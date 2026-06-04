@@ -4,13 +4,10 @@ RSpec.describe "Home page" do
   describe "GET /" do
     context "when public visitor opens the app" do
       it "renders the public dashboard and navigation" do
-        # arrange
         path = root_path
 
-        # act
         get path
 
-        # assert
         expect(response).to have_http_status(:ok)
         expect(response.body).to include("Football App")
         expect(response.body).to include("Dashboard")
@@ -22,13 +19,10 @@ RSpec.describe "Home page" do
 
     context "when public visitor opens the app without player data" do
       it "does not render private phone data" do
-        # arrange
         path = root_path
 
-        # act
         get path
 
-        # assert
         expect(response.body).not_to include("phone")
         expect(response.body).not_to include("telefon")
       end
