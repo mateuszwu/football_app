@@ -18,11 +18,25 @@
     <link rel="icon" href="/icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="/icon.png">
 
-    <%# Includes all stylesheet files in app/assets/stylesheets %>
-    <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
+    <%= stylesheet_link_tag "application", "data-turbo-track": "reload" %>
   </head>
 
   <body>
-    <%= yield %>
+    <header class="site-header">
+      <nav class="site-nav" aria-label="Main navigation">
+        <%= link_to "Football App", root_path, class: "site-nav__brand" %>
+
+        <div class="site-nav__links">
+          <%= link_to "Dashboard", root_path(anchor: "dashboard") %>
+          <%= link_to "Leaderboardy", root_path(anchor: "leaderboards") %>
+          <%= link_to "Zawodnicy", root_path(anchor: "players") %>
+          <%= link_to "Zaloguj", "#", class: "site-nav__login" %>
+        </div>
+      </nav>
+    </header>
+
+    <main>
+      <%= yield %>
+    </main>
   </body>
 </html>
