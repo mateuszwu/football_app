@@ -30,7 +30,9 @@ require "rspec/rails"
 # recreate the test database by loading the schema.
 # If you are not using ActiveRecord, you can remove these lines.
 begin
-  ActiveRecord::Migration.maintain_test_schema!
+  if Rails.root.join("db/schema.rb").exist?
+    ActiveRecord::Migration.maintain_test_schema!
+  end
 rescue ActiveRecord::PendingMigrationError => e
   abort e.to_s.strip
 end
