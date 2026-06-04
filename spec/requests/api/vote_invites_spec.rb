@@ -19,11 +19,11 @@ RSpec.describe "API vote invites" do
             "vote_invites" => [
               {
                 "phone" => "+48222222222",
-                "sms_body" => "Czesc adam, zaglosuj na MVP i DEF po dzisiejszym meczu przez swoj link do glosowania."
+                "sms_body" => "Czesc adam, zaglosuj na MVP i DEF po dzisiejszym meczu."
               },
               {
                 "phone" => "+48111111111",
-                "sms_body" => "Czesc zed, zaglosuj na MVP i DEF po dzisiejszym meczu przez swoj link do glosowania."
+                "sms_body" => "Czesc zed, zaglosuj na MVP i DEF po dzisiejszym meczu."
               }
             ]
           )

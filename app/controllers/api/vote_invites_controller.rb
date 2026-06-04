@@ -16,7 +16,7 @@ module Api
     end
 
     def sms_body(player)
-      "Czesc #{player.nickname}, zaglosuj na MVP i DEF po dzisiejszym meczu przez swoj link do glosowania."
+      "Czesc #{player.nickname}, zaglosuj na MVP i DEF po dzisiejszym meczu."
     end
   end
 end
