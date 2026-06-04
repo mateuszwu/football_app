@@ -88,8 +88,10 @@ http://127.0.0.1:3000
 Run tests:
 
 ```sh
-bin/rails test
+bin/rails spec
 ```
+
+New behavior should include RSpec coverage. Prefer FactoryBot for persisted records and verified doubles, such as `instance_double`, for isolated collaborators.
 
 Run security checks:
 
@@ -102,6 +104,14 @@ Run the Rails style checker:
 
 ```sh
 bin/rubocop
+```
+
+Before creating or publishing a PR, run:
+
+```sh
+bin/rails spec
+bin/rubocop
+bin/brakeman
 ```
 
 Show framework and runtime versions:
