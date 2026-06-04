@@ -66,6 +66,23 @@ RSpec.describe Player do
       end
     end
 
+    context "when approval status is supported" do
+      it "is valid" do
+        players = Player::APPROVAL_STATUSES.map { |approval_status| build(:player, approval_status: approval_status) }
+
+        expect(players).to all(be_valid)
+      end
+    end
+
+    context "when approval status is unsupported" do
+      it "is invalid" do
+        player = build(:player, approval_status: "archived")
+
+        expect(player).not_to be_valid
+        expect(player.errors[:approval_status]).to include("is not included in the list")
+      end
+    end
+
     context "when role code is supported" do
       it "is valid" do
         players = Player::ROLE_CODES.map { |role_code| build(:player, role_code: role_code) }
@@ -80,6 +97,48 @@ RSpec.describe Player do
 
         expect(player).not_to be_valid
         expect(player.errors[:role_code]).to include("is not included in the list")
+      end
+    end
+  end
+
+  describe ".approved" do
+    context "when players have mixed approval statuses" do
+      it "returns approved players only" do
+        approved_player = create(:player, approval_status: "approved")
+        create(:player, approval_status: "pending")
+        create(:player, approval_status: "rejected")
+
+        result = described_class.approved
+
+        expect(result).to contain_exactly(approved_player)
+      end
+    end
+  end
+
+  describe ".pending" do
+    context "when players have mixed approval statuses" do
+      it "returns pending players only" do
+        pending_player = create(:player, approval_status: "pending")
+        create(:player, approval_status: "approved")
+        create(:player, approval_status: "rejected")
+
+        result = described_class.pending
+
+        expect(result).to contain_exactly(pending_player)
+      end
+    end
+  end
+
+  describe ".rejected" do
+    context "when players have mixed approval statuses" do
+      it "returns rejected players only" do
+        rejected_player = create(:player, approval_status: "rejected")
+        create(:player, approval_status: "approved")
+        create(:player, approval_status: "pending")
+
+        result = described_class.rejected
+
+        expect(result).to contain_exactly(rejected_player)
       end
     end
   end
