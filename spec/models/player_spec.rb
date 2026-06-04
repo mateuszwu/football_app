@@ -65,6 +65,23 @@ RSpec.describe Player do
         expect(player.errors[:description]).to include("can't be blank")
       end
     end
+
+    context "when role code is supported" do
+      it "is valid" do
+        players = Player::ROLE_CODES.map { |role_code| build(:player, role_code: role_code) }
+
+        expect(players).to all(be_valid)
+      end
+    end
+
+    context "when role code is unsupported" do
+      it "is invalid" do
+        player = build(:player, role_code: "COACH")
+
+        expect(player).not_to be_valid
+        expect(player.errors[:role_code]).to include("is not included in the list")
+      end
+    end
   end
 
   describe ".active" do

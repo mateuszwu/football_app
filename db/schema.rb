@@ -10,17 +10,19 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_03_121100) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_04_235200) do
   create_table "players", force: :cascade do |t|
     t.boolean "active", default: true, null: false
     t.datetime "created_at", null: false
     t.text "description", default: "", null: false
     t.string "name", null: false
     t.string "nickname", null: false
+    t.string "role_code", default: "ANY", null: false
     t.string "phone", null: false
     t.datetime "updated_at", null: false
     t.index ["active"], name: "index_players_on_active"
     t.index ["nickname"], name: "index_players_on_nickname", unique: true
     t.index ["phone"], name: "index_players_on_phone", unique: true
+    t.index ["role_code"], name: "index_players_on_role_code"
   end
 end
