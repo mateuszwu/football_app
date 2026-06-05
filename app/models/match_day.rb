@@ -5,6 +5,7 @@ class MatchDay < ApplicationRecord
   has_many :match_day_players, dependent: :destroy
   has_many :players, through: :match_day_players
   has_many :team_setups, dependent: :destroy
+  has_many :teams, through: :team_setups
 
   validates :played_on, presence: true
   validates :status, inclusion: { in: STATUSES }

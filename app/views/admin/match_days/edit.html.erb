@@ -7,5 +7,10 @@
     <p>Aktualizuj sezon i termin dla wybranego match day.</p>
   </div>
 
-  <%= render "form", match_day: match_day, seasons: seasons, players: players %>
+  <%= render "form",
+      match_day: match_day,
+      seasons: seasons,
+      players: players,
+      team_a_player_ids: team_a_player_ids,
+      team_b_player_ids: team_b_player_ids %>
 </section>
