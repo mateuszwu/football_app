@@ -54,6 +54,13 @@ RSpec.describe MatchDay do
 
         expect(match_day.season).to eq(season)
       end
+
+      it "has many team setups" do
+        match_day = create(:match_day)
+        team_setup = create(:team_setup, match_day: match_day)
+
+        expect(match_day.team_setups).to contain_exactly(team_setup)
+      end
     end
   end
 end
