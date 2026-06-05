@@ -79,6 +79,95 @@ RSpec.describe "Players" do
     end
   end
 
+  describe "GET /players/:id/edit" do
+    context "when the cookie belongs to the same pending player" do
+      it "renders the edit form" do
+        player = create(:player, approval_status: "pending", active: true)
+        cookies[:pending_player_edit_token] = Players::GenerateEditToken.call(player: player)
+
+        get "/players/#{player.id}/edit"
+
+        expect(response).to have_http_status(:ok)
+        expect(response.body).to include("Edytuj zgloszenie zawodnika")
+        expect(response.body).to include(player.name)
+        expect(response.body).to include(player.nickname)
+        expect(response.body).to include(player.phone)
+      end
+    end
+
+    context "when the cookie belongs to another player" do
+      it "redirects away from the edit page" do
+        player = create(:player, approval_status: "pending", active: true)
+        other_player = create(:player, approval_status: "pending", active: true)
+        cookies[:pending_player_edit_token] = Players::GenerateEditToken.call(player: other_player)
+
+        get "/players/#{player.id}/edit"
+
+        expect(response).to redirect_to("/players/new")
+        expect(flash[:alert]).to eq("Brak dostepu do edycji tego zgloszenia.")
+      end
+    end
+
+    context "when the cookie is missing" do
+      it "redirects away from the edit page" do
+        player = create(:player, approval_status: "pending", active: true)
+
+        get "/players/#{player.id}/edit"
+
+        expect(response).to redirect_to("/players/new")
+        expect(flash[:alert]).to eq("Brak dostepu do edycji tego zgloszenia.")
+      end
+    end
+  end
+
+  describe "PATCH /players/:id" do
+    context "when the cookie belongs to the same pending player" do
+      it "updates the player submission" do
+        player = create(:player, approval_status: "pending", active: true, name: "Old Name", nickname: "oldnick")
+        cookies[:pending_player_edit_token] = Players::GenerateEditToken.call(player: player)
+
+        patch "/players/#{player.id}", params: {
+          player: {
+            name: "New Name",
+            nickname: "newnick",
+            phone: player.phone,
+            description: "Updated description",
+            role_code: "MID"
+          }
+        }
+
+        expect(response).to redirect_to("/players/#{player.id}/edit")
+        expect(flash[:notice]).to eq("Zgloszenie zawodnika zostalo zaktualizowane.")
+        expect(player.reload.name).to eq("New Name")
+        expect(player.nickname).to eq("newnick")
+        expect(player.description).to eq("Updated description")
+        expect(player.role_code).to eq("MID")
+        expect(player.approval_status).to eq("pending")
+      end
+    end
+
+    context "when the cookie is invalid" do
+      it "does not update the player submission" do
+        player = create(:player, approval_status: "pending", active: true, name: "Old Name")
+        cookies[:pending_player_edit_token] = "not-a-token"
+
+        patch "/players/#{player.id}", params: {
+          player: {
+            name: "New Name",
+            nickname: player.nickname,
+            phone: player.phone,
+            description: player.description,
+            role_code: player.role_code
+          }
+        }
+
+        expect(response).to redirect_to("/players/new")
+        expect(flash[:alert]).to eq("Brak dostepu do edycji tego zgloszenia.")
+        expect(player.reload.name).to eq("Old Name")
+      end
+    end
+  end
+
   describe "GET /players/:id" do
     context "when the player is approved and active" do
       it "renders the public profile with match history and without private phone data" do

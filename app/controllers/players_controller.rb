@@ -22,6 +22,24 @@ class PlayersController < ApplicationController
     end
   end
 
+  def edit
+    player = pending_player_for_current_device!
+    return if performed?
+
+    render :edit, locals: { player: player }
+  end
+
+  def update
+    player = pending_player_for_current_device!
+    return if performed?
+
+    if player.update(player_params)
+      redirect_to edit_player_path(player), notice: "Zgloszenie zawodnika zostalo zaktualizowane."
+    else
+      render :edit, locals: { player: player }, status: :unprocessable_content
+    end
+  end
+
   def show
     player = Player.approved.active.find(params[:id])
     match_history = player.match_history
@@ -33,5 +51,15 @@ class PlayersController < ApplicationController
 
   def player_params
     params.require(:player).permit(:name, :nickname, :phone, :description, :role_code)
+  end
+
+  def pending_player_for_current_device!
+    payload = Players::DecodeEditToken.call(token: cookies[:pending_player_edit_token])
+    player = Player.pending.find_by(id: params[:id])
+
+    return redirect_to(new_player_path, alert: "Brak dostepu do edycji tego zgloszenia.") if payload.blank? || player.blank?
+    return redirect_to(new_player_path, alert: "Brak dostepu do edycji tego zgloszenia.") if payload.fetch("player_id", nil) != player.id
+
+    player
   end
 end
