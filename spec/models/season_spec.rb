@@ -197,4 +197,28 @@ RSpec.describe Season do
       end
     end
   end
+
+  describe "#appearances_leaderboard" do
+    context "when players have different appearance counts" do
+      it "returns players ranked by season appearances" do
+        season = create(:season)
+        top_player = create(:player, name: "Zed")
+        tied_player = create(:player, name: "Adam")
+        lower_player = create(:player, name: "Marek")
+        first_match_day = create(:match_day, season: season, played_on: Date.new(2026, 6, 5))
+        second_match_day = create(:match_day, season: season, played_on: Date.new(2026, 6, 12))
+        other_season_match_day = create(:match_day, season: create(:season), played_on: Date.new(2026, 6, 19))
+        create(:match_day_player, match_day: first_match_day, player: top_player)
+        create(:match_day_player, match_day: second_match_day, player: top_player)
+        create(:match_day_player, match_day: first_match_day, player: tied_player)
+        create(:match_day_player, match_day: first_match_day, player: lower_player)
+        create(:match_day_player, match_day: other_season_match_day, player: lower_player)
+
+        result = season.appearances_leaderboard
+
+        expect(result.map(&:name)).to eq([ "Zed", "Adam", "Marek" ])
+        expect(result.map(&:appearances_count)).to eq([ 2, 1, 1 ])
+      end
+    end
+  end
 end

@@ -27,6 +27,24 @@
   </div>
 
   <div class="player-profile__body">
+    <h2>Leaderboard sezonu</h2>
+
+    <% if appearances_leaderboard.any? %>
+      <ol>
+        <% appearances_leaderboard.each do |player| %>
+          <li>
+            <strong><%= link_to player.name, player_path(player) %></strong>
+            <span><%= player.nickname %></span>
+            <span><%= pluralize(player.appearances_count, "appearance") %></span>
+          </li>
+        <% end %>
+      </ol>
+    <% else %>
+      <p class="empty-state">Brak zawodnikow w leaderboardzie sezonu.</p>
+    <% end %>
+  </div>
+
+  <div class="player-profile__body">
     <h2>Ostatnie match days</h2>
 
     <% if recent_match_days.any? %>

@@ -32,6 +32,15 @@ class Season < ApplicationRecord
     match_days.order(played_on: :desc, id: :desc)
   end
 
+  def appearances_leaderboard
+    Player
+      .joins(match_day_players: :match_day)
+      .where(match_days: { season_id: id })
+      .select("players.*, COUNT(match_day_players.id) AS appearances_count")
+      .group("players.id")
+      .order(Arel.sql("appearances_count DESC"), :name)
+  end
+
   private
 
   def ends_on_is_after_starts_on
