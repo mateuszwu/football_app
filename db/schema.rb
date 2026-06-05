@@ -10,7 +10,17 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_05_085000) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_05_090000) do
+  create_table "match_day_players", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.integer "match_day_id", null: false
+    t.integer "player_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["match_day_id", "player_id"], name: "index_match_day_players_on_match_day_id_and_player_id", unique: true
+    t.index ["match_day_id"], name: "index_match_day_players_on_match_day_id"
+    t.index ["player_id"], name: "index_match_day_players_on_player_id"
+  end
+
   create_table "match_days", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.date "played_on", null: false
@@ -55,5 +65,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_05_085000) do
     t.index ["starts_on", "ends_on"], name: "index_seasons_on_starts_on_and_ends_on"
   end
 
+  add_foreign_key "match_day_players", "match_days"
+  add_foreign_key "match_day_players", "players"
   add_foreign_key "match_days", "seasons"
 end
