@@ -16,6 +16,7 @@ Rails.application.routes.draw do
     resources :vote_invites, only: :index
   end
 
+  resources :relationships, only: :index
   resources :players, only: :show
   resources :seasons, only: :show
 
