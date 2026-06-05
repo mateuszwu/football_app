@@ -31,6 +31,7 @@
           <%= link_to "Leaderboardy", root_path(anchor: "leaderboards") %>
           <%= link_to "Relacje", relationships_path %>
           <%= link_to "Zawodnicy", root_path(anchor: "players") %>
+          <%= link_to "Dolacz", new_player_path %>
           <% if admin_signed_in? %>
             <%= link_to "Match days", admin_match_days_path %>
             <%= link_to "Sezony", admin_seasons_path %>

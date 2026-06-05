@@ -1,6 +1,72 @@
 require "rails_helper"
 
 RSpec.describe "Players" do
+  describe "GET /players/new" do
+    it "renders the public submission form without private phone data" do
+      get "/players/new"
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("Zgloszenie zawodnika")
+      expect(response.body).to include("Imie i nazwisko")
+      expect(response.body).to include("Nick")
+      expect(response.body).to include("Telefon")
+      expect(response.body).to include("Opis")
+      expect(response.body).to include("Rola")
+      expect(response.body).not_to include("+48")
+    end
+  end
+
+  describe "POST /players" do
+    context "when the submission is valid" do
+      it "creates a pending player and redirects back to the form" do
+        post "/players", params: {
+          player: {
+            name: "Adam Nowak",
+            nickname: "adam",
+            phone: "+48111111111",
+            description: "Solid defender",
+            role_code: "DEF"
+          }
+        }
+
+        player = Player.order(:created_at).last
+
+        expect(response).to redirect_to("/players/new")
+        expect(flash[:notice]).to eq("Zgloszenie zawodnika zostalo zapisane i czeka na akceptacje.")
+        expect(player.name).to eq("Adam Nowak")
+        expect(player.nickname).to eq("adam")
+        expect(player.phone).to eq("+48111111111")
+        expect(player.description).to eq("Solid defender")
+        expect(player.role_code).to eq("DEF")
+        expect(player.approval_status).to eq("pending")
+        expect(player.active).to eq(true)
+      end
+    end
+
+    context "when the submission is invalid" do
+      it "renders validation errors without creating the player" do
+        post "/players", params: {
+          player: {
+            name: "",
+            nickname: "",
+            phone: "",
+            description: "",
+            role_code: "COACH"
+          }
+        }
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(response.body).to include("Popraw bledy formularza:")
+        expect(response.body).to include("Name can&#39;t be blank")
+        expect(response.body).to include("Nickname can&#39;t be blank")
+        expect(response.body).to include("Phone can&#39;t be blank")
+        expect(response.body).to include("Description can&#39;t be blank")
+        expect(response.body).to include("Role code is not included in the list")
+        expect(Player.count).to eq(0)
+      end
+    end
+  end
+
   describe "GET /players/:id" do
     context "when the player is approved and active" do
       it "renders the public profile with match history and without private phone data" do
