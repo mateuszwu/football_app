@@ -1,0 +1,14 @@
+<% content_for :title, "#{player.name} - Football App" %>
+
+<section class="section player-profile">
+  <div class="section__header">
+    <p class="eyebrow">Profil zawodnika</p>
+    <h1><%= player.name %></h1>
+    <p><%= player.nickname %> &middot; <%= player.role_code %></p>
+  </div>
+
+  <div class="player-profile__body">
+    <h2>Opis</h2>
+    <p><%= player.description %></p>
+  </div>
+</section>

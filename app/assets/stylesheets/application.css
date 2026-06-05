@@ -132,3 +132,38 @@
 .flash--notice {
   color: #047857;
 }
+
+.player-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+}
+
+.player-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  padding: 1rem;
+}
+
+.player-card h3 {
+  margin-top: 0;
+}
+
+.player-card__meta {
+  color: #4b5563;
+  font-weight: 700;
+}
+
+.player-profile {
+  max-width: 48rem;
+}
+
+.player-profile__body {
+  border-top: 1px solid #e5e7eb;
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+}
+
+.empty-state {
+  color: #4b5563;
+}
