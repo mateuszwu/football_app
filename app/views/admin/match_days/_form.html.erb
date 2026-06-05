@@ -41,6 +41,45 @@
     <% end %>
   </div>
 
+  <div class="form-field">
+    <label>Manualny builder bazowych zespolow</label>
+    <p class="field-hint">Przypisz zaznaczonych zawodnikow do Team A i Team B.</p>
+
+    <div class="checkbox-columns">
+      <div>
+        <p><strong>Team A</strong></p>
+        <% if players.any? %>
+          <div class="checkbox-list">
+            <% players.each do |player| %>
+              <label class="checkbox-list__item">
+                <%= check_box_tag "match_day[team_a_player_ids][]", player.id, team_a_player_ids.map(&:to_s).include?(player.id.to_s) %>
+                <span><%= player.name %> (<%= player.nickname %>)</span>
+              </label>
+            <% end %>
+          </div>
+        <% else %>
+          <p class="empty-state">Brak zawodnikow do przypisania.</p>
+        <% end %>
+      </div>
+
+      <div>
+        <p><strong>Team B</strong></p>
+        <% if players.any? %>
+          <div class="checkbox-list">
+            <% players.each do |player| %>
+              <label class="checkbox-list__item">
+                <%= check_box_tag "match_day[team_b_player_ids][]", player.id, team_b_player_ids.map(&:to_s).include?(player.id.to_s) %>
+                <span><%= player.name %> (<%= player.nickname %>)</span>
+              </label>
+            <% end %>
+          </div>
+        <% else %>
+          <p class="empty-state">Brak zawodnikow do przypisania.</p>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
   <div class="form-actions">
     <%= form.submit "Zapisz", class: "button button--primary" %>
     <%= link_to "Wroc", admin_match_days_path, class: "button button--secondary" %>

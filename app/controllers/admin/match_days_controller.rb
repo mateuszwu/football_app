@@ -13,7 +13,7 @@ module Admin
       seasons = available_seasons
       players = available_players
 
-      render :new, locals: { match_day: match_day, seasons: seasons, players: players }
+      render :new, locals: form_locals(match_day:, seasons:, players:)
     end
 
     def create
@@ -24,7 +24,7 @@ module Admin
       if CreateMatchDay.call(match_day:, params: match_day_form_params, available_players: players)
         redirect_to admin_match_days_path, notice: "Match day created"
       else
-        render :new, locals: { match_day: match_day, seasons: seasons, players: players }, status: :unprocessable_content
+        render :new, locals: form_locals(match_day:, seasons:, players:), status: :unprocessable_content
       end
     end
 
@@ -33,7 +33,7 @@ module Admin
       seasons = available_seasons
       players = available_players
 
-      render :edit, locals: { match_day: match_day, seasons: seasons, players: players }
+      render :edit, locals: form_locals(match_day:, seasons:, players:)
     end
 
     def update
@@ -44,7 +44,7 @@ module Admin
       if UpdateMatchDay.call(match_day:, params: match_day_form_params, available_players: players)
         redirect_to admin_match_days_path, notice: "Match day updated"
       else
-        render :edit, locals: { match_day: match_day, seasons: seasons, players: players }, status: :unprocessable_content
+        render :edit, locals: form_locals(match_day:, seasons:, players:), status: :unprocessable_content
       end
     end
 
@@ -64,8 +64,27 @@ module Admin
 
     def match_day_form_params
       match_day_params.to_h.symbolize_keys.merge(
-        player_ids: params.fetch(:match_day, {}).fetch(:player_ids, [])
+        player_ids: params.fetch(:match_day, {}).fetch(:player_ids, []),
+        team_a_player_ids: params.fetch(:match_day, {}).fetch(:team_a_player_ids, []),
+        team_b_player_ids: params.fetch(:match_day, {}).fetch(:team_b_player_ids, [])
       )
+    end
+
+    def form_locals(match_day:, seasons:, players:)
+      {
+        match_day:,
+        seasons:,
+        players:,
+        team_a_player_ids: team_player_ids(match_day:, team_name: "Team A", params_key: :team_a_player_ids),
+        team_b_player_ids: team_player_ids(match_day:, team_name: "Team B", params_key: :team_b_player_ids)
+      }
+    end
+
+    def team_player_ids(match_day:, team_name:, params_key:)
+      submitted_ids = params.fetch(:match_day, {}).fetch(params_key, nil)
+      return submitted_ids if submitted_ids
+
+      match_day.teams.find_by(name: team_name)&.player_ids || []
     end
   end
 end

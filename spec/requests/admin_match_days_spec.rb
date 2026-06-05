@@ -87,6 +87,9 @@ RSpec.describe "Admin match days" do
           expect(response.body).to include("setup")
           expect(response.body).to include("Adam (adam)")
           expect(response.body).not_to include("Bartek (bartek)")
+          expect(response.body).to include("Manualny builder bazowych zespolow")
+          expect(response.body).to include("Team A")
+          expect(response.body).to include("Team B")
           expect(response.body).to include("selected=\"selected\"")
         ensure
           if original_admin_password.nil?
@@ -120,12 +123,21 @@ RSpec.describe "Admin match days" do
           player = create(:player, approval_status: "approved", active: true)
 
           post "/admin/session", params: { password: "secret-password" }
-          post "/admin/match_days", params: { match_day: { season_id: season.id, played_on: "2026-06-05", player_ids: [ player.id.to_s ] } }
+          post "/admin/match_days", params: {
+            match_day: {
+              season_id: season.id,
+              played_on: "2026-06-05",
+              player_ids: [ player.id.to_s ],
+              team_a_player_ids: [ player.id.to_s ],
+              team_b_player_ids: []
+            }
+          }
 
           expect(response).to redirect_to(admin_match_days_path)
           match_day = MatchDay.find_by!(season: season, played_on: Date.new(2026, 6, 5))
           expect(match_day.status).to eq("setup")
           expect(match_day.players).to contain_exactly(player)
+          expect(match_day.teams.find_by!(name: "Team A").players).to contain_exactly(player)
         ensure
           if original_admin_password.nil?
             ENV.delete("FOOTBALL_APP_ADMIN_PASSWORD")
@@ -191,6 +203,7 @@ RSpec.describe "Admin match days" do
           expect(response.body).to include("Spring 2026")
           expect(response.body).to include("2026-06-05")
           expect(response.body).to include("Adam (adam)")
+          expect(response.body).to include("Manualny builder bazowych zespolow")
           expect(response.body).to include("checked=\"checked\"")
         ensure
           if original_admin_password.nil?
@@ -226,9 +239,20 @@ RSpec.describe "Admin match days" do
           new_player = create(:player, name: "New Player", nickname: "new", phone: "+48987654321", approval_status: "approved", active: true)
           match_day = create(:match_day, season: season, played_on: Date.new(2026, 6, 5))
           create(:match_day_player, match_day: match_day, player: original_player)
+          team_setup = create(:team_setup, match_day: match_day)
+          original_team = create(:team, team_setup: team_setup, name: "Team A", team_type: "baseline")
+          create(:team_player, team: original_team, player: original_player)
 
           post "/admin/session", params: { password: "secret-password" }
-          patch "/admin/match_days/#{match_day.id}", params: { match_day: { season_id: other_season.id, played_on: "2026-06-12", player_ids: [ new_player.id.to_s ] } }
+          patch "/admin/match_days/#{match_day.id}", params: {
+            match_day: {
+              season_id: other_season.id,
+              played_on: "2026-06-12",
+              player_ids: [ new_player.id.to_s ],
+              team_a_player_ids: [],
+              team_b_player_ids: [ new_player.id.to_s ]
+            }
+          }
 
           expect(response).to redirect_to(admin_match_days_path)
           match_day.reload
@@ -236,6 +260,8 @@ RSpec.describe "Admin match days" do
           expect(match_day.played_on).to eq(Date.new(2026, 6, 12))
           expect(match_day.status).to eq("setup")
           expect(match_day.players).to contain_exactly(new_player)
+          expect(match_day.teams.find_by!(name: "Team B").players).to contain_exactly(new_player)
+          expect(match_day.teams.find_by(name: "Team A")).to be_nil
         ensure
           if original_admin_password.nil?
             ENV.delete("FOOTBALL_APP_ADMIN_PASSWORD")
