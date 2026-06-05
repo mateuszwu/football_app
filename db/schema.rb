@@ -10,7 +10,18 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_05_083000) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_05_085000) do
+  create_table "match_days", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.date "played_on", null: false
+    t.integer "season_id", null: false
+    t.string "status", default: "setup", null: false
+    t.datetime "updated_at", null: false
+    t.index ["season_id", "played_on"], name: "index_match_days_on_season_id_and_played_on", unique: true
+    t.index ["season_id"], name: "index_match_days_on_season_id"
+    t.index ["status"], name: "index_match_days_on_status"
+  end
+
   create_table "players", force: :cascade do |t|
     t.boolean "active", default: true, null: false
     t.string "approval_status", default: "pending", null: false
@@ -43,4 +54,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_05_083000) do
     t.index ["name"], name: "index_seasons_on_name", unique: true
     t.index ["starts_on", "ends_on"], name: "index_seasons_on_starts_on_and_ends_on"
   end
+
+  add_foreign_key "match_days", "seasons"
 end
