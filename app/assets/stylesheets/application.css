@@ -178,3 +178,14 @@
   margin: 0;
   padding: 0.25rem 0.625rem;
 }
+
+.checkbox-list {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.checkbox-list__item {
+  align-items: center;
+  display: flex;
+  gap: 0.5rem;
+}

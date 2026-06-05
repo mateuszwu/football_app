@@ -3,6 +3,7 @@ class Player < ApplicationRecord
   ROLE_CODES = %w[ANY GK DEF MID ATT].freeze
 
   has_many :match_day_players, dependent: :destroy
+  has_many :match_days, through: :match_day_players
 
   validates :name, presence: true
   validates :nickname, presence: true, uniqueness: true
