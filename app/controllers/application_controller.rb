@@ -6,8 +6,13 @@ class ApplicationController < ActionController::Base
   stale_when_importmap_changes
 
   helper_method :admin_signed_in?
+  helper_method :current_season
 
   private
+
+  def current_season
+    Season.current_active
+  end
 
   def admin_signed_in?
     session[:admin] == true
