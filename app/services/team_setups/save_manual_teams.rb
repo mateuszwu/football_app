@@ -1,10 +1,5 @@
 module TeamSetups
   class SaveManualTeams
-    TEAM_DEFINITIONS = {
-      "Team A" => :team_a_player_ids,
-      "Team B" => :team_b_player_ids
-    }.freeze
-
     def self.call(match_day:, selected_player_ids:, team_a_player_ids:, team_b_player_ids:)
       new(
         match_day:,
@@ -24,7 +19,7 @@ module TeamSetups
     def call
       return false unless valid_assignments?
 
-      if manual_team_ids.empty?
+      if generated_teams.empty?
         match_day.team_setups.destroy_all
         return true
       end
@@ -32,8 +27,13 @@ module TeamSetups
       team_setup = match_day.team_setups.first_or_create!
       team_setup.teams.where(team_type: "baseline").destroy_all
 
-      TEAM_DEFINITIONS.each do |team_name, key|
-        create_team(team_setup:, team_name:, player_ids: player_ids_for(key))
+      generated_teams.each do |team_definition|
+        create_team(
+          team_setup:,
+          team_name: team_definition.fetch(:name),
+          team_type: team_definition.fetch(:team_type),
+          player_ids: team_definition.fetch(:player_ids)
+        )
       end
 
       true
@@ -64,31 +64,27 @@ module TeamSetups
     end
 
     def manual_team_ids
-      (team_a_player_ids + team_b_player_ids).uniq
+      generated_teams.flat_map { |team_definition| team_definition.fetch(:player_ids) }.uniq
     end
 
-    def create_team(team_setup:, team_name:, player_ids:)
+    def create_team(team_setup:, team_name:, team_type:, player_ids:)
       return if player_ids.empty?
 
-      team = team_setup.teams.create!(name: team_name, team_type: "baseline")
+      team = team_setup.teams.create!(name: team_name, team_type: team_type)
       player_ids.each do |player_id|
         team.team_players.create!(player_id:)
       end
     end
 
-    def normalize_ids(ids)
-      Array(ids).reject(&:blank?).map(&:to_i).uniq
+    def generated_teams
+      @generated_teams ||= TeamSetups::ManualGeneratorAdapter.call(
+        team_a_player_ids:,
+        team_b_player_ids:
+      )
     end
 
-    def player_ids_for(key)
-      case key
-      when :team_a_player_ids
-        team_a_player_ids
-      when :team_b_player_ids
-        team_b_player_ids
-      else
-        []
-      end
+    def normalize_ids(ids)
+      Array(ids).reject(&:blank?).map(&:to_i).uniq
     end
   end
 end
