@@ -73,3 +73,9 @@ Prefer loading records inside controller actions instead of using setup-style `b
 Prefer rendering views with explicit locals, for example `render :show, locals: { player: player }`, instead of relying on controller instance variables.
 
 For non-trivial create/update persistence in controllers, prefer service objects with a single `.call` entrypoint, for example `CreateMatchDay.call(...)` and `UpdateMatchDay.call(...)`, instead of keeping transaction and association-sync logic inside the controller.
+
+## Models And Queries
+
+Keep ActiveRecord models lean. When logic becomes query-heavy or reads like a standalone operation, prefer extracting it into a query object or service object instead of growing the model API.
+
+Use query objects for read-focused data shaping and ranking logic, and service objects for domain operations such as generating fingerprints, tokens, or multi-step persistence workflows.
