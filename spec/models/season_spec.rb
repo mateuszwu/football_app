@@ -96,4 +96,38 @@ RSpec.describe Season do
       end
     end
   end
+
+  describe ".current_active" do
+    context "when there is one active season" do
+      it "returns the active season" do
+        active_season = create(:season, active: true)
+        create(:season, active: false)
+
+        result = described_class.current_active
+
+        expect(result).to eq(active_season)
+      end
+    end
+
+    context "when there are multiple active seasons" do
+      it "returns the latest one by start date" do
+        create(:season, name: "Spring 2026", active: true, starts_on: Date.new(2026, 3, 1))
+        latest_season = create(:season, name: "Summer 2026", active: true, starts_on: Date.new(2026, 6, 1))
+
+        result = described_class.current_active
+
+        expect(result).to eq(latest_season)
+      end
+    end
+
+    context "when there is no active season" do
+      it "returns nil" do
+        create(:season, active: false)
+
+        result = described_class.current_active
+
+        expect(result).to be_nil
+      end
+    end
+  end
 end

@@ -10,6 +10,10 @@ class Season < ApplicationRecord
 
   scope :active, -> { where(active: true) }
 
+  def self.current_active
+    active.order(starts_on: :desc, created_at: :desc).first
+  end
+
   private
 
   def ends_on_is_after_starts_on
