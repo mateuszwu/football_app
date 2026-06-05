@@ -28,6 +28,13 @@ RSpec.describe TeamSetup do
 
         expect(team_setup.match_day).to eq(match_day)
       end
+
+      it "has many teams" do
+        team_setup = create(:team_setup)
+        team = create(:team, team_setup: team_setup)
+
+        expect(team_setup.teams).to contain_exactly(team)
+      end
     end
   end
 end

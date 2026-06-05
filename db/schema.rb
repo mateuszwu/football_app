@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_05_231000) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_05_232500) do
   create_table "match_day_players", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.integer "match_day_id", null: false
@@ -39,8 +39,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_05_231000) do
     t.text "description", default: "", null: false
     t.string "name", null: false
     t.string "nickname", null: false
-    t.string "role_code", default: "ANY", null: false
     t.string "phone", null: false
+    t.string "role_code", default: "ANY", null: false
     t.datetime "updated_at", null: false
     t.index ["active"], name: "index_players_on_active"
     t.index ["approval_status"], name: "index_players_on_approval_status"
@@ -72,8 +72,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_05_231000) do
     t.index ["match_day_id"], name: "index_team_setups_on_match_day_id"
   end
 
+  create_table "teams", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "name", null: false
+    t.integer "team_setup_id", null: false
+    t.string "team_type", null: false
+    t.datetime "updated_at", null: false
+    t.index ["team_setup_id"], name: "index_teams_on_team_setup_id"
+    t.index ["team_type"], name: "index_teams_on_team_type"
+  end
+
   add_foreign_key "match_day_players", "match_days"
   add_foreign_key "match_day_players", "players"
   add_foreign_key "match_days", "seasons"
   add_foreign_key "team_setups", "match_days"
+  add_foreign_key "teams", "team_setups"
 end
