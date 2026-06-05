@@ -17,6 +17,7 @@ Rails.application.routes.draw do
   end
 
   resources :players, only: :show
+  resources :seasons, only: :show
 
   root "home#index"
 

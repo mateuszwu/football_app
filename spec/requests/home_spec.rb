@@ -57,5 +57,17 @@ RSpec.describe "Home page" do
         expect(response.body).not_to include("+48222222222")
       end
     end
+
+    context "when an active season exists" do
+      it "renders a link to the season stats page" do
+        season = create(:season, name: "Summer 2026", active: true)
+
+        get root_path
+
+        expect(response).to have_http_status(:ok)
+        expect(response.body).to include("Summer 2026")
+        expect(response.body).to include(season_path(season))
+      end
+    end
   end
 end
