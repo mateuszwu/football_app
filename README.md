@@ -83,6 +83,41 @@ Open:
 http://127.0.0.1:3000
 ```
 
+## Apple Shortcuts Vote Invites
+
+The vote invite API is intended for a private Apple Shortcut that sends SMS messages to active players after a match.
+
+Configure an API token for the Rails app:
+
+```sh
+FOOTBALL_APP_API_TOKEN="change-me"
+```
+
+In Apple Shortcuts:
+
+1. Add a "Get Contents of URL" action.
+2. Set the URL to `https://your-app.example.com/api/vote_invites`.
+3. Set the method to `GET`.
+4. Add the request header `Authorization` with value `Bearer change-me`.
+5. Parse the JSON response.
+6. Repeat over `vote_invites`.
+7. For each item, use "Send Message" with `phone` as the recipient and `sms_body` as the message text.
+
+The response shape is:
+
+```json
+{
+  "vote_invites": [
+    {
+      "phone": "+48123456789",
+      "sms_body": "Czesc player1, zaglosuj na MVP i DEF po dzisiejszym meczu."
+    }
+  ]
+}
+```
+
+The bearer token protects the API endpoint used by the Shortcut. It is not a player vote access token. Player-specific vote tokens and vote URLs are not implemented yet; when they are added, the response should include the tokenized voting URL and `sms_body` should include that URL.
+
 ## Common Commands
 
 Run tests:
