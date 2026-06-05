@@ -23,7 +23,7 @@ RSpec.describe "Admin sessions" do
           Rails.application.routes.draw do
             get "/admin/protected_test", to: "admin/protected_test#index"
             get "/admin/login", to: "admin/sessions#new", as: :admin_login
-            resource :admin_session, path: "/admin/session", only: :create, controller: "admin/sessions"
+            resource :admin_session, path: "/admin/session", only: %i[create destroy], controller: "admin/sessions"
             root "home#index"
           end
 
@@ -91,6 +91,50 @@ RSpec.describe "Admin sessions" do
           else
             ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = original_admin_password
           end
+        end
+      end
+    end
+  end
+
+  describe "DELETE /admin/session" do
+    context "when the visitor is signed in as admin" do
+      it "signs out the admin" do
+        begin
+          original_admin_password = ENV["FOOTBALL_APP_ADMIN_PASSWORD"]
+          ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = "secret-password"
+
+          Rails.application.routes.draw do
+            get "/admin/protected_test", to: "admin/protected_test#index"
+            get "/admin/login", to: "admin/sessions#new", as: :admin_login
+            resource :admin_session, path: "/admin/session", only: %i[create destroy], controller: "admin/sessions"
+            root "home#index"
+          end
+
+          stub_const(
+            "Admin::ProtectedTestController",
+            Class.new(ApplicationController) do
+              before_action :require_admin!
+
+              def index
+                render plain: admin_signed_in?.to_s
+              end
+            end
+          )
+
+          post "/admin/session", params: { password: "secret-password" }
+          delete "/admin/session"
+          get "/admin/protected_test"
+
+          expect(response).to redirect_to(root_path)
+          expect(flash[:alert]).to eq("Admin access required")
+        ensure
+          if original_admin_password.nil?
+            ENV.delete("FOOTBALL_APP_ADMIN_PASSWORD")
+          else
+            ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = original_admin_password
+          end
+
+          Rails.application.reload_routes!
         end
       end
     end
