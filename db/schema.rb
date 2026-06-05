@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_04_240200) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_05_083000) do
   create_table "players", force: :cascade do |t|
     t.boolean "active", default: true, null: false
     t.string "approval_status", default: "pending", null: false
@@ -26,5 +26,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_04_240200) do
     t.index ["nickname"], name: "index_players_on_nickname", unique: true
     t.index ["phone"], name: "index_players_on_phone", unique: true
     t.index ["role_code"], name: "index_players_on_role_code"
+  end
+
+  create_table "seasons", force: :cascade do |t|
+    t.boolean "active", default: false, null: false
+    t.datetime "created_at", null: false
+    t.integer "def_vote_bonus", default: 10, null: false
+    t.integer "elo_k_factor", default: 32, null: false
+    t.date "ends_on"
+    t.integer "initial_elo", default: 1000, null: false
+    t.integer "mvp_vote_bonus", default: 10, null: false
+    t.string "name", null: false
+    t.date "starts_on", null: false
+    t.datetime "updated_at", null: false
+    t.index ["active"], name: "index_seasons_on_active"
+    t.index ["name"], name: "index_seasons_on_name", unique: true
+    t.index ["starts_on", "ends_on"], name: "index_seasons_on_starts_on_and_ends_on"
   end
 end
