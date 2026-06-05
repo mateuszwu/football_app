@@ -9,6 +9,13 @@ class PlayersController < ApplicationController
     player = Player.new(player_params)
 
     if player.save
+      cookies[:pending_player_edit_token] = {
+        value: Players::GenerateEditToken.call(player: player),
+        expires: Players::GenerateEditToken::EXPIRATION.from_now,
+        httponly: true,
+        same_site: :lax
+      }
+
       redirect_to new_player_path, notice: "Zgloszenie zawodnika zostalo zapisane i czeka na akceptacje."
     else
       render :new, locals: { player: player }, status: :unprocessable_content
