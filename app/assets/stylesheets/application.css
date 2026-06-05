@@ -20,7 +20,9 @@
   gap: 0.35rem;
 }
 
-.form-field input {
+.form-field input,
+.form-field select,
+.form-field textarea {
   border: 1px solid #d4d4d8;
   border-radius: 0.5rem;
   font: inherit;
@@ -38,6 +40,36 @@
 .button--primary {
   background: #111827;
   color: #ffffff;
+}
+
+.button--secondary {
+  background: #e5e7eb;
+  color: #111827;
+  display: inline-block;
+  text-decoration: none;
+}
+
+.admin-form {
+  display: grid;
+  gap: 1rem;
+  max-width: 36rem;
+}
+
+.form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.form-checkbox {
+  align-items: center;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.form-errors {
+  color: #b91c1c;
+  margin-bottom: 1rem;
 }
 
 .site-nav__button {
