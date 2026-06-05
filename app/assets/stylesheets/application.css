@@ -40,6 +40,14 @@
   color: #ffffff;
 }
 
+.site-nav__button {
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+  padding: 0;
+}
+
 .flash {
   margin: 1rem auto 0;
   max-width: 72rem;

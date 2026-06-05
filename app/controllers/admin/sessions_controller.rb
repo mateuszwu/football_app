@@ -14,6 +14,11 @@ module Admin
       end
     end
 
+    def destroy
+      session[:admin] = false
+      redirect_to root_path, notice: "Signed out"
+    end
+
     private
 
     def valid_admin_password?
