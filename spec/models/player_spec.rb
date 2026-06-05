@@ -172,4 +172,17 @@ RSpec.describe Player do
       end
     end
   end
+
+  describe "#played_with" do
+    it "delegates to the shared match day query" do
+      player = create(:player)
+      result = instance_double(ActiveRecord::Relation)
+      allow(Players::SharedMatchDaysQuery).to receive(:call).with(player: player).and_return(result)
+
+      returned_result = player.played_with
+
+      expect(returned_result).to eq(result)
+      expect(Players::SharedMatchDaysQuery).to have_received(:call).with(player: player)
+    end
+  end
 end
