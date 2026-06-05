@@ -155,4 +155,21 @@ RSpec.describe Player do
       end
     end
   end
+
+  describe "#match_history" do
+    context "when the player has played multiple match days" do
+      it "returns the player's match days ordered from newest to oldest" do
+        player = create(:player)
+        current_match_day = create(:match_day, played_on: Date.new(2026, 6, 5))
+        older_match_day = create(:match_day, played_on: Date.new(2026, 5, 29))
+        create(:match_day_player, player: player, match_day: older_match_day)
+        create(:match_day_player, player: player, match_day: current_match_day)
+        create(:match_day_player, player: create(:player), match_day: create(:match_day, played_on: Date.new(2026, 6, 12)))
+
+        result = player.match_history
+
+        expect(result).to eq([ current_match_day, older_match_day ])
+      end
+    end
+  end
 end
