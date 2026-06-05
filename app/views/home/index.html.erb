@@ -23,7 +23,11 @@
     </article>
     <article class="summary-card">
       <span class="summary-card__label">Aktywny sezon</span>
-      <strong>Brak danych</strong>
+      <% if current_season %>
+        <strong><%= link_to current_season.name, season_path(current_season) %></strong>
+      <% else %>
+        <strong>Brak danych</strong>
+      <% end %>
     </article>
     <article class="summary-card">
       <span class="summary-card__label">Zawodnicy</span>

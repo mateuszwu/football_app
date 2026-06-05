@@ -1,4 +1,6 @@
 class Season < ApplicationRecord
+  has_many :match_days, dependent: :destroy
+
   validates :name, presence: true, uniqueness: true
   validates :starts_on, presence: true
   validates :initial_elo, numericality: { only_integer: true, greater_than: 0 }
@@ -12,6 +14,22 @@ class Season < ApplicationRecord
 
   def self.current_active
     active.order(starts_on: :desc, created_at: :desc).first
+  end
+
+  def match_days_count
+    match_days.count
+  end
+
+  def player_appearances_count
+    MatchDayPlayer.joins(:match_day).where(match_days: { season_id: id }).count
+  end
+
+  def unique_players_count
+    MatchDayPlayer.joins(:match_day).where(match_days: { season_id: id }).distinct.count(:player_id)
+  end
+
+  def recent_match_days
+    match_days.order(played_on: :desc, id: :desc)
   end
 
   private

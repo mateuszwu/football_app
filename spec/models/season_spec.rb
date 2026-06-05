@@ -130,4 +130,71 @@ RSpec.describe Season do
       end
     end
   end
+
+  describe "#match_days_count" do
+    context "when the season has match days" do
+      it "returns the number of match days in the season" do
+        season = create(:season)
+        create(:match_day, season: season, played_on: Date.new(2026, 6, 5))
+        create(:match_day, season: season, played_on: Date.new(2026, 6, 12))
+        create(:match_day, season: create(:season))
+
+        result = season.match_days_count
+
+        expect(result).to eq(2)
+      end
+    end
+  end
+
+  describe "#player_appearances_count" do
+    context "when players appear across match days" do
+      it "returns the number of player appearances in the season" do
+        season = create(:season)
+        player = create(:player)
+        first_match_day = create(:match_day, season: season, played_on: Date.new(2026, 6, 5))
+        second_match_day = create(:match_day, season: season, played_on: Date.new(2026, 6, 12))
+        create(:match_day_player, match_day: first_match_day, player: player)
+        create(:match_day_player, match_day: second_match_day, player: player)
+        create(:match_day_player, match_day: create(:match_day, season: create(:season)), player: create(:player))
+
+        result = season.player_appearances_count
+
+        expect(result).to eq(2)
+      end
+    end
+  end
+
+  describe "#unique_players_count" do
+    context "when a player appears more than once" do
+      it "counts each player once within the season" do
+        season = create(:season)
+        player = create(:player)
+        other_player = create(:player)
+        first_match_day = create(:match_day, season: season, played_on: Date.new(2026, 6, 5))
+        second_match_day = create(:match_day, season: season, played_on: Date.new(2026, 6, 12))
+        create(:match_day_player, match_day: first_match_day, player: player)
+        create(:match_day_player, match_day: second_match_day, player: player)
+        create(:match_day_player, match_day: second_match_day, player: other_player)
+
+        result = season.unique_players_count
+
+        expect(result).to eq(2)
+      end
+    end
+  end
+
+  describe "#recent_match_days" do
+    context "when the season has multiple match days" do
+      it "returns match days ordered from newest to oldest" do
+        season = create(:season)
+        older_match_day = create(:match_day, season: season, played_on: Date.new(2026, 6, 5))
+        latest_match_day = create(:match_day, season: season, played_on: Date.new(2026, 6, 12))
+        create(:match_day, season: create(:season), played_on: Date.new(2026, 6, 19))
+
+        result = season.recent_match_days
+
+        expect(result).to eq([ latest_match_day, older_match_day ])
+      end
+    end
+  end
 end

@@ -1,0 +1,46 @@
+<% content_for :title, "#{season.name} - Football App" %>
+
+<section class="section season-stats">
+  <div class="section__header">
+    <p class="eyebrow">Statystyki sezonu</p>
+    <h1><%= season.name %></h1>
+    <p>
+      <%= season.starts_on %>
+      -
+      <%= season.ends_on || "bez daty konca" %>
+    </p>
+  </div>
+
+  <div class="summary-grid">
+    <article class="summary-card">
+      <span class="summary-card__label">Match days</span>
+      <strong><%= season.match_days_count %></strong>
+    </article>
+    <article class="summary-card">
+      <span class="summary-card__label">Zawodnicy</span>
+      <strong><%= season.unique_players_count %></strong>
+    </article>
+    <article class="summary-card">
+      <span class="summary-card__label">Wystepy</span>
+      <strong><%= season.player_appearances_count %></strong>
+    </article>
+  </div>
+
+  <div class="player-profile__body">
+    <h2>Ostatnie match days</h2>
+
+    <% if recent_match_days.any? %>
+      <ul>
+        <% recent_match_days.each do |match_day| %>
+          <li>
+            <strong><%= match_day.played_on %></strong>
+            <span><%= match_day.status %></span>
+            <span><%= pluralize(match_day.players.size, "player") %></span>
+          </li>
+        <% end %>
+      </ul>
+    <% else %>
+      <p class="empty-state">Brak match days w tym sezonie.</p>
+    <% end %>
+  </div>
+</section>
