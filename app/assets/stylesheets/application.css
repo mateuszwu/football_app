@@ -167,3 +167,14 @@
 .empty-state {
   color: #4b5563;
 }
+
+.status-badge {
+  background: #e5e7eb;
+  border-radius: 999px;
+  color: #111827;
+  display: inline-block;
+  font-size: 0.875rem;
+  font-weight: 700;
+  margin: 0;
+  padding: 0.25rem 0.625rem;
+}

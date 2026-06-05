@@ -1,0 +1,40 @@
+<% content_for :title, "Admin Match Days" %>
+
+<section class="section" id="admin-match-days">
+  <div class="section__header">
+    <span class="section__eyebrow">Admin</span>
+    <h1>Match days</h1>
+    <p>Konfiguracja terminow grania i ich statusu roboczego.</p>
+  </div>
+
+  <p><%= link_to "Nowy match day", new_admin_match_day_path, class: "button button--secondary" %></p>
+
+  <% if match_days.any? %>
+    <div class="table-wrapper">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th scope="col">Sezon</th>
+            <th scope="col">Data</th>
+            <th scope="col">Status</th>
+            <th scope="col">Akcje</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% match_days.each do |match_day| %>
+            <tr>
+              <td><%= match_day.season.name %></td>
+              <td><%= match_day.played_on %></td>
+              <td><span class="status-badge"><%= match_day.status %></span></td>
+              <td class="admin-table__actions">
+                <%= link_to "Edytuj", edit_admin_match_day_path(match_day) %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <p>Brak match days do wyswietlenia.</p>
+  <% end %>
+</section>
