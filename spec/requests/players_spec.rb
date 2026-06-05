@@ -18,7 +18,7 @@ RSpec.describe "Players" do
 
   describe "POST /players" do
     context "when the submission is valid" do
-      it "creates a pending player and redirects back to the form" do
+      it "creates a pending player, writes the edit cookie, and redirects back to the form" do
         post "/players", params: {
           player: {
             name: "Adam Nowak",
@@ -40,6 +40,17 @@ RSpec.describe "Players" do
         expect(player.role_code).to eq("DEF")
         expect(player.approval_status).to eq("pending")
         expect(player.active).to eq(true)
+        expect(cookies[:pending_player_edit_token]).to be_present
+
+        payload, = JWT.decode(
+          cookies[:pending_player_edit_token],
+          Rails.application.secret_key_base,
+          true,
+          algorithm: Players::GenerateEditToken::ALGORITHM
+        )
+
+        expect(payload["player_id"]).to eq(player.id)
+        expect(payload["exp"]).to be_within(5).of(Players::GenerateEditToken::EXPIRATION.from_now.to_i)
       end
     end
 
@@ -62,6 +73,7 @@ RSpec.describe "Players" do
         expect(response.body).to include("Phone can&#39;t be blank")
         expect(response.body).to include("Description can&#39;t be blank")
         expect(response.body).to include("Role code is not included in the list")
+        expect(cookies[:pending_player_edit_token]).to be_nil
         expect(Player.count).to eq(0)
       end
     end
