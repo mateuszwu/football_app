@@ -63,6 +63,21 @@ RSpec.describe Team do
 
         expect(team.team_setup).to eq(team_setup)
       end
+
+      it "has many team players" do
+        team = create(:team)
+        team_player = create(:team_player, team: team)
+
+        expect(team.team_players).to contain_exactly(team_player)
+      end
+
+      it "has many players through team players" do
+        team = create(:team)
+        player = create(:player)
+        create(:team_player, team: team, player: player)
+
+        expect(team.players).to contain_exactly(player)
+      end
     end
   end
 end
