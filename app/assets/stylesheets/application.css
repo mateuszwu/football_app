@@ -48,6 +48,28 @@
   padding: 0;
 }
 
+.table-wrapper {
+  overflow-x: auto;
+}
+
+.admin-table {
+  border-collapse: collapse;
+  min-width: 48rem;
+  width: 100%;
+}
+
+.admin-table th,
+.admin-table td {
+  border-bottom: 1px solid #e5e7eb;
+  padding: 0.75rem;
+  text-align: left;
+}
+
+.admin-table th {
+  color: #374151;
+  font-weight: 700;
+}
+
 .flash {
   margin: 1rem auto 0;
   max-width: 72rem;

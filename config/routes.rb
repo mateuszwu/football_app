@@ -2,6 +2,7 @@ Rails.application.routes.draw do
   namespace :admin do
     get "login", to: "sessions#new", as: :login
     resource :session, only: %i[create destroy]
+    resources :players, only: :index
   end
 
   namespace :api do
