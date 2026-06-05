@@ -14,6 +14,7 @@ RSpec.describe "Home page" do
         expect(response.body).to include("Leaderboardy")
         expect(response.body).to include("Relacje")
         expect(response.body).to include("Zawodnicy")
+        expect(response.body).to include("Dolacz")
         expect(response.body).to include("Zaloguj")
       end
     end

@@ -17,7 +17,7 @@ Rails.application.routes.draw do
   end
 
   resources :relationships, only: :index
-  resources :players, only: :show
+  resources :players, only: %i[show new create]
   resources :seasons, only: :show
 
   root "home#index"

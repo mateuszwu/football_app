@@ -53,6 +53,10 @@
     <p>Aktywni zawodnicy z publicznymi profilami.</p>
   </div>
 
+  <p>
+    <%= link_to "Wyslij zgloszenie zawodnika", new_player_path, class: "button button--secondary" %>
+  </p>
+
   <% if players.any? %>
     <div class="player-grid">
       <% players.each do |player| %>
