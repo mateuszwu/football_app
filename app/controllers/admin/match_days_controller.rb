@@ -21,7 +21,7 @@ module Admin
       seasons = available_seasons
       players = available_players
 
-      if save_match_day(match_day)
+      if CreateMatchDay.call(match_day:, params: match_day_form_params, available_players: players)
         redirect_to admin_match_days_path, notice: "Match day created"
       else
         render :new, locals: { match_day: match_day, seasons: seasons, players: players }, status: :unprocessable_content
@@ -41,7 +41,7 @@ module Admin
       seasons = available_seasons
       players = available_players
 
-      if save_match_day(match_day)
+      if UpdateMatchDay.call(match_day:, params: match_day_form_params, available_players: players)
         redirect_to admin_match_days_path, notice: "Match day updated"
       else
         render :edit, locals: { match_day: match_day, seasons: seasons, players: players }, status: :unprocessable_content
@@ -58,25 +58,14 @@ module Admin
       Player.approved.active.order(:name)
     end
 
-    def save_match_day(match_day)
-      MatchDay.transaction do
-        match_day.update!(match_day_params)
-        match_day.player_ids = selected_player_ids
-      end
-
-      true
-    rescue ActiveRecord::RecordInvalid
-      false
-    end
-
-    def selected_player_ids
-      requested_player_ids = params.fetch(:match_day, {}).fetch(:player_ids, []).reject(&:blank?)
-
-      available_players.where(id: requested_player_ids).pluck(:id)
-    end
-
     def match_day_params
       params.require(:match_day).permit(:season_id, :played_on)
+    end
+
+    def match_day_form_params
+      match_day_params.to_h.symbolize_keys.merge(
+        player_ids: params.fetch(:match_day, {}).fetch(:player_ids, [])
+      )
     end
   end
 end
