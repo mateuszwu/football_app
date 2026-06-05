@@ -29,6 +29,7 @@
         <div class="site-nav__links">
           <%= link_to "Dashboard", root_path(anchor: "dashboard") %>
           <%= link_to "Leaderboardy", root_path(anchor: "leaderboards") %>
+          <%= link_to "Relacje", relationships_path %>
           <%= link_to "Zawodnicy", root_path(anchor: "players") %>
           <% if admin_signed_in? %>
             <%= link_to "Match days", admin_match_days_path %>

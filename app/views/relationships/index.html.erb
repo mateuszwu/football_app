@@ -1,0 +1,84 @@
+<% content_for :title, "Graf relacji - Football App" %>
+
+<section class="section">
+  <div class="section__header">
+    <p class="eyebrow">Relacje zawodnikow</p>
+    <h1>Graf relacji</h1>
+    <p>Publiczny widok polaczen zbudowanych na wspolnych match dayach approved aktywnych zawodnikow.</p>
+  </div>
+
+  <div class="summary-grid">
+    <article class="summary-card">
+      <span class="summary-card__label">Publiczni zawodnicy</span>
+      <strong><%= players.count %></strong>
+    </article>
+    <article class="summary-card">
+      <span class="summary-card__label">Widoczne polaczenia</span>
+      <strong><%= edges.count %></strong>
+    </article>
+    <article class="summary-card">
+      <span class="summary-card__label">Najsilniejszy duet</span>
+      <% if strongest_edge %>
+        <strong><%= strongest_edge.player_one.name %> + <%= strongest_edge.player_two.name %></strong>
+        <span><%= pluralize(strongest_edge.shared_match_days_count, "shared match day") %></span>
+      <% else %>
+        <strong>Brak danych</strong>
+      <% end %>
+    </article>
+  </div>
+</section>
+
+<section class="section section--muted">
+  <div class="section__header">
+    <h2>Najmocniejsze polaczenia</h2>
+    <p>Duety uporzadkowane po liczbie wspolnych match dayow.</p>
+  </div>
+
+  <% if edges.any? %>
+    <ol class="relationship-list">
+      <% edges.each do |edge| %>
+        <li class="relationship-list__item">
+          <div>
+            <strong><%= link_to edge.player_one.name, player_path(edge.player_one) %></strong>
+            <span class="relationship-list__connector">&harr;</span>
+            <strong><%= link_to edge.player_two.name, player_path(edge.player_two) %></strong>
+          </div>
+          <span class="status-badge"><%= pluralize(edge.shared_match_days_count, "shared match day") %></span>
+        </li>
+      <% end %>
+    </ol>
+  <% else %>
+    <p class="empty-state">Brak publicznych polaczen do wyswietlenia.</p>
+  <% end %>
+</section>
+
+<section class="section">
+  <div class="section__header">
+    <h2>Najlepsi teammatezi</h2>
+    <p>Top relacje dla kazdego publicznego zawodnika.</p>
+  </div>
+
+  <% if nodes.any? %>
+    <div class="player-grid">
+      <% nodes.each do |node| %>
+        <article class="player-card">
+          <h3><%= link_to node.player.name, player_path(node.player) %></h3>
+          <p class="player-card__meta"><%= node.player.nickname %> &middot; <%= node.player.role_code %></p>
+
+          <% if node.top_teammates.any? %>
+            <p>Najlepsze polaczenie:</p>
+            <ul class="relationship-node-list">
+              <% node.top_teammates.each do |teammate| %>
+                <li><%= link_to teammate.name, player_path(teammate) %></li>
+              <% end %>
+            </ul>
+          <% else %>
+            <p class="empty-state">Brak publicznych teammateow.</p>
+          <% end %>
+        </article>
+      <% end %>
+    </div>
+  <% else %>
+    <p class="empty-state">Brak publicznych zawodnikow do zbudowania grafu relacji.</p>
+  <% end %>
+</section>
