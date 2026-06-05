@@ -30,7 +30,11 @@
               <td><%= player.role_code %></td>
               <td><%= player.approval_status %></td>
               <td><%= player.active? ? "Tak" : "Nie" %></td>
-              <td><%= link_to "Edytuj", edit_admin_player_path(player) %></td>
+              <td class="admin-table__actions">
+                <%= link_to "Edytuj", edit_admin_player_path(player) %>
+                <%= button_to "Approve", approve_admin_player_path(player), method: :patch, class: "link-button" %>
+                <%= button_to "Reject", reject_admin_player_path(player), method: :patch, class: "link-button" %>
+              </td>
             </tr>
           <% end %>
         </tbody>
