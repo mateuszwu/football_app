@@ -25,6 +25,22 @@
     <p class="status-badge"><%= match_day.status.presence || "setup" %></p>
   </div>
 
+  <div class="form-field">
+    <label>Obecni zawodnicy</label>
+    <% if players.any? %>
+      <div class="checkbox-list">
+        <% players.each do |player| %>
+          <label class="checkbox-list__item">
+            <%= check_box_tag "match_day[player_ids][]", player.id, match_day.player_ids.include?(player.id) %>
+            <span><%= player.name %> (<%= player.nickname %>)</span>
+          </label>
+        <% end %>
+      </div>
+    <% else %>
+      <p class="empty-state">Brak aktywnych i zatwierdzonych zawodnikow.</p>
+    <% end %>
+  </div>
+
   <div class="form-actions">
     <%= form.submit "Zapisz", class: "button button--primary" %>
     <%= link_to "Wroc", admin_match_days_path, class: "button button--secondary" %>
