@@ -193,4 +193,74 @@ RSpec.describe "Admin players" do
       end
     end
   end
+
+  describe "PATCH /admin/players/:id/approve" do
+    context "when the visitor is not signed in as admin" do
+      it "does not approve the player" do
+        player = create(:player, approval_status: "pending")
+
+        patch "/admin/players/#{player.id}/approve"
+
+        expect(response).to redirect_to(root_path)
+        expect(player.reload.approval_status).to eq("pending")
+      end
+    end
+
+    context "when the visitor is signed in as admin" do
+      it "approves the player" do
+        begin
+          original_admin_password = ENV["FOOTBALL_APP_ADMIN_PASSWORD"]
+          ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = "secret-password"
+          player = create(:player, approval_status: "pending")
+
+          post "/admin/session", params: { password: "secret-password" }
+          patch "/admin/players/#{player.id}/approve"
+
+          expect(response).to redirect_to(admin_players_path)
+          expect(player.reload.approval_status).to eq("approved")
+        ensure
+          if original_admin_password.nil?
+            ENV.delete("FOOTBALL_APP_ADMIN_PASSWORD")
+          else
+            ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = original_admin_password
+          end
+        end
+      end
+    end
+  end
+
+  describe "PATCH /admin/players/:id/reject" do
+    context "when the visitor is not signed in as admin" do
+      it "does not reject the player" do
+        player = create(:player, approval_status: "pending")
+
+        patch "/admin/players/#{player.id}/reject"
+
+        expect(response).to redirect_to(root_path)
+        expect(player.reload.approval_status).to eq("pending")
+      end
+    end
+
+    context "when the visitor is signed in as admin" do
+      it "rejects the player" do
+        begin
+          original_admin_password = ENV["FOOTBALL_APP_ADMIN_PASSWORD"]
+          ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = "secret-password"
+          player = create(:player, approval_status: "pending")
+
+          post "/admin/session", params: { password: "secret-password" }
+          patch "/admin/players/#{player.id}/reject"
+
+          expect(response).to redirect_to(admin_players_path)
+          expect(player.reload.approval_status).to eq("rejected")
+        ensure
+          if original_admin_password.nil?
+            ENV.delete("FOOTBALL_APP_ADMIN_PASSWORD")
+          else
+            ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = original_admin_password
+          end
+        end
+      end
+    end
+  end
 end
