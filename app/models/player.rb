@@ -2,6 +2,8 @@ class Player < ApplicationRecord
   APPROVAL_STATUSES = %w[pending approved rejected].freeze
   ROLE_CODES = %w[ANY GK DEF MID ATT].freeze
 
+  has_many :match_day_players, dependent: :destroy
+
   validates :name, presence: true
   validates :nickname, presence: true, uniqueness: true
   validates :phone, presence: true, uniqueness: true
