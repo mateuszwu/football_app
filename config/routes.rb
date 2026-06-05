@@ -2,6 +2,7 @@ Rails.application.routes.draw do
   namespace :admin do
     get "login", to: "sessions#new", as: :login
     resource :session, only: %i[create destroy]
+    resources :seasons, except: :show
     resources :players, only: %i[index edit update] do
       member do
         patch :approve
