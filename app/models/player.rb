@@ -4,6 +4,8 @@ class Player < ApplicationRecord
 
   has_many :match_day_players, dependent: :destroy
   has_many :match_days, through: :match_day_players
+  has_many :team_players, dependent: :destroy
+  has_many :teams, through: :team_players
 
   validates :name, presence: true
   validates :nickname, presence: true, uniqueness: true

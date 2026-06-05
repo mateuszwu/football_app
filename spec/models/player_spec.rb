@@ -185,4 +185,23 @@ RSpec.describe Player do
       expect(Players::SharedMatchDaysQuery).to have_received(:call).with(player: player)
     end
   end
+
+  describe "associations" do
+    context "when the record is saved" do
+      it "has many team players" do
+        player = create(:player)
+        team_player = create(:team_player, player: player)
+
+        expect(player.team_players).to contain_exactly(team_player)
+      end
+
+      it "has many teams through team players" do
+        player = create(:player)
+        team = create(:team)
+        create(:team_player, player: player, team: team)
+
+        expect(player.teams).to contain_exactly(team)
+      end
+    end
+  end
 end
