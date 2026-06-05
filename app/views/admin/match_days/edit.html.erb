@@ -1,0 +1,11 @@
+<% content_for :title, "Edit Match Day" %>
+
+<section class="section" id="admin-match-day-edit">
+  <div class="section__header">
+    <span class="section__eyebrow">Admin</span>
+    <h1>Edytuj match day</h1>
+    <p>Aktualizuj sezon i termin dla wybranego match day.</p>
+  </div>
+
+  <%= render "form", match_day: match_day, seasons: seasons %>
+</section>
