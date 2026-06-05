@@ -20,4 +20,8 @@ class Player < ApplicationRecord
   def match_history
     match_days.includes(:season).order(played_on: :desc, id: :desc)
   end
+
+  def played_with
+    Players::SharedMatchDaysQuery.call(player: self)
+  end
 end
