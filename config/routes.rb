@@ -1,4 +1,9 @@
 Rails.application.routes.draw do
+  namespace :admin do
+    get "login", to: "sessions#new", as: :login
+    resource :session, only: :create
+  end
+
   namespace :api do
     resources :vote_invites, only: :index
   end

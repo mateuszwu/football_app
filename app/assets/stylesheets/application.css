@@ -8,3 +8,48 @@
  *
  * Consider organizing styles into separate files for maintainability.
  */
+
+.admin-login-form {
+  display: grid;
+  gap: 1rem;
+  max-width: 24rem;
+}
+
+.form-field {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.form-field input {
+  border: 1px solid #d4d4d8;
+  border-radius: 0.5rem;
+  font: inherit;
+  padding: 0.75rem 0.875rem;
+}
+
+.button {
+  border: 0;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  font: inherit;
+  padding: 0.75rem 1rem;
+}
+
+.button--primary {
+  background: #111827;
+  color: #ffffff;
+}
+
+.flash {
+  margin: 1rem auto 0;
+  max-width: 72rem;
+  padding: 0 1.5rem;
+}
+
+.flash--alert {
+  color: #b91c1c;
+}
+
+.flash--notice {
+  color: #047857;
+}
