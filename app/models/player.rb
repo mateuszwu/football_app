@@ -16,4 +16,8 @@ class Player < ApplicationRecord
   scope :approved, -> { where(approval_status: "approved") }
   scope :pending, -> { where(approval_status: "pending") }
   scope :rejected, -> { where(approval_status: "rejected") }
+
+  def match_history
+    match_days.includes(:season).order(played_on: :desc, id: :desc)
+  end
 end

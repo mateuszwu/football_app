@@ -11,4 +11,22 @@
     <h2>Opis</h2>
     <p><%= player.description %></p>
   </div>
+
+  <div class="player-profile__body">
+    <h2>Historia meczow</h2>
+
+    <% if match_history.any? %>
+      <ul>
+        <% match_history.each do |match_day| %>
+          <li>
+            <strong><%= match_day.played_on %></strong>
+            <span><%= match_day.season.name %></span>
+            <span><%= match_day.status %></span>
+          </li>
+        <% end %>
+      </ul>
+    <% else %>
+      <p>Brak rozegranych meczow.</p>
+    <% end %>
+  </div>
 </section>
