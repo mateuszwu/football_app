@@ -8,8 +8,18 @@ When the user says "continue", treat it as:
 2. If green and mergeable, mark the PR ready.
 3. Merge it.
 4. Update local `main`.
-5. Pick the next suitable open ticket.
+5. Pick the next suitable open ticket, prioritizing the lowest open MVP milestone number first.
 6. Implement it, run checks, push, and open the next draft PR.
+
+## Issue Priority
+
+When choosing the next issue, use this order:
+
+1. Lowest open MVP milestone number first: MVP 1 before MVP 2 before MVP 3, and so on.
+2. Within the same MVP milestone, prefer issues that are already AI-ready or otherwise clearly implementable from the current codebase.
+3. Only move to a higher MVP milestone after the lower MVP milestone no longer has a suitable open issue.
+
+Use GitHub project/milestone metadata to determine the MVP number when it is available. Do not skip ahead to a higher MVP milestone just because a later issue looks smaller or more interesting.
 
 ## GitHub PR Workflow Commands
 
