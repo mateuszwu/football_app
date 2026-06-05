@@ -27,5 +27,35 @@ RSpec.describe "Home page" do
         expect(response.body).not_to include("telefon")
       end
     end
+
+    context "when public approved players exist" do
+      it "renders links to public profiles without private phone data" do
+        approved_player = create(
+          :player,
+          name: "Adam Nowak",
+          nickname: "adam",
+          phone: "+48111111111",
+          approval_status: "approved",
+          active: true
+        )
+        create(
+          :player,
+          name: "Pending Player",
+          nickname: "pending",
+          phone: "+48222222222",
+          approval_status: "pending",
+          active: true
+        )
+
+        get root_path
+
+        expect(response).to have_http_status(:ok)
+        expect(response.body).to include("Adam Nowak")
+        expect(response.body).to include(player_path(approved_player))
+        expect(response.body).not_to include("Pending Player")
+        expect(response.body).not_to include("+48111111111")
+        expect(response.body).not_to include("+48222222222")
+      end
+    end
   end
 end

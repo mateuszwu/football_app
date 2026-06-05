@@ -42,6 +42,20 @@
 <section class="section" id="players">
   <div class="section__header">
     <h2>Zawodnicy</h2>
-    <p>Publiczna lista profili i formularz dodania zawodnika pojawią się w kolejnych zadaniach MVP 1.</p>
+    <p>Aktywni zawodnicy z publicznymi profilami.</p>
   </div>
+
+  <% if players.any? %>
+    <div class="player-grid">
+      <% players.each do |player| %>
+        <article class="player-card">
+          <h3><%= link_to player.name, player_path(player) %></h3>
+          <p class="player-card__meta"><%= player.nickname %> &middot; <%= player.role_code %></p>
+          <p><%= truncate(player.description, length: 140) %></p>
+        </article>
+      <% end %>
+    </div>
+  <% else %>
+    <p class="empty-state">Brak publicznych profili zawodnikow.</p>
+  <% end %>
 </section>
