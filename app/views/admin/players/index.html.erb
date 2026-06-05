@@ -1,0 +1,40 @@
+<% content_for :title, "Admin Players" %>
+
+<section class="section" id="admin-players">
+  <div class="section__header">
+    <span class="section__eyebrow">Admin</span>
+    <h1>Zawodnicy</h1>
+    <p>Lista zawodnikow z danymi administracyjnymi.</p>
+  </div>
+
+  <% if @players.any? %>
+    <div class="table-wrapper">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th scope="col">Imie</th>
+            <th scope="col">Nick</th>
+            <th scope="col">Telefon</th>
+            <th scope="col">Rola</th>
+            <th scope="col">Status</th>
+            <th scope="col">Aktywny</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @players.each do |player| %>
+            <tr>
+              <td><%= player.name %></td>
+              <td><%= player.nickname %></td>
+              <td><%= player.phone %></td>
+              <td><%= player.role_code %></td>
+              <td><%= player.approval_status %></td>
+              <td><%= player.active? ? "Tak" : "Nie" %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <p>Brak zawodnikow do wyswietlenia.</p>
+  <% end %>
+</section>
