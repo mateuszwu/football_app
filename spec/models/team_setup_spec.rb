@@ -37,4 +37,17 @@ RSpec.describe TeamSetup do
       end
     end
   end
+
+  describe "#fingerprint" do
+    it "delegates to the fingerprint generator" do
+      team_setup = create(:team_setup)
+      fingerprint = "abc123"
+      allow(TeamSetups::GenerateFingerprint).to receive(:call).with(team_setup: team_setup).and_return(fingerprint)
+
+      result = team_setup.fingerprint
+
+      expect(result).to eq(fingerprint)
+      expect(TeamSetups::GenerateFingerprint).to have_received(:call).with(team_setup: team_setup)
+    end
+  end
 end
