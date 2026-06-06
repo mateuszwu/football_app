@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_06_061500) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_06_070000) do
   create_table "match_day_players", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.integer "match_day_id", null: false
@@ -29,6 +29,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_06_061500) do
     t.datetime "used_at"
     t.index ["match_day_player_id"], name: "index_match_day_vote_tokens_on_match_day_player_id", unique: true
     t.index ["token"], name: "index_match_day_vote_tokens_on_token", unique: true
+  end
+
+  create_table "match_day_votes", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.integer "def_player_id", null: false
+    t.integer "match_day_vote_token_id", null: false
+    t.integer "mvp_player_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["def_player_id"], name: "index_match_day_votes_on_def_player_id"
+    t.index ["match_day_vote_token_id"], name: "index_match_day_votes_on_match_day_vote_token_id", unique: true
+    t.index ["mvp_player_id"], name: "index_match_day_votes_on_mvp_player_id"
   end
 
   create_table "match_days", force: :cascade do |t|
@@ -105,6 +116,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_06_061500) do
   add_foreign_key "match_day_players", "match_days"
   add_foreign_key "match_day_players", "players"
   add_foreign_key "match_day_vote_tokens", "match_day_players"
+  add_foreign_key "match_day_votes", "match_day_vote_tokens"
+  add_foreign_key "match_day_votes", "players", column: "def_player_id"
+  add_foreign_key "match_day_votes", "players", column: "mvp_player_id"
   add_foreign_key "match_days", "seasons"
   add_foreign_key "team_players", "players"
   add_foreign_key "team_players", "teams"
