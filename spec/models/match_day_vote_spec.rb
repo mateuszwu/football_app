@@ -107,6 +107,20 @@ RSpec.describe MatchDayVote do
         expect(match_day_vote.errors[:def_player_id]).to include("cannot be the voter")
       end
     end
+
+    context "when the same non-voter is selected for MVP and DEF" do
+      it "is valid" do
+        match_day_vote_token = create_vote_token(name: "Voter Same")
+        selected_player = create(:player, name: "Two Way Player")
+        match_day_vote = described_class.new(
+          match_day_vote_token: match_day_vote_token,
+          mvp_player: selected_player,
+          def_player: selected_player
+        )
+
+        expect(match_day_vote).to be_valid
+      end
+    end
   end
 
   describe "associations" do

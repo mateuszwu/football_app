@@ -66,6 +66,28 @@ RSpec.describe "Votes" do
           def_player: def_candidate
         )
       end
+
+      it "allows the same non-voter to be selected for MVP and DEF" do
+        voter = create(:player, name: "Voter", nickname: "voter", phone: "+48111111111", approval_status: "approved", active: true)
+        selected_player = create(:player, name: "Adam Nowak", nickname: "adam", phone: "+48222222222", approval_status: "approved", active: true)
+        match_day = create(:match_day)
+        voter_match_day_player = create(:match_day_player, match_day: match_day, player: voter)
+        create(:match_day_player, match_day: match_day, player: selected_player)
+        vote_token = create(:match_day_vote_token, match_day_player: voter_match_day_player, token: "vote-token")
+
+        post "/votes/#{vote_token.token}", params: {
+          match_day_vote: {
+            mvp_player_id: selected_player.id,
+            def_player_id: selected_player.id
+          }
+        }
+
+        expect(response).to redirect_to("/votes/#{vote_token.token}")
+        expect(vote_token.reload.match_day_vote).to have_attributes(
+          mvp_player: selected_player,
+          def_player: selected_player
+        )
+      end
     end
 
     context "when the vote params are invalid" do
