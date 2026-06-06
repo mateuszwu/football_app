@@ -25,6 +25,7 @@ RSpec.describe CreateMatchDay do
         expect(match_day.season).to eq(season)
         expect(match_day.played_on).to eq(Date.new(2026, 6, 5))
         expect(match_day.players).to contain_exactly(approved_player)
+        expect(match_day.match_day_players.first.match_day_vote_token).to be_present
       end
 
       it "creates manual baseline teams when team assignments are provided" do
@@ -49,6 +50,7 @@ RSpec.describe CreateMatchDay do
         expect(result).to be(true)
         expect(match_day.teams.find_by!(name: "Team A").players).to contain_exactly(first_player)
         expect(match_day.teams.find_by!(name: "Team B").players).to contain_exactly(second_player)
+        expect(match_day.match_day_players.map(&:match_day_vote_token)).to all(be_present)
       end
     end
 

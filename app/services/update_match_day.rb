@@ -12,7 +12,8 @@ class UpdateMatchDay
   def call
     MatchDay.transaction do
       match_day.update!(match_day_attributes)
-      match_day.player_ids = selected_player_ids
+      sync_match_day_players!
+      GenerateMatchDayVoteTokens.call(match_day:)
       save_manual_teams!
     end
 
@@ -31,6 +32,15 @@ class UpdateMatchDay
 
   def match_day_attributes
     params.slice(:season_id, :played_on)
+  end
+
+  def sync_match_day_players!
+    match_day.match_day_players.where.not(player_id: selected_player_ids).find_each(&:destroy!)
+
+    missing_player_ids = selected_player_ids - match_day.match_day_players.pluck(:player_id)
+    missing_player_ids.each do |player_id|
+      match_day.match_day_players.create!(player_id: player_id)
+    end
   end
 
   def save_manual_teams!

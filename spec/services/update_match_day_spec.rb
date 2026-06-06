@@ -9,7 +9,8 @@ RSpec.describe UpdateMatchDay do
         original_player = create(:player, approval_status: "approved", active: true)
         new_player = create(:player, name: "New Player", nickname: "new", phone: "+48987654321", approval_status: "approved", active: true)
         match_day = create(:match_day, season:, played_on: Date.new(2026, 6, 5))
-        create(:match_day_player, match_day:, player: original_player)
+        original_match_day_player = create(:match_day_player, match_day:, player: original_player)
+        original_match_day_player.create_match_day_vote_token!(token: "original-token")
         params = {
           season_id: other_season.id,
           played_on: Date.new(2026, 6, 12),
@@ -26,6 +27,8 @@ RSpec.describe UpdateMatchDay do
         expect(match_day.reload.season).to eq(other_season)
         expect(match_day.played_on).to eq(Date.new(2026, 6, 12))
         expect(match_day.players).to contain_exactly(new_player)
+        expect(match_day.match_day_players.first.match_day_vote_token).to be_present
+        expect(MatchDayVoteToken.find_by(token: "original-token")).to be_nil
       end
 
       it "replaces manual baseline teams" do
@@ -54,6 +57,7 @@ RSpec.describe UpdateMatchDay do
         expect(result).to be(true)
         expect(match_day.reload.teams.find_by!(name: "Team A").players).to contain_exactly(second_player)
         expect(match_day.teams.find_by!(name: "Team B").players).to contain_exactly(third_player)
+        expect(match_day.match_day_players.map(&:match_day_vote_token)).to all(be_present)
       end
     end
 
