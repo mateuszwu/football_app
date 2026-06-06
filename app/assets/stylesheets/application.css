@@ -218,3 +218,37 @@
   margin: 0.5rem 0 0;
   padding-left: 1.25rem;
 }
+
+.relationship-graph-shell {
+  background:
+    radial-gradient(circle at top, #eff6ff, #ffffff 55%),
+    linear-gradient(135deg, #f8fafc, #eef2ff);
+  border: 1px solid #dbeafe;
+  border-radius: 1rem;
+  overflow-x: auto;
+  padding: 1rem;
+}
+
+.relationship-graph {
+  display: block;
+  height: auto;
+  min-width: 40rem;
+  width: 100%;
+}
+
+.relationship-graph__edge {
+  stroke: #93c5fd;
+  stroke-linecap: round;
+}
+
+.relationship-graph__node {
+  fill: #111827;
+  stroke: #ffffff;
+  stroke-width: 3px;
+}
+
+.relationship-graph__label {
+  fill: #1f2937;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
