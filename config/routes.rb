@@ -16,6 +16,9 @@ Rails.application.routes.draw do
     resources :vote_invites, only: :index
   end
 
+  get "votes/:token", to: "votes#show", as: :vote
+  post "votes/:token", to: "votes#create"
+
   resources :relationships, only: :index
   resources :players, only: %i[show new create edit update]
   resources :seasons, only: :show
