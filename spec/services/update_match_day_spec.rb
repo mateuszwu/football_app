@@ -55,9 +55,40 @@ RSpec.describe UpdateMatchDay do
         )
 
         expect(result).to be(true)
+        expect(match_day.reload.status).to eq("ready")
         expect(match_day.reload.teams.find_by!(name: "Team A").players).to contain_exactly(second_player)
         expect(match_day.teams.find_by!(name: "Team B").players).to contain_exactly(third_player)
         expect(match_day.match_day_players.map(&:match_day_vote_token)).to all(be_present)
+      end
+
+      it "moves the match day back to setup when team assignments become incomplete" do
+        season = create(:season)
+        first_player = create(:player, approval_status: "approved", active: true)
+        second_player = create(:player, name: "Second", nickname: "second", phone: "+48999999998", approval_status: "approved", active: true)
+        match_day = create(:match_day, season:, played_on: Date.new(2026, 6, 5), status: "ready")
+        create(:match_day_player, match_day:, player: first_player)
+        create(:match_day_player, match_day:, player: second_player)
+        team_setup = create(:team_setup, match_day: match_day)
+        team_a = create(:team, team_setup:, name: "Team A", team_type: "baseline")
+        team_b = create(:team, team_setup:, name: "Team B", team_type: "baseline")
+        create(:team_player, team: team_a, player: first_player)
+        create(:team_player, team: team_b, player: second_player)
+        params = {
+          season_id: season.id,
+          played_on: Date.new(2026, 6, 12),
+          player_ids: [ first_player.id.to_s, second_player.id.to_s ],
+          team_a_player_ids: [ first_player.id.to_s ],
+          team_b_player_ids: []
+        }
+
+        result = described_class.call(
+          match_day: match_day,
+          params: params,
+          available_players: Player.approved.active.order(:name)
+        )
+
+        expect(result).to be(true)
+        expect(match_day.reload.status).to eq("setup")
       end
     end
 

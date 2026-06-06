@@ -48,9 +48,33 @@ RSpec.describe CreateMatchDay do
         )
 
         expect(result).to be(true)
+        expect(match_day.status).to eq("ready")
         expect(match_day.teams.find_by!(name: "Team A").players).to contain_exactly(first_player)
         expect(match_day.teams.find_by!(name: "Team B").players).to contain_exactly(second_player)
         expect(match_day.match_day_players.map(&:match_day_vote_token)).to all(be_present)
+      end
+
+      it "keeps the match day in setup when selected players are not fully assigned" do
+        season = create(:season)
+        first_player = create(:player, approval_status: "approved", active: true)
+        second_player = create(:player, name: "Second", nickname: "second", phone: "+48999999998", approval_status: "approved", active: true)
+        match_day = MatchDay.new
+        params = {
+          season_id: season.id,
+          played_on: Date.new(2026, 6, 5),
+          player_ids: [ first_player.id.to_s, second_player.id.to_s ],
+          team_a_player_ids: [ first_player.id.to_s ],
+          team_b_player_ids: []
+        }
+
+        result = described_class.call(
+          match_day: match_day,
+          params: params,
+          available_players: Player.approved.active.order(:name)
+        )
+
+        expect(result).to be(true)
+        expect(match_day.status).to eq("setup")
       end
     end
 
