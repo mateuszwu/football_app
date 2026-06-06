@@ -88,6 +88,26 @@ RSpec.describe "Votes" do
         expect(response.body).to include("Popraw bledy formularza:")
         expect(response.body).to include("Mvp player must exist")
       end
+
+      it "rejects self-voting selections" do
+        voter = create(:player, name: "Voter", nickname: "voter", phone: "+48111111111", approval_status: "approved", active: true)
+        candidate = create(:player, name: "Adam Nowak", nickname: "adam", phone: "+48222222222", approval_status: "approved", active: true)
+        match_day = create(:match_day)
+        voter_match_day_player = create(:match_day_player, match_day: match_day, player: voter)
+        create(:match_day_player, match_day: match_day, player: candidate)
+        vote_token = create(:match_day_vote_token, match_day_player: voter_match_day_player, token: "vote-token")
+
+        post "/votes/#{vote_token.token}", params: {
+          match_day_vote: {
+            mvp_player_id: voter.id,
+            def_player_id: candidate.id
+          }
+        }
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(response.body).to include("Mvp player cannot be the voter")
+        expect(vote_token.reload.match_day_vote).to be_nil
+      end
     end
   end
 end

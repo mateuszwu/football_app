@@ -77,6 +77,36 @@ RSpec.describe MatchDayVote do
         expect(match_day_vote.errors[:match_day_vote_token_id]).to include("has already been taken")
       end
     end
+
+    context "when the voter selects themself as MVP" do
+      it "is invalid" do
+        match_day_vote_token = create_vote_token(name: "Voter Self")
+        def_player = create(:player, name: "Other DEF")
+        match_day_vote = described_class.new(
+          match_day_vote_token: match_day_vote_token,
+          mvp_player: match_day_vote_token.match_day_player.player,
+          def_player: def_player
+        )
+
+        expect(match_day_vote).not_to be_valid
+        expect(match_day_vote.errors[:mvp_player_id]).to include("cannot be the voter")
+      end
+    end
+
+    context "when the voter selects themself as DEF" do
+      it "is invalid" do
+        match_day_vote_token = create_vote_token(name: "Voter Self")
+        mvp_player = create(:player, name: "Other MVP")
+        match_day_vote = described_class.new(
+          match_day_vote_token: match_day_vote_token,
+          mvp_player: mvp_player,
+          def_player: match_day_vote_token.match_day_player.player
+        )
+
+        expect(match_day_vote).not_to be_valid
+        expect(match_day_vote.errors[:def_player_id]).to include("cannot be the voter")
+      end
+    end
   end
 
   describe "associations" do
