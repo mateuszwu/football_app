@@ -13,6 +13,7 @@ class VotesController < ApplicationController
     selectable_players = match_day_vote_token.match_day_player.match_day.players.order(:name)
 
     if vote.update(vote_params.merge(match_day_vote_token: match_day_vote_token))
+      match_day_vote_token.mark_used!
       redirect_to vote_path(match_day_vote_token.token), notice: "Glos zapisany"
     else
       render :show, locals: { match_day_vote_token: match_day_vote_token, selectable_players: selectable_players, vote: vote }, status: :unprocessable_content
