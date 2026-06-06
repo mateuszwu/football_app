@@ -1,0 +1,40 @@
+<% content_for :title, "Glosowanie MVP i DEF - Football App" %>
+
+<section class="section vote-form-page">
+  <div class="section__header">
+    <p class="eyebrow">Glosowanie po meczu</p>
+    <h1>MVP i DEF</h1>
+    <p>
+      Glosuje: <strong><%= match_day_vote_token.match_day_player.player.nickname %></strong>
+      <span>&middot;</span>
+      <span><%= match_day_vote_token.match_day_player.match_day.played_on %></span>
+    </p>
+  </div>
+
+  <% if vote.errors.any? %>
+    <div class="form-errors">
+      <p>Popraw bledy formularza:</p>
+      <ul>
+        <% vote.errors.full_messages.each do |message| %>
+          <li><%= message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <%= form_with model: vote, url: vote_path(match_day_vote_token.token), class: "admin-form", method: :post do |form| %>
+    <div class="form-field">
+      <%= form.label :mvp_player_id, "Wybierz MVP" %>
+      <%= form.collection_select :mvp_player_id, selectable_players, :id, :name, { prompt: "Wybierz zawodnika" }, required: true %>
+    </div>
+
+    <div class="form-field">
+      <%= form.label :def_player_id, "Wybierz DEF" %>
+      <%= form.collection_select :def_player_id, selectable_players, :id, :name, { prompt: "Wybierz zawodnika" }, required: true %>
+    </div>
+
+    <div class="form-actions">
+      <%= form.submit "Zapisz glos", class: "button button--primary" %>
+    </div>
+  <% end %>
+</section>
