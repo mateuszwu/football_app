@@ -1,4 +1,5 @@
 <% content_for :title, "Graf relacji - Football App" %>
+<% graph_layout = relationship_graph_layout(players: players, edges: edges) %>
 
 <section class="section">
   <div class="section__header">
@@ -26,6 +27,60 @@
       <% end %>
     </article>
   </div>
+</section>
+
+<section class="section">
+  <div class="section__header">
+    <h2>Wizualna siec polaczen</h2>
+    <p>Statyczny graf SVG pokazujacy publicznych zawodnikow i sile ich wspolnych match dayow.</p>
+  </div>
+
+  <% if graph_layout.nodes.any? %>
+    <div class="relationship-graph-shell">
+      <svg
+        aria-labelledby="relationship-graph-title"
+        class="relationship-graph"
+        role="img"
+        viewBox="0 0 <%= graph_layout.width %> <%= graph_layout.height %>"
+      >
+        <title id="relationship-graph-title">Graf relacji publicznych zawodnikow</title>
+
+        <% graph_layout.edges.each do |edge| %>
+          <line
+            class="relationship-graph__edge"
+            x1="<%= edge.x1 %>"
+            y1="<%= edge.y1 %>"
+            x2="<%= edge.x2 %>"
+            y2="<%= edge.y2 %>"
+            stroke-width="<%= edge.stroke_width %>"
+          >
+            <title><%= "#{edge.player_one.name} i #{edge.player_two.name}: #{pluralize(edge.shared_match_days_count, "shared match day")}" %></title>
+          </line>
+        <% end %>
+
+        <% graph_layout.nodes.each do |node| %>
+          <a href="<%= player_path(node.player) %>">
+            <circle
+              class="relationship-graph__node"
+              cx="<%= node.x %>"
+              cy="<%= node.y %>"
+              r="16"
+            >
+              <title><%= "#{node.player.name} (#{node.player.nickname})" %></title>
+            </circle>
+            <text
+              class="relationship-graph__label"
+              text-anchor="middle"
+              x="<%= node.label_x %>"
+              y="<%= node.label_y %>"
+            ><%= node.player.name %></text>
+          </a>
+        <% end %>
+      </svg>
+    </div>
+  <% else %>
+    <p class="empty-state">Brak publicznych zawodnikow do narysowania grafu relacji.</p>
+  <% end %>
 </section>
 
 <section class="section section--muted">
