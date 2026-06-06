@@ -18,6 +18,15 @@ RSpec.describe TeamSetup do
         expect(team_setup.errors[:match_day]).to include("must exist")
       end
     end
+
+    context "when reroll count is negative" do
+      it "is invalid" do
+        team_setup = build(:team_setup, reroll_count: -1)
+
+        expect(team_setup).not_to be_valid
+        expect(team_setup.errors[:reroll_count]).to include("must be greater than or equal to 0")
+      end
+    end
   end
 
   describe "associations" do
@@ -48,6 +57,14 @@ RSpec.describe TeamSetup do
 
       expect(result).to eq(fingerprint)
       expect(TeamSetups::GenerateFingerprint).to have_received(:call).with(team_setup: team_setup)
+    end
+  end
+
+  describe "defaults" do
+    it "starts with a zero reroll count" do
+      team_setup = create(:team_setup)
+
+      expect(team_setup.reroll_count).to eq(0)
     end
   end
 end
