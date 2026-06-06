@@ -1,42 +1,10 @@
 require "rails_helper"
 
 RSpec.describe MatchDayVoteToken do
-  def create_persisted_player(name:)
-    attributes = {
-      name: name,
-      role_code: "ANY",
-      description: "Regular football player",
-      approval_status: "pending",
-      active: true,
-      created_at: Time.current,
-      updated_at: Time.current
-    }
-
-    if Player.columns_hash.key?("nickname")
-      attributes[:nickname] = name.parameterize
-    end
-
-    if Player.columns_hash.key?("phone")
-      attributes[:phone] = "+48123#{SecureRandom.random_number(10**6).to_s.rjust(6, "0")}"
-    end
-
-    if Player.columns_hash.key?("rating_code")
-      attributes[:rating_code] = "starter"
-    end
-
-    if Player.columns_hash.key?("team_id")
-      attributes[:team_id] = nil
-    end
-
-    Player.insert(attributes)
-
-    Player.order(:id).last
-  end
-
   def create_match_day_player_record(name:)
     season = create(:season)
     match_day = create(:match_day, season: season)
-    player = create_persisted_player(name: name)
+    player = create(:player, name: name)
 
     MatchDayPlayer.create!(match_day: match_day, player: player)
   end
@@ -94,8 +62,8 @@ RSpec.describe MatchDayVoteToken do
         match_day_vote_token = create_match_day_player_record(name: "Player Four").then do |match_day_player|
           described_class.create!(match_day_player: match_day_player, token: "vote-token-4")
         end
-        mvp_player = create_persisted_player(name: "Assoc MVP")
-        def_player = create_persisted_player(name: "Assoc DEF")
+        mvp_player = create(:player, name: "Assoc MVP")
+        def_player = create(:player, name: "Assoc DEF")
         match_day_vote = MatchDayVote.create!(
           match_day_vote_token: match_day_vote_token,
           mvp_player: mvp_player,
