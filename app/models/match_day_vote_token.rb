@@ -3,4 +3,10 @@ class MatchDayVoteToken < ApplicationRecord
   has_one :match_day_vote, dependent: :destroy
 
   validates :token, presence: true, uniqueness: true
+
+  def mark_used!
+    return if used_at.present?
+
+    update!(used_at: Time.current)
+  end
 end

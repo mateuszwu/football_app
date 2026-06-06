@@ -65,6 +65,7 @@ RSpec.describe "Votes" do
           mvp_player: mvp_candidate,
           def_player: def_candidate
         )
+        expect(vote_token.used_at).to be_present
       end
 
       it "allows the same non-voter to be selected for MVP and DEF" do
@@ -87,6 +88,7 @@ RSpec.describe "Votes" do
           mvp_player: selected_player,
           def_player: selected_player
         )
+        expect(vote_token.used_at).to be_present
       end
     end
 
@@ -109,6 +111,7 @@ RSpec.describe "Votes" do
         expect(response).to have_http_status(:unprocessable_content)
         expect(response.body).to include("Popraw bledy formularza:")
         expect(response.body).to include("Mvp player must exist")
+        expect(vote_token.reload.used_at).to be_nil
       end
 
       it "rejects self-voting selections" do
@@ -129,6 +132,7 @@ RSpec.describe "Votes" do
         expect(response).to have_http_status(:unprocessable_content)
         expect(response.body).to include("Mvp player cannot be the voter")
         expect(vote_token.reload.match_day_vote).to be_nil
+        expect(vote_token.used_at).to be_nil
       end
     end
   end
