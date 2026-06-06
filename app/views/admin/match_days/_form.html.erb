@@ -43,41 +43,46 @@
 
   <div class="form-field">
     <label>Manualny builder bazowych zespolow</label>
-    <p class="field-hint">Przypisz zaznaczonych zawodnikow do Team A i Team B.</p>
+    <p class="field-hint">Przeciagnij zaznaczonych zawodnikow do Team A albo Team B.</p>
 
-    <div class="checkbox-columns">
-      <div>
-        <p><strong>Team A</strong></p>
-        <% if players.any? %>
-          <div class="checkbox-list">
-            <% players.each do |player| %>
-              <label class="checkbox-list__item">
-                <%= check_box_tag "match_day[team_a_player_ids][]", player.id, team_a_player_ids.map(&:to_s).include?(player.id.to_s) %>
-                <span><%= player.name %> (<%= player.nickname %>)</span>
-              </label>
-            <% end %>
-          </div>
-        <% else %>
-          <p class="empty-state">Brak zawodnikow do przypisania.</p>
-        <% end %>
-      </div>
+    <% if players.any? %>
+      <div
+        class="lineup-editor"
+        data-lineup-editor
+        data-team-a-player-ids="<%= json_escape(team_a_player_ids.to_json) %>"
+        data-team-b-player-ids="<%= json_escape(team_b_player_ids.to_json) %>"
+      >
+        <div class="lineup-editor__columns">
+          <section class="lineup-column" data-lineup-column="pool">
+            <header class="lineup-column__header">
+              <h3>Dostepni</h3>
+              <p>Zaznaczeni zawodnicy gotowi do przypisania.</p>
+            </header>
+            <div class="lineup-column__list" data-lineup-list="pool"></div>
+          </section>
 
-      <div>
-        <p><strong>Team B</strong></p>
-        <% if players.any? %>
-          <div class="checkbox-list">
-            <% players.each do |player| %>
-              <label class="checkbox-list__item">
-                <%= check_box_tag "match_day[team_b_player_ids][]", player.id, team_b_player_ids.map(&:to_s).include?(player.id.to_s) %>
-                <span><%= player.name %> (<%= player.nickname %>)</span>
-              </label>
-            <% end %>
-          </div>
-        <% else %>
-          <p class="empty-state">Brak zawodnikow do przypisania.</p>
-        <% end %>
+          <section class="lineup-column" data-lineup-column="team_a">
+            <header class="lineup-column__header">
+              <h3>Team A</h3>
+              <p>Przeciagnij tutaj sklad Team A.</p>
+            </header>
+            <div class="lineup-column__list" data-lineup-list="team_a"></div>
+            <div data-lineup-inputs="team_a"></div>
+          </section>
+
+          <section class="lineup-column" data-lineup-column="team_b">
+            <header class="lineup-column__header">
+              <h3>Team B</h3>
+              <p>Przeciagnij tutaj sklad Team B.</p>
+            </header>
+            <div class="lineup-column__list" data-lineup-list="team_b"></div>
+            <div data-lineup-inputs="team_b"></div>
+          </section>
+        </div>
       </div>
-    </div>
+    <% else %>
+      <p class="empty-state">Brak zawodnikow do przypisania.</p>
+    <% end %>
   </div>
 
   <div class="form-actions">
@@ -85,3 +90,114 @@
     <%= link_to "Wroc", admin_match_days_path, class: "button button--secondary" %>
   </div>
 <% end %>
+
+<script>
+  (() => {
+    const editor = document.querySelector("[data-lineup-editor]");
+    if (!editor || editor.dataset.lineupInitialized === "true") return;
+
+    editor.dataset.lineupInitialized = "true";
+
+    const playerCheckboxes = Array.from(document.querySelectorAll('input[name="match_day[player_ids][]"]'));
+    const poolList = editor.querySelector('[data-lineup-list="pool"]');
+    const teamAList = editor.querySelector('[data-lineup-list="team_a"]');
+    const teamBList = editor.querySelector('[data-lineup-list="team_b"]');
+    const teamAInputs = editor.querySelector('[data-lineup-inputs="team_a"]');
+    const teamBInputs = editor.querySelector('[data-lineup-inputs="team_b"]');
+    const state = {
+      teamA: JSON.parse(editor.dataset.teamAPlayerIds || "[]").map(String),
+      teamB: JSON.parse(editor.dataset.teamBPlayerIds || "[]").map(String)
+    };
+
+    const selectedPlayers = () =>
+      playerCheckboxes
+        .filter((checkbox) => checkbox.checked)
+        .map((checkbox) => ({
+          id: checkbox.value,
+          label: checkbox.closest("label")?.querySelector("span")?.textContent?.trim() || checkbox.value
+        }));
+
+    const normalizeState = () => {
+      const selectedIds = selectedPlayers().map((player) => player.id);
+
+      state.teamA = state.teamA.filter((id) => selectedIds.includes(id));
+      state.teamB = state.teamB.filter((id) => selectedIds.includes(id) && !state.teamA.includes(id));
+    };
+
+    const createCard = (player, column) => {
+      const card = document.createElement("button");
+      card.type = "button";
+      card.className = "lineup-card";
+      card.draggable = true;
+      card.dataset.playerId = player.id;
+      card.dataset.sourceColumn = column;
+      card.textContent = player.label;
+
+      card.addEventListener("dragstart", (event) => {
+        event.dataTransfer.setData("text/plain", player.id);
+        event.dataTransfer.setData("application/x-lineup-source", column);
+      });
+
+      return card;
+    };
+
+    const renderInputs = (container, name, ids) => {
+      container.replaceChildren();
+
+      ids.forEach((id) => {
+        const input = document.createElement("input");
+        input.type = "hidden";
+        input.name = name;
+        input.value = id;
+        container.appendChild(input);
+      });
+    };
+
+    const render = () => {
+      normalizeState();
+
+      const players = selectedPlayers();
+      const assignedIds = new Set([...state.teamA, ...state.teamB]);
+      const poolPlayers = players.filter((player) => !assignedIds.has(player.id));
+      const teamAPlayers = players.filter((player) => state.teamA.includes(player.id));
+      const teamBPlayers = players.filter((player) => state.teamB.includes(player.id));
+
+      poolList.replaceChildren(...poolPlayers.map((player) => createCard(player, "pool")));
+      teamAList.replaceChildren(...teamAPlayers.map((player) => createCard(player, "team_a")));
+      teamBList.replaceChildren(...teamBPlayers.map((player) => createCard(player, "team_b")));
+
+      renderInputs(teamAInputs, "match_day[team_a_player_ids][]", state.teamA);
+      renderInputs(teamBInputs, "match_day[team_b_player_ids][]", state.teamB);
+    };
+
+    const movePlayer = (playerId, targetColumn) => {
+      state.teamA = state.teamA.filter((id) => id !== playerId);
+      state.teamB = state.teamB.filter((id) => id !== playerId);
+
+      if (targetColumn === "team_a") state.teamA.push(playerId);
+      if (targetColumn === "team_b") state.teamB.push(playerId);
+
+      render();
+    };
+
+    [poolList, teamAList, teamBList].forEach((list) => {
+      list.addEventListener("dragover", (event) => {
+        event.preventDefault();
+        list.classList.add("lineup-column__list--dragover");
+      });
+
+      list.addEventListener("dragleave", () => {
+        list.classList.remove("lineup-column__list--dragover");
+      });
+
+      list.addEventListener("drop", (event) => {
+        event.preventDefault();
+        list.classList.remove("lineup-column__list--dragover");
+        movePlayer(event.dataTransfer.getData("text/plain"), list.dataset.lineupList);
+      });
+    });
+
+    playerCheckboxes.forEach((checkbox) => checkbox.addEventListener("change", render));
+    render();
+  })();
+</script>

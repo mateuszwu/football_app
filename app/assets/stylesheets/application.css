@@ -190,6 +190,70 @@
   gap: 0.5rem;
 }
 
+.lineup-editor {
+  display: grid;
+  gap: 1rem;
+}
+
+.lineup-editor__columns {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+}
+
+.lineup-column {
+  background: #f9fafb;
+  border: 1px solid #d1d5db;
+  border-radius: 0.75rem;
+  padding: 0.75rem;
+}
+
+.lineup-column__header h3,
+.lineup-column__header p {
+  margin: 0;
+}
+
+.lineup-column__header {
+  display: grid;
+  gap: 0.25rem;
+  margin-bottom: 0.75rem;
+}
+
+.lineup-column__header p {
+  color: #4b5563;
+  font-size: 0.875rem;
+}
+
+.lineup-column__list {
+  background: #ffffff;
+  border: 1px dashed #cbd5e1;
+  border-radius: 0.75rem;
+  display: grid;
+  gap: 0.5rem;
+  min-height: 8rem;
+  padding: 0.75rem;
+}
+
+.lineup-column__list--dragover {
+  background: #eff6ff;
+  border-color: #60a5fa;
+}
+
+.lineup-card {
+  background: #111827;
+  border: 0;
+  border-radius: 0.625rem;
+  color: #ffffff;
+  cursor: grab;
+  font: inherit;
+  padding: 0.75rem;
+  text-align: left;
+}
+
+.lineup-card:active {
+  cursor: grabbing;
+}
+
 .relationship-list {
   display: grid;
   gap: 0.75rem;
