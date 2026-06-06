@@ -13,8 +13,9 @@ class UpdateMatchDay
     MatchDay.transaction do
       match_day.update!(match_day_attributes)
       sync_match_day_players!
-      GenerateMatchDayVoteTokens.call(match_day:)
       save_manual_teams!
+      match_day.sync_setup_status!
+      GenerateMatchDayVoteTokens.call(match_day:)
     end
 
     true

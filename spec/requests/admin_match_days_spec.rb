@@ -120,24 +120,26 @@ RSpec.describe "Admin match days" do
           original_admin_password = ENV["FOOTBALL_APP_ADMIN_PASSWORD"]
           ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = "secret-password"
           season = create(:season)
-          player = create(:player, approval_status: "approved", active: true)
+          first_player = create(:player, approval_status: "approved", active: true)
+          second_player = create(:player, name: "Second", nickname: "second", phone: "+48999999998", approval_status: "approved", active: true)
 
           post "/admin/session", params: { password: "secret-password" }
           post "/admin/match_days", params: {
             match_day: {
               season_id: season.id,
               played_on: "2026-06-05",
-              player_ids: [ player.id.to_s ],
-              team_a_player_ids: [ player.id.to_s ],
-              team_b_player_ids: []
+              player_ids: [ first_player.id.to_s, second_player.id.to_s ],
+              team_a_player_ids: [ first_player.id.to_s ],
+              team_b_player_ids: [ second_player.id.to_s ]
             }
           }
 
           expect(response).to redirect_to(admin_match_days_path)
           match_day = MatchDay.find_by!(season: season, played_on: Date.new(2026, 6, 5))
-          expect(match_day.status).to eq("setup")
-          expect(match_day.players).to contain_exactly(player)
-          expect(match_day.teams.find_by!(name: "Team A").players).to contain_exactly(player)
+          expect(match_day.status).to eq("ready")
+          expect(match_day.players).to contain_exactly(first_player, second_player)
+          expect(match_day.teams.find_by!(name: "Team A").players).to contain_exactly(first_player)
+          expect(match_day.teams.find_by!(name: "Team B").players).to contain_exactly(second_player)
         ensure
           if original_admin_password.nil?
             ENV.delete("FOOTBALL_APP_ADMIN_PASSWORD")
@@ -248,7 +250,7 @@ RSpec.describe "Admin match days" do
             match_day: {
               season_id: other_season.id,
               played_on: "2026-06-12",
-              player_ids: [ new_player.id.to_s ],
+              player_ids: [ original_player.id.to_s, new_player.id.to_s ],
               team_a_player_ids: [],
               team_b_player_ids: [ new_player.id.to_s ]
             }
@@ -259,7 +261,7 @@ RSpec.describe "Admin match days" do
           expect(match_day.season).to eq(other_season)
           expect(match_day.played_on).to eq(Date.new(2026, 6, 12))
           expect(match_day.status).to eq("setup")
-          expect(match_day.players).to contain_exactly(new_player)
+          expect(match_day.players).to contain_exactly(original_player, new_player)
           expect(match_day.teams.find_by!(name: "Team B").players).to contain_exactly(new_player)
           expect(match_day.teams.find_by(name: "Team A")).to be_nil
         ensure
