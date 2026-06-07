@@ -2,12 +2,14 @@ module TeamSetups
   class ManualGeneratorAdapter < GeneratorAdapter
     TEAM_DEFINITIONS = {
       "Team A" => :team_a_player_ids,
-      "Team B" => :team_b_player_ids
+      "Team B" => :team_b_player_ids,
+      "Team 3" => :team_waiting_player_ids
     }.freeze
 
-    def initialize(team_a_player_ids:, team_b_player_ids:)
+    def initialize(team_a_player_ids:, team_b_player_ids:, team_waiting_player_ids: [])
       @team_a_player_ids = normalize_ids(team_a_player_ids)
       @team_b_player_ids = normalize_ids(team_b_player_ids)
+      @team_waiting_player_ids = normalize_ids(team_waiting_player_ids)
     end
 
     def call
@@ -25,7 +27,7 @@ module TeamSetups
 
     private
 
-    attr_reader :team_a_player_ids, :team_b_player_ids
+    attr_reader :team_a_player_ids, :team_b_player_ids, :team_waiting_player_ids
 
     def normalize_ids(ids)
       Array(ids).reject(&:blank?).map(&:to_i).uniq
@@ -37,6 +39,8 @@ module TeamSetups
         team_a_player_ids
       when :team_b_player_ids
         team_b_player_ids
+      when :team_waiting_player_ids
+        team_waiting_player_ids
       else
         []
       end

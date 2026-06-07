@@ -66,7 +66,8 @@ module Admin
       match_day_params.to_h.symbolize_keys.merge(
         player_ids: params.fetch(:match_day, {}).fetch(:player_ids, []),
         team_a_player_ids: params.fetch(:match_day, {}).fetch(:team_a_player_ids, []),
-        team_b_player_ids: params.fetch(:match_day, {}).fetch(:team_b_player_ids, [])
+        team_b_player_ids: params.fetch(:match_day, {}).fetch(:team_b_player_ids, []),
+        team_waiting_player_ids: params.fetch(:match_day, {}).fetch(:team_waiting_player_ids, [])
       )
     end
 
@@ -76,7 +77,8 @@ module Admin
         seasons:,
         players:,
         team_a_player_ids: team_player_ids(match_day:, team_name: "Team A", params_key: :team_a_player_ids),
-        team_b_player_ids: team_player_ids(match_day:, team_name: "Team B", params_key: :team_b_player_ids)
+        team_b_player_ids: team_player_ids(match_day:, team_name: "Team B", params_key: :team_b_player_ids),
+        team_waiting_player_ids: team_player_ids(match_day:, team_name: "Team 3", params_key: :team_waiting_player_ids)
       }
     end
 

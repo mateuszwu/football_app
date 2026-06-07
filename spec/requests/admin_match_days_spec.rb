@@ -151,6 +151,41 @@ RSpec.describe "Admin match days" do
           end
         end
       end
+
+      it "creates the match day with Team 3 (waiting team)" do
+        begin
+          original_admin_password = ENV["FOOTBALL_APP_ADMIN_PASSWORD"]
+          ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = "secret-password"
+          season = create(:season)
+          first_player = create(:player, approval_status: "approved", active: true)
+          second_player = create(:player, name: "Second", nickname: "second", phone: "+48999999998", approval_status: "approved", active: true)
+          third_player = create(:player, name: "Third", nickname: "third", phone: "+48999999997", approval_status: "approved", active: true)
+
+          post "/admin/session", params: { password: "secret-password" }
+          post "/admin/match_days", params: {
+            match_day: {
+              season_id: season.id,
+              played_on: "2026-06-05",
+              player_ids: [ first_player.id.to_s, second_player.id.to_s, third_player.id.to_s ],
+              team_a_player_ids: [ first_player.id.to_s ],
+              team_b_player_ids: [ second_player.id.to_s ],
+              team_waiting_player_ids: [ third_player.id.to_s ]
+            }
+          }
+
+          expect(response).to redirect_to(admin_match_days_path)
+          match_day = MatchDay.find_by!(season: season, played_on: Date.new(2026, 6, 5))
+          expect(match_day.teams.find_by!(name: "Team A").players).to contain_exactly(first_player)
+          expect(match_day.teams.find_by!(name: "Team B").players).to contain_exactly(second_player)
+          expect(match_day.teams.find_by!(name: "Team 3").players).to contain_exactly(third_player)
+        ensure
+          if original_admin_password.nil?
+            ENV.delete("FOOTBALL_APP_ADMIN_PASSWORD")
+          else
+            ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = original_admin_password
+          end
+        end
+      end
     end
 
     context "when the visitor is signed in as admin and params are invalid" do

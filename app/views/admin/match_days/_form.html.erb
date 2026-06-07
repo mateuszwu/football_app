@@ -51,6 +51,7 @@
         data-controller="lineup-editor"
         data-lineup-editor-team-a-player-ids-value="<%= team_a_player_ids.to_json %>"
         data-lineup-editor-team-b-player-ids-value="<%= team_b_player_ids.to_json %>"
+        data-lineup-editor-team-waiting-player-ids-value="<%= team_waiting_player_ids.to_json %>"
       >
         <div class="lineup-editor__columns">
           <section class="lineup-column" data-lineup-column="pool">
@@ -77,6 +78,15 @@
             </header>
             <div class="lineup-column__list" data-lineup-list="team_b" data-lineup-editor-target="teamB"></div>
             <div data-lineup-inputs="team_b" data-lineup-editor-target="teamBInputs"></div>
+          </section>
+
+          <section class="lineup-column" data-lineup-column="team_waiting">
+            <header class="lineup-column__header">
+              <h3>Team 3 (Czeka)</h3>
+              <p>Zawodnicy oczekujacy (opcjonalne).</p>
+            </header>
+            <div class="lineup-column__list" data-lineup-list="team_waiting" data-lineup-editor-target="teamWaiting"></div>
+            <div data-lineup-inputs="team_waiting" data-lineup-editor-target="teamWaitingInputs"></div>
           </section>
         </div>
       </div>
