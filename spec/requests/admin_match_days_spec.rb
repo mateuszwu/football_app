@@ -90,6 +90,9 @@ RSpec.describe "Admin match days" do
           expect(response.body).to include("Manualny builder bazowych zespolow")
           expect(response.body).to include("Team A")
           expect(response.body).to include("Team B")
+          expect(response.body).to include("data-lineup-editor")
+          expect(response.body).to include("data-lineup-list=\"team_a\"")
+          expect(response.body).to include("data-lineup-list=\"team_b\"")
           expect(response.body).to include("selected=\"selected\"")
         ensure
           if original_admin_password.nil?
@@ -206,6 +209,8 @@ RSpec.describe "Admin match days" do
           expect(response.body).to include("2026-06-05")
           expect(response.body).to include("Adam (adam)")
           expect(response.body).to include("Manualny builder bazowych zespolow")
+          expect(response.body).to include("data-lineup-editor")
+          expect(response.body).to include("data-lineup-list=\"pool\"")
           expect(response.body).to include("checked=\"checked\"")
         ensure
           if original_admin_password.nil?

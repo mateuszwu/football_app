@@ -15,11 +15,13 @@ When the user says "continue", treat it as:
 
 When choosing the next issue, use this order:
 
-1. Lowest open MVP milestone number first: MVP 1 before MVP 2 before MVP 3, and so on.
+1. Lowest open MVP milestone number first: `MVP 1 - ...` before `MVP 2 - ...` before `MVP 3 - ...`, and so on.
 2. Within the same MVP milestone, prefer issues that are already AI-ready or otherwise clearly implementable from the current codebase.
 3. Only move to a higher MVP milestone after the lower MVP milestone no longer has a suitable open issue.
 
-Use GitHub project/milestone metadata to determine the MVP number when it is available. Do not skip ahead to a higher MVP milestone just because a later issue looks smaller or more interesting.
+Treat `MVP` as just a milestone name prefix. Determine priority from the numeric prefix in milestone names such as `MVP 1 - Admin and players` or `MVP 6 - MVP/DEF voting`, not from issue age, area, or how recently work was started in a later milestone.
+
+Use GitHub project/milestone metadata to determine the MVP number when it is available. Do not skip ahead to a higher MVP milestone just because a later issue looks smaller, more interesting, or is already partially implemented.
 
 ## GitHub PR Workflow Commands
 

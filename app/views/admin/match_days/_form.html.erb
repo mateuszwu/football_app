@@ -43,41 +43,46 @@
 
   <div class="form-field">
     <label>Manualny builder bazowych zespolow</label>
-    <p class="field-hint">Przypisz zaznaczonych zawodnikow do Team A i Team B.</p>
+    <p class="field-hint">Przeciagnij zaznaczonych zawodnikow do Team A albo Team B.</p>
 
-    <div class="checkbox-columns">
-      <div>
-        <p><strong>Team A</strong></p>
-        <% if players.any? %>
-          <div class="checkbox-list">
-            <% players.each do |player| %>
-              <label class="checkbox-list__item">
-                <%= check_box_tag "match_day[team_a_player_ids][]", player.id, team_a_player_ids.map(&:to_s).include?(player.id.to_s) %>
-                <span><%= player.name %> (<%= player.nickname %>)</span>
-              </label>
-            <% end %>
-          </div>
-        <% else %>
-          <p class="empty-state">Brak zawodnikow do przypisania.</p>
-        <% end %>
-      </div>
+    <% if players.any? %>
+      <div
+        class="lineup-editor"
+        data-controller="lineup-editor"
+        data-lineup-editor-team-a-player-ids-value="<%= team_a_player_ids.to_json %>"
+        data-lineup-editor-team-b-player-ids-value="<%= team_b_player_ids.to_json %>"
+      >
+        <div class="lineup-editor__columns">
+          <section class="lineup-column" data-lineup-column="pool">
+            <header class="lineup-column__header">
+              <h3>Dostepni</h3>
+              <p>Zaznaczeni zawodnicy gotowi do przypisania.</p>
+            </header>
+            <div class="lineup-column__list" data-lineup-list="pool" data-lineup-editor-target="pool"></div>
+          </section>
 
-      <div>
-        <p><strong>Team B</strong></p>
-        <% if players.any? %>
-          <div class="checkbox-list">
-            <% players.each do |player| %>
-              <label class="checkbox-list__item">
-                <%= check_box_tag "match_day[team_b_player_ids][]", player.id, team_b_player_ids.map(&:to_s).include?(player.id.to_s) %>
-                <span><%= player.name %> (<%= player.nickname %>)</span>
-              </label>
-            <% end %>
-          </div>
-        <% else %>
-          <p class="empty-state">Brak zawodnikow do przypisania.</p>
-        <% end %>
+          <section class="lineup-column" data-lineup-column="team_a">
+            <header class="lineup-column__header">
+              <h3>Team A</h3>
+              <p>Przeciagnij tutaj sklad Team A.</p>
+            </header>
+            <div class="lineup-column__list" data-lineup-list="team_a" data-lineup-editor-target="teamA"></div>
+            <div data-lineup-inputs="team_a" data-lineup-editor-target="teamAInputs"></div>
+          </section>
+
+          <section class="lineup-column" data-lineup-column="team_b">
+            <header class="lineup-column__header">
+              <h3>Team B</h3>
+              <p>Przeciagnij tutaj sklad Team B.</p>
+            </header>
+            <div class="lineup-column__list" data-lineup-list="team_b" data-lineup-editor-target="teamB"></div>
+            <div data-lineup-inputs="team_b" data-lineup-editor-target="teamBInputs"></div>
+          </section>
+        </div>
       </div>
-    </div>
+    <% else %>
+      <p class="empty-state">Brak zawodnikow do przypisania.</p>
+    <% end %>
   </div>
 
   <div class="form-actions">
