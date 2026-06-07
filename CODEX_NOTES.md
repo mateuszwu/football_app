@@ -38,7 +38,9 @@ git switch -c ai/<issue-number>-short-description
 git add <changed-files>
 git commit -m "feat(ai-<issue-number>): short imperative message"
 git push -u origin <branch-name>
-gh pr create --draft --base main --head <branch-name> --title "feat(ai-<issue-number>): short title" --body "<markdown body>"
+gh pr create --draft --base main --head <branch-name> --title "feat(ai-<issue-number>): short title" --body "Closes #<issue-number>
+
+<markdown body>"
 ```
 
 If `gh pr merge` fails because the PR is still a draft immediately after `gh pr ready`, rerun:
