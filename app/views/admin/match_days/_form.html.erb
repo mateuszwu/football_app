@@ -42,16 +42,19 @@
   </div>
 
   <div class="form-field">
-    <label>Manualny builder bazowych zespolow</label>
-    <p class="field-hint">Przeciagnij zaznaczonych zawodnikow do Team A albo Team B.</p>
+    <div class="field-header">
+      <label>Manualny builder bazowych zespolow</label>
+      <button type="button" class="button button--small button--secondary" data-action="lineup-editor#addTeam">
+        Dodaj zespol
+      </button>
+    </div>
+    <p class="field-hint">Przeciagnij zaznaczonych zawodnikow do zespolow.</p>
 
     <% if players.any? %>
       <div
         class="lineup-editor"
         data-controller="lineup-editor"
-        data-lineup-editor-team-a-player-ids-value="<%= team_a_player_ids.to_json %>"
-        data-lineup-editor-team-b-player-ids-value="<%= team_b_player_ids.to_json %>"
-        data-lineup-editor-team-waiting-player-ids-value="<%= team_waiting_player_ids.to_json %>"
+        data-lineup-editor-teams-value="<%= teams_data.to_json %>"
       >
         <div class="lineup-editor__columns">
           <section class="lineup-column" data-lineup-column="pool">
@@ -62,32 +65,9 @@
             <div class="lineup-column__list" data-lineup-list="pool" data-lineup-editor-target="pool"></div>
           </section>
 
-          <section class="lineup-column" data-lineup-column="team_a">
-            <header class="lineup-column__header">
-              <h3>Team A</h3>
-              <p>Przeciagnij tutaj sklad Team A.</p>
-            </header>
-            <div class="lineup-column__list" data-lineup-list="team_a" data-lineup-editor-target="teamA"></div>
-            <div data-lineup-inputs="team_a" data-lineup-editor-target="teamAInputs"></div>
-          </section>
-
-          <section class="lineup-column" data-lineup-column="team_b">
-            <header class="lineup-column__header">
-              <h3>Team B</h3>
-              <p>Przeciagnij tutaj sklad Team B.</p>
-            </header>
-            <div class="lineup-column__list" data-lineup-list="team_b" data-lineup-editor-target="teamB"></div>
-            <div data-lineup-inputs="team_b" data-lineup-editor-target="teamBInputs"></div>
-          </section>
-
-          <section class="lineup-column" data-lineup-column="team_waiting">
-            <header class="lineup-column__header">
-              <h3>Team 3 (Czeka)</h3>
-              <p>Zawodnicy oczekujacy (opcjonalne).</p>
-            </header>
-            <div class="lineup-column__list" data-lineup-list="team_waiting" data-lineup-editor-target="teamWaiting"></div>
-            <div data-lineup-inputs="team_waiting" data-lineup-editor-target="teamWaitingInputs"></div>
-          </section>
+          <div class="lineup-editor__dynamic-columns" data-lineup-editor-target="columnsContainer">
+            <%# Rendered by Stimulus %>
+          </div>
         </div>
       </div>
     <% else %>

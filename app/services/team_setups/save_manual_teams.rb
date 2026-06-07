@@ -1,21 +1,17 @@
 module TeamSetups
   class SaveManualTeams
-    def self.call(match_day:, selected_player_ids:, team_a_player_ids:, team_b_player_ids:, team_waiting_player_ids: [])
+    def self.call(match_day:, selected_player_ids:, teams_data:)
       new(
         match_day:,
         selected_player_ids:,
-        team_a_player_ids:,
-        team_b_player_ids:,
-        team_waiting_player_ids:
+        teams_data:
       ).call
     end
 
-    def initialize(match_day:, selected_player_ids:, team_a_player_ids:, team_b_player_ids:, team_waiting_player_ids:)
+    def initialize(match_day:, selected_player_ids:, teams_data:)
       @match_day = match_day
       @selected_player_ids = normalize_ids(selected_player_ids)
-      @team_a_player_ids = normalize_ids(team_a_player_ids)
-      @team_b_player_ids = normalize_ids(team_b_player_ids)
-      @team_waiting_player_ids = normalize_ids(team_waiting_player_ids)
+      @teams_data = Array(teams_data).map { |d| d.is_a?(Hash) ? d.symbolize_keys : d }
     end
 
     def call
@@ -43,7 +39,7 @@ module TeamSetups
 
     private
 
-    attr_reader :match_day, :selected_player_ids, :team_a_player_ids, :team_b_player_ids, :team_waiting_player_ids
+    attr_reader :match_day, :selected_player_ids, :teams_data
 
     def valid_assignments?
       if overlapping_player_ids.any?
@@ -58,10 +54,15 @@ module TeamSetups
     end
 
     def overlapping_player_ids
+      all_assigned_ids = []
       overlapping = []
-      overlapping += (team_a_player_ids & team_b_player_ids)
-      overlapping += (team_a_player_ids & team_waiting_player_ids)
-      overlapping += (team_b_player_ids & team_waiting_player_ids)
+
+      generated_teams.each do |team|
+        ids = team[:player_ids]
+        overlapping += (all_assigned_ids & ids)
+        all_assigned_ids += ids
+      end
+
       overlapping.uniq
     end
 
@@ -84,9 +85,7 @@ module TeamSetups
 
     def generated_teams
       @generated_teams ||= TeamSetups::ManualGeneratorAdapter.call(
-        team_a_player_ids:,
-        team_b_player_ids:,
-        team_waiting_player_ids:
+        teams_data: teams_data
       )
     end
 

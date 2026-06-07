@@ -90,9 +90,8 @@ RSpec.describe "Admin match days" do
           expect(response.body).to include("Manualny builder bazowych zespolow")
           expect(response.body).to include("Team A")
           expect(response.body).to include("Team B")
-          expect(response.body).to include("data-lineup-editor")
-          expect(response.body).to include("data-lineup-list=\"team_a\"")
-          expect(response.body).to include("data-lineup-list=\"team_b\"")
+          expect(response.body).to include("data-controller=\"lineup-editor\"")
+          expect(response.body).to include("data-lineup-editor-teams-value")
           expect(response.body).to include("selected=\"selected\"")
         ensure
           if original_admin_password.nil?
@@ -132,8 +131,10 @@ RSpec.describe "Admin match days" do
               season_id: season.id,
               played_on: "2026-06-05",
               player_ids: [ first_player.id.to_s, second_player.id.to_s ],
-              team_a_player_ids: [ first_player.id.to_s ],
-              team_b_player_ids: [ second_player.id.to_s ]
+              teams_data: [
+                { name: "Team A", player_ids: [ first_player.id.to_s ] },
+                { name: "Team B", player_ids: [ second_player.id.to_s ] }
+              ]
             }
           }
 
@@ -167,9 +168,11 @@ RSpec.describe "Admin match days" do
               season_id: season.id,
               played_on: "2026-06-05",
               player_ids: [ first_player.id.to_s, second_player.id.to_s, third_player.id.to_s ],
-              team_a_player_ids: [ first_player.id.to_s ],
-              team_b_player_ids: [ second_player.id.to_s ],
-              team_waiting_player_ids: [ third_player.id.to_s ]
+              teams_data: [
+                { name: "Team A", player_ids: [ first_player.id.to_s ] },
+                { name: "Team B", player_ids: [ second_player.id.to_s ] },
+                { name: "Team 3", player_ids: [ third_player.id.to_s ] }
+              ]
             }
           }
 
@@ -178,6 +181,38 @@ RSpec.describe "Admin match days" do
           expect(match_day.teams.find_by!(name: "Team A").players).to contain_exactly(first_player)
           expect(match_day.teams.find_by!(name: "Team B").players).to contain_exactly(second_player)
           expect(match_day.teams.find_by!(name: "Team 3").players).to contain_exactly(third_player)
+        ensure
+          if original_admin_password.nil?
+            ENV.delete("FOOTBALL_APP_ADMIN_PASSWORD")
+          else
+            ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = original_admin_password
+          end
+        end
+      end
+
+      it "creates the match day with many dynamic teams" do
+        begin
+          original_admin_password = ENV["FOOTBALL_APP_ADMIN_PASSWORD"]
+          ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = "secret-password"
+          season = create(:season)
+          players = create_list(:player, 5, approval_status: "approved", active: true)
+
+          post "/admin/session", params: { password: "secret-password" }
+          post "/admin/match_days", params: {
+            match_day: {
+              season_id: season.id,
+              played_on: "2026-06-05",
+              player_ids: players.map(&:id).map(&:to_s),
+              teams_data: players.each_with_index.map do |player, index|
+                { name: "Team #{index + 1}", player_ids: [ player.id.to_s ] }
+              end
+            }
+          }
+
+          expect(response).to redirect_to(admin_match_days_path)
+          match_day = MatchDay.find_by!(season: season, played_on: Date.new(2026, 6, 5))
+          expect(match_day.teams.where(team_type: "baseline").count).to eq(5)
+          expect(match_day.status).to eq("ready")
         ensure
           if original_admin_password.nil?
             ENV.delete("FOOTBALL_APP_ADMIN_PASSWORD")
@@ -244,8 +279,7 @@ RSpec.describe "Admin match days" do
           expect(response.body).to include("2026-06-05")
           expect(response.body).to include("Adam (adam)")
           expect(response.body).to include("Manualny builder bazowych zespolow")
-          expect(response.body).to include("data-lineup-editor")
-          expect(response.body).to include("data-lineup-list=\"pool\"")
+          expect(response.body).to include("data-controller=\"lineup-editor\"")
           expect(response.body).to include("checked=\"checked\"")
         ensure
           if original_admin_password.nil?
@@ -291,8 +325,10 @@ RSpec.describe "Admin match days" do
               season_id: other_season.id,
               played_on: "2026-06-12",
               player_ids: [ original_player.id.to_s, new_player.id.to_s ],
-              team_a_player_ids: [],
-              team_b_player_ids: [ new_player.id.to_s ]
+              teams_data: [
+                { name: "Team B", player_ids: [ new_player.id.to_s ] },
+                { name: "Team A", player_ids: [ original_player.id.to_s ] }
+              ]
             }
           }
 
@@ -300,10 +336,10 @@ RSpec.describe "Admin match days" do
           match_day.reload
           expect(match_day.season).to eq(other_season)
           expect(match_day.played_on).to eq(Date.new(2026, 6, 12))
-          expect(match_day.status).to eq("setup")
+          expect(match_day.status).to eq("ready")
           expect(match_day.players).to contain_exactly(original_player, new_player)
           expect(match_day.teams.find_by!(name: "Team B").players).to contain_exactly(new_player)
-          expect(match_day.teams.find_by(name: "Team A")).to be_nil
+          expect(match_day.teams.find_by!(name: "Team A").players).to contain_exactly(original_player)
         ensure
           if original_admin_password.nil?
             ENV.delete("FOOTBALL_APP_ADMIN_PASSWORD")

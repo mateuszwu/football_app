@@ -63,11 +63,19 @@ module Admin
     end
 
     def match_day_form_params
+      teams_params = params.fetch(:match_day, {}).fetch(:teams_data, [])
+
+      # Transform parameters from indexed hash to array if necessary (Rails usually does this for arrays)
+      # But sometimes when using complex JS objects, they might come as indexed hashes.
+      teams_data = if teams_params.is_a?(Hash)
+                     teams_params.values
+      else
+                     Array(teams_params)
+      end
+
       match_day_params.to_h.symbolize_keys.merge(
         player_ids: params.fetch(:match_day, {}).fetch(:player_ids, []),
-        team_a_player_ids: params.fetch(:match_day, {}).fetch(:team_a_player_ids, []),
-        team_b_player_ids: params.fetch(:match_day, {}).fetch(:team_b_player_ids, []),
-        team_waiting_player_ids: params.fetch(:match_day, {}).fetch(:team_waiting_player_ids, [])
+        teams_data: teams_data.map { |t| { name: t[:name], player_ids: t[:player_ids] || [] } }
       )
     end
 
@@ -76,17 +84,31 @@ module Admin
         match_day:,
         seasons:,
         players:,
-        team_a_player_ids: team_player_ids(match_day:, team_name: "Team A", params_key: :team_a_player_ids),
-        team_b_player_ids: team_player_ids(match_day:, team_name: "Team B", params_key: :team_b_player_ids),
-        team_waiting_player_ids: team_player_ids(match_day:, team_name: "Team 3", params_key: :team_waiting_player_ids)
+        teams_data: current_teams_data(match_day)
       }
     end
 
-    def team_player_ids(match_day:, team_name:, params_key:)
-      submitted_ids = params.fetch(:match_day, {}).fetch(params_key, nil)
-      return submitted_ids if submitted_ids
+    def current_teams_data(match_day)
+      submitted_teams = params.fetch(:match_day, {}).fetch(:teams_data, nil)
+      if submitted_teams
+        if submitted_teams.is_a?(Hash)
+          return submitted_teams.values.map { |t| { name: t[:name], player_ids: t[:player_ids] || [] } }
+        else
+          return Array(submitted_teams).map { |t| { name: t[:name], player_ids: t[:player_ids] || [] } }
+        end
+      end
 
-      match_day.teams.find_by(name: team_name)&.player_ids || []
+      # Default teams if none submitted or exists
+      baseline_teams = match_day.teams.where(team_type: "baseline").order(:created_at)
+      if baseline_teams.any?
+        baseline_teams.map { |t| { name: t.name, player_ids: t.player_ids.map(&:to_s) } }
+      else
+        # Provide default Team A and Team B for new match days
+        [
+          { name: "Team A", player_ids: [] },
+          { name: "Team B", player_ids: [] }
+        ]
+      end
     end
   end
 end
