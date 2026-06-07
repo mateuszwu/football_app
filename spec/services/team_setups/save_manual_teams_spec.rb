@@ -11,8 +11,10 @@ RSpec.describe TeamSetups::SaveManualTeams do
         result = described_class.call(
           match_day: match_day,
           selected_player_ids: [ player_one.id, player_two.id ],
-          team_a_player_ids: [ player_one.id.to_s ],
-          team_b_player_ids: [ player_two.id.to_s ]
+          teams_data: [
+            { name: "Team A", player_ids: [ player_one.id.to_s ] },
+            { name: "Team B", player_ids: [ player_two.id.to_s ] }
+          ]
         )
 
         expect(result).to be(true)
@@ -32,8 +34,7 @@ RSpec.describe TeamSetups::SaveManualTeams do
         result = described_class.call(
           match_day: match_day,
           selected_player_ids: [],
-          team_a_player_ids: [],
-          team_b_player_ids: []
+          teams_data: []
         )
 
         expect(result).to be(true)
@@ -41,7 +42,7 @@ RSpec.describe TeamSetups::SaveManualTeams do
       end
     end
 
-    context "when a player is assigned to both teams" do
+    context "when a player is assigned to more than one team" do
       it "returns false and adds an error" do
         match_day = create(:match_day)
         player = create(:player)
@@ -49,12 +50,14 @@ RSpec.describe TeamSetups::SaveManualTeams do
         result = described_class.call(
           match_day: match_day,
           selected_player_ids: [ player.id ],
-          team_a_player_ids: [ player.id.to_s ],
-          team_b_player_ids: [ player.id.to_s ]
+          teams_data: [
+            { name: "Team A", player_ids: [ player.id.to_s ] },
+            { name: "Team B", player_ids: [ player.id.to_s ] }
+          ]
         )
 
         expect(result).to be(false)
-        expect(match_day.errors[:base]).to include("Player cannot be assigned to both manual teams")
+        expect(match_day.errors[:base]).to include("Player cannot be assigned to more than one manual team")
       end
     end
 
@@ -67,8 +70,9 @@ RSpec.describe TeamSetups::SaveManualTeams do
         result = described_class.call(
           match_day: match_day,
           selected_player_ids: [ selected_player.id ],
-          team_a_player_ids: [ other_player.id.to_s ],
-          team_b_player_ids: []
+          teams_data: [
+            { name: "Team A", player_ids: [ other_player.id.to_s ] }
+          ]
         )
 
         expect(result).to be(false)

@@ -65,8 +65,6 @@ module Admin
     def match_day_form_params
       teams_params = params.fetch(:match_day, {}).fetch(:teams_data, [])
 
-      # Transform parameters from indexed hash to array if necessary (Rails usually does this for arrays)
-      # But sometimes when using complex JS objects, they might come as indexed hashes.
       teams_data = if teams_params.is_a?(Hash)
                      teams_params.values
       else
@@ -98,12 +96,10 @@ module Admin
         end
       end
 
-      # Default teams if none submitted or exists
       baseline_teams = match_day.teams.where(team_type: "baseline").order(:created_at)
       if baseline_teams.any?
         baseline_teams.map { |t| { name: t.name, player_ids: t.player_ids.map(&:to_s) } }
       else
-        # Provide default Team A and Team B for new match days
         [
           { name: "Team A", player_ids: [] },
           { name: "Team B", player_ids: [] }

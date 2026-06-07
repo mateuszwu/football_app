@@ -10,8 +10,6 @@ export default class extends Controller {
     if (this.element.dataset.lineupInitialized === "true") return;
     this.element.dataset.lineupInitialized = "true";
 
-    // Initialize state from values
-    // teams: [{ name: "Team A", player_ids: ["1", "2"] }]
     this.state = {
       teams: (this.teamsValue || []).map((team) => ({
         name: team.name,
@@ -19,7 +17,6 @@ export default class extends Controller {
       })),
     };
 
-    // Setup listeners for checkbox changes
     const playerCheckboxes = Array.from(
       document.querySelectorAll('input[name="match_day[player_ids][]"]'),
     );
@@ -27,10 +24,8 @@ export default class extends Controller {
       checkbox.addEventListener("change", () => this.render());
     });
 
-    // Setup pool listeners
     this.setupPoolListeners();
 
-    // Initial render
     this.render();
   }
 
@@ -54,8 +49,6 @@ export default class extends Controller {
   renameTeam(event) {
     const index = parseInt(event.currentTarget.dataset.teamIndex);
     this.state.teams[index].name = event.currentTarget.value;
-    // We don't necessarily need to full render on every keystroke
-    // but we need to update the hidden inputs or the name in state.
   }
 
   selectedPlayers() {
@@ -77,8 +70,6 @@ export default class extends Controller {
   normalizeState() {
     const selectedIds = this.selectedPlayers().map((player) => player.id);
 
-    // Filter out players that are no longer selected
-    // and ensure players are not in multiple teams (preferring earlier teams)
     const allAssignedIds = new Set();
     this.state.teams.forEach((team) => {
       team.player_ids = team.player_ids.filter((id) => {
@@ -99,12 +90,10 @@ export default class extends Controller {
     card.dataset.playerId = player.id;
     card.textContent = player.label;
 
-    // Add drag event listeners
     card.addEventListener("dragstart", (event) => {
       event.dataTransfer.setData("text/plain", player.id);
     });
 
-    // Add click-to-swap functionality
     card.addEventListener("click", (event) => {
       event.stopPropagation();
       this.handleCardClick(player.id, columnType, teamIndex);
@@ -117,13 +106,11 @@ export default class extends Controller {
     let nextTeamIndex;
 
     if (columnType === "pool") {
-      // From pool to first team
       nextTeamIndex = 0;
     } else {
-      // From team to next team, or back to pool if last team
       nextTeamIndex = teamIndex + 1;
       if (nextTeamIndex >= this.state.teams.length) {
-        nextTeamIndex = -1; // -1 means move back to pool
+        nextTeamIndex = -1;
       }
     }
 
@@ -139,12 +126,10 @@ export default class extends Controller {
     );
     const poolPlayers = players.filter((player) => !assignedIds.has(player.id));
 
-    // Render Pool
     this.poolTarget.replaceChildren(
       ...poolPlayers.map((player) => this.createCard(player, "pool")),
     );
 
-    // Render Dynamic Team Columns
     this.columnsContainerTarget.replaceChildren();
 
     this.state.teams.forEach((team, index) => {
@@ -189,7 +174,6 @@ export default class extends Controller {
       ...teamPlayers.map((p) => this.createCard(p, "team", index)),
     );
 
-    // Drag and Drop listeners for the list
     list.addEventListener("dragover", (event) => {
       event.preventDefault();
       list.classList.add("lineup-column__list--dragover");
@@ -208,7 +192,6 @@ export default class extends Controller {
 
     section.appendChild(list);
 
-    // Hidden inputs for player IDs
     const inputsContainer = document.createElement("div");
     team.player_ids.forEach((id) => {
       const input = document.createElement("input");
@@ -222,7 +205,6 @@ export default class extends Controller {
     return section;
   }
 
-  // Pool drag and drop
   setupPoolListeners() {
     this.poolTarget.addEventListener("dragover", (event) => {
       event.preventDefault();
@@ -242,12 +224,10 @@ export default class extends Controller {
   }
 
   movePlayer(playerId, targetTeamIndex) {
-    // Remove from all teams
     this.state.teams.forEach((team) => {
       team.player_ids = team.player_ids.filter((id) => id !== playerId);
     });
 
-    // Add to target team if not moving to pool (-1)
     if (targetTeamIndex !== -1) {
       this.state.teams[targetTeamIndex].player_ids.push(playerId);
     }

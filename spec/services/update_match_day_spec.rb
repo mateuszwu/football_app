@@ -44,8 +44,10 @@ RSpec.describe UpdateMatchDay do
           season_id: season.id,
           played_on: Date.new(2026, 6, 12),
           player_ids: [ second_player.id.to_s, third_player.id.to_s ],
-          team_a_player_ids: [ second_player.id.to_s ],
-          team_b_player_ids: [ third_player.id.to_s ]
+          teams_data: [
+            { name: "Team A", player_ids: [ second_player.id.to_s ] },
+            { name: "Team B", player_ids: [ third_player.id.to_s ] }
+          ]
         }
 
         result = described_class.call(
@@ -77,8 +79,10 @@ RSpec.describe UpdateMatchDay do
           season_id: season.id,
           played_on: Date.new(2026, 6, 12),
           player_ids: [ first_player.id.to_s, second_player.id.to_s ],
-          team_a_player_ids: [ first_player.id.to_s ],
-          team_b_player_ids: []
+          teams_data: [
+            { name: "Team A", player_ids: [ first_player.id.to_s ] },
+            { name: "Team B", player_ids: [] }
+          ]
         }
 
         result = described_class.call(
