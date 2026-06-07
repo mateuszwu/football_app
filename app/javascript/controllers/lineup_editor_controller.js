@@ -1,34 +1,22 @@
 import { Controller } from "@hotwired/stimulus";
 
 export default class extends Controller {
-  static targets = [
-    "pool",
-    "teamA",
-    "teamB",
-    "teamWaiting",
-    "teamAInputs",
-    "teamBInputs",
-    "teamWaitingInputs",
-  ];
+  static targets = ["pool", "columnsContainer"];
   static values = {
-    teamAPlayerIds: Array,
-    teamBPlayerIds: Array,
-    teamWaitingPlayerIds: Array,
+    teams: Array,
   };
 
   connect() {
     if (this.element.dataset.lineupInitialized === "true") return;
-
     this.element.dataset.lineupInitialized = "true";
 
-    // Initialize state from dataset
     this.state = {
-      teamA: (this.teamAPlayerIdsValue || []).map(String),
-      teamB: (this.teamBPlayerIdsValue || []).map(String),
-      teamWaiting: (this.teamWaitingPlayerIdsValue || []).map(String),
+      teams: (this.teamsValue || []).map((team) => ({
+        name: team.name,
+        player_ids: (team.player_ids || []).map(String),
+      })),
     };
 
-    // Setup listeners for checkbox changes
     const playerCheckboxes = Array.from(
       document.querySelectorAll('input[name="match_day[player_ids][]"]'),
     );
@@ -36,31 +24,31 @@ export default class extends Controller {
       checkbox.addEventListener("change", () => this.render());
     });
 
-    [
-      this.poolTarget,
-      this.teamATarget,
-      this.teamBTarget,
-      this.teamWaitingTarget,
-    ].forEach((list) => {
-      list.addEventListener("dragover", (event) => {
-        event.preventDefault();
-        list.classList.add("lineup-column__list--dragover");
-      });
+    this.setupPoolListeners();
 
-      list.addEventListener("dragleave", () => {
-        list.classList.remove("lineup-column__list--dragover");
-      });
-
-      list.addEventListener("drop", (event) => {
-        event.preventDefault();
-        list.classList.remove("lineup-column__list--dragover");
-        const playerId = event.dataTransfer.getData("text/plain");
-        this.movePlayer(playerId, list.dataset.lineupList);
-      });
-    });
-
-    // Initial render
     this.render();
+  }
+
+  addTeam(event) {
+    event.preventDefault();
+    const teamIndex = this.state.teams.length + 1;
+    this.state.teams.push({
+      name: `Team ${teamIndex}`,
+      player_ids: [],
+    });
+    this.render();
+  }
+
+  removeTeam(event) {
+    event.preventDefault();
+    const index = parseInt(event.currentTarget.dataset.teamIndex);
+    this.state.teams.splice(index, 1);
+    this.render();
+  }
+
+  renameTeam(event) {
+    const index = parseInt(event.currentTarget.dataset.teamIndex);
+    this.state.teams[index].name = event.currentTarget.value;
   }
 
   selectedPlayers() {
@@ -82,124 +70,167 @@ export default class extends Controller {
   normalizeState() {
     const selectedIds = this.selectedPlayers().map((player) => player.id);
 
-    this.state.teamA = this.state.teamA.filter((id) => selectedIds.includes(id));
-    this.state.teamB = this.state.teamB.filter(
-      (id) => selectedIds.includes(id) && !this.state.teamA.includes(id),
-    );
-    this.state.teamWaiting = this.state.teamWaiting.filter(
-      (id) =>
-        selectedIds.includes(id) &&
-        !this.state.teamA.includes(id) &&
-        !this.state.teamB.includes(id),
-    );
+    const allAssignedIds = new Set();
+    this.state.teams.forEach((team) => {
+      team.player_ids = team.player_ids.filter((id) => {
+        if (selectedIds.includes(id) && !allAssignedIds.has(id)) {
+          allAssignedIds.add(id);
+          return true;
+        }
+        return false;
+      });
+    });
   }
 
-  createCard(player, column) {
+  createCard(player, columnType, teamIndex = null) {
     const card = document.createElement("button");
     card.type = "button";
     card.className = "lineup-card";
     card.draggable = true;
     card.dataset.playerId = player.id;
-    card.dataset.sourceColumn = column;
     card.textContent = player.label;
 
-    // Add drag event listeners
     card.addEventListener("dragstart", (event) => {
       event.dataTransfer.setData("text/plain", player.id);
-      event.dataTransfer.setData("application/x-lineup-source", column);
     });
 
-    // Add click-to-swap functionality
     card.addEventListener("click", (event) => {
       event.stopPropagation();
-      // Allow circular swapping: Team A -> Team B -> Team 3 -> Team A
-      let targetColumn;
-      if (column === "team_a") targetColumn = "team_b";
-      else if (column === "team_b") targetColumn = "team_waiting";
-      else if (column === "team_waiting") targetColumn = "team_a";
-
-      if (targetColumn) {
-        this.movePlayer(player.id, targetColumn);
-      }
+      this.handleCardClick(player.id, columnType, teamIndex);
     });
 
     return card;
   }
 
-  renderInputs(container, name, ids) {
-    container.replaceChildren();
+  handleCardClick(playerId, columnType, teamIndex) {
+    let nextTeamIndex;
 
-    ids.forEach((id) => {
-      const input = document.createElement("input");
-      input.type = "hidden";
-      input.name = name;
-      input.value = id;
-      container.appendChild(input);
-    });
+    if (columnType === "pool") {
+      nextTeamIndex = 0;
+    } else {
+      nextTeamIndex = teamIndex + 1;
+      if (nextTeamIndex >= this.state.teams.length) {
+        nextTeamIndex = -1;
+      }
+    }
+
+    this.movePlayer(playerId, nextTeamIndex);
   }
 
   render() {
     this.normalizeState();
 
     const players = this.selectedPlayers();
-    const assignedIds = new Set([
-      ...this.state.teamA,
-      ...this.state.teamB,
-      ...this.state.teamWaiting,
-    ]);
+    const assignedIds = new Set(
+      this.state.teams.flatMap((team) => team.player_ids),
+    );
     const poolPlayers = players.filter((player) => !assignedIds.has(player.id));
-    const teamAPlayers = players.filter((player) =>
-      this.state.teamA.includes(player.id),
-    );
-    const teamBPlayers = players.filter((player) =>
-      this.state.teamB.includes(player.id),
-    );
-    const teamWaitingPlayers = players.filter((player) =>
-      this.state.teamWaiting.includes(player.id),
-    );
 
     this.poolTarget.replaceChildren(
       ...poolPlayers.map((player) => this.createCard(player, "pool")),
     );
-    this.teamATarget.replaceChildren(
-      ...teamAPlayers.map((player) => this.createCard(player, "team_a")),
-    );
-    this.teamBTarget.replaceChildren(
-      ...teamBPlayers.map((player) => this.createCard(player, "team_b")),
-    );
-    this.teamWaitingTarget.replaceChildren(
-      ...teamWaitingPlayers.map((player) =>
-        this.createCard(player, "team_waiting"),
-      ),
-    );
 
-    this.renderInputs(
-      this.teamAInputsTarget,
-      "match_day[team_a_player_ids][]",
-      this.state.teamA,
-    );
-    this.renderInputs(
-      this.teamBInputsTarget,
-      "match_day[team_b_player_ids][]",
-      this.state.teamB,
-    );
-    this.renderInputs(
-      this.teamWaitingInputsTarget,
-      "match_day[team_waiting_player_ids][]",
-      this.state.teamWaiting,
-    );
+    this.columnsContainerTarget.replaceChildren();
+
+    this.state.teams.forEach((team, index) => {
+      const column = this.createTeamColumn(team, index, players);
+      this.columnsContainerTarget.appendChild(column);
+    });
   }
 
-  movePlayer(playerId, targetColumn) {
-    this.state.teamA = this.state.teamA.filter((id) => id !== playerId);
-    this.state.teamB = this.state.teamB.filter((id) => id !== playerId);
-    this.state.teamWaiting = this.state.teamWaiting.filter(
-      (id) => id !== playerId,
+  createTeamColumn(team, index, allPlayers) {
+    const section = document.createElement("section");
+    section.className = "lineup-column";
+    section.dataset.teamIndex = index;
+
+    const header = document.createElement("header");
+    header.className = "lineup-column__header";
+
+    const nameInput = document.createElement("input");
+    nameInput.type = "text";
+    nameInput.value = team.name;
+    nameInput.className = "lineup-column__name-input";
+    nameInput.name = `match_day[teams_data][${index}][name]`;
+    nameInput.dataset.teamIndex = index;
+    nameInput.dataset.action = "blur->lineup-editor#renameTeam";
+    header.appendChild(nameInput);
+
+    const removeBtn = document.createElement("button");
+    removeBtn.type = "button";
+    removeBtn.className = "button button--small button--danger";
+    removeBtn.textContent = "×";
+    removeBtn.dataset.teamIndex = index;
+    removeBtn.dataset.action = "lineup-editor#removeTeam";
+    header.appendChild(removeBtn);
+
+    section.appendChild(header);
+
+    const list = document.createElement("div");
+    list.className = "lineup-column__list";
+    list.dataset.teamIndex = index;
+
+    const teamPlayers = allPlayers.filter((p) => team.player_ids.includes(p.id));
+    list.replaceChildren(
+      ...teamPlayers.map((p) => this.createCard(p, "team", index)),
     );
 
-    if (targetColumn === "team_a") this.state.teamA.push(playerId);
-    if (targetColumn === "team_b") this.state.teamB.push(playerId);
-    if (targetColumn === "team_waiting") this.state.teamWaiting.push(playerId);
+    list.addEventListener("dragover", (event) => {
+      event.preventDefault();
+      list.classList.add("lineup-column__list--dragover");
+    });
+
+    list.addEventListener("dragleave", () => {
+      list.classList.remove("lineup-column__list--dragover");
+    });
+
+    list.addEventListener("drop", (event) => {
+      event.preventDefault();
+      list.classList.remove("lineup-column__list--dragover");
+      const playerId = event.dataTransfer.getData("text/plain");
+      this.movePlayer(playerId, index);
+    });
+
+    section.appendChild(list);
+
+    const inputsContainer = document.createElement("div");
+    team.player_ids.forEach((id) => {
+      const input = document.createElement("input");
+      input.type = "hidden";
+      input.name = `match_day[teams_data][${index}][player_ids][]`;
+      input.value = id;
+      inputsContainer.appendChild(input);
+    });
+    section.appendChild(inputsContainer);
+
+    return section;
+  }
+
+  setupPoolListeners() {
+    this.poolTarget.addEventListener("dragover", (event) => {
+      event.preventDefault();
+      this.poolTarget.classList.add("lineup-column__list--dragover");
+    });
+
+    this.poolTarget.addEventListener("dragleave", () => {
+      this.poolTarget.classList.remove("lineup-column__list--dragover");
+    });
+
+    this.poolTarget.addEventListener("drop", (event) => {
+      event.preventDefault();
+      this.poolTarget.classList.remove("lineup-column__list--dragover");
+      const playerId = event.dataTransfer.getData("text/plain");
+      this.movePlayer(playerId, -1);
+    });
+  }
+
+  movePlayer(playerId, targetTeamIndex) {
+    this.state.teams.forEach((team) => {
+      team.player_ids = team.player_ids.filter((id) => id !== playerId);
+    });
+
+    if (targetTeamIndex !== -1) {
+      this.state.teams[targetTeamIndex].player_ids.push(playerId);
+    }
 
     this.render();
   }

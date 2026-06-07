@@ -22,12 +22,11 @@ class MatchDay < ApplicationRecord
     return false if selected_player_ids.empty?
 
     baseline_teams = teams.where(team_type: "baseline")
-    return false unless baseline_teams.where(name: "Team A").exists?
-    return false unless baseline_teams.where(name: "Team B").exists?
+    return false if baseline_teams.count < 2
 
     assigned_player_ids = baseline_teams.joins(:team_players).distinct.order("team_players.player_id").pluck("team_players.player_id")
 
-    assigned_player_ids == selected_player_ids
+    assigned_player_ids.sort == selected_player_ids.sort
   end
 
   def sync_setup_status!
