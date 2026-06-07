@@ -1,19 +1,21 @@
 module TeamSetups
   class SaveManualTeams
-    def self.call(match_day:, selected_player_ids:, team_a_player_ids:, team_b_player_ids:)
+    def self.call(match_day:, selected_player_ids:, team_a_player_ids:, team_b_player_ids:, team_waiting_player_ids: [])
       new(
         match_day:,
         selected_player_ids:,
         team_a_player_ids:,
-        team_b_player_ids:
+        team_b_player_ids:,
+        team_waiting_player_ids:
       ).call
     end
 
-    def initialize(match_day:, selected_player_ids:, team_a_player_ids:, team_b_player_ids:)
+    def initialize(match_day:, selected_player_ids:, team_a_player_ids:, team_b_player_ids:, team_waiting_player_ids:)
       @match_day = match_day
       @selected_player_ids = normalize_ids(selected_player_ids)
       @team_a_player_ids = normalize_ids(team_a_player_ids)
       @team_b_player_ids = normalize_ids(team_b_player_ids)
+      @team_waiting_player_ids = normalize_ids(team_waiting_player_ids)
     end
 
     def call
@@ -41,11 +43,11 @@ module TeamSetups
 
     private
 
-    attr_reader :match_day, :selected_player_ids, :team_a_player_ids, :team_b_player_ids
+    attr_reader :match_day, :selected_player_ids, :team_a_player_ids, :team_b_player_ids, :team_waiting_player_ids
 
     def valid_assignments?
       if overlapping_player_ids.any?
-        match_day.errors.add(:base, "Player cannot be assigned to both manual teams")
+        match_day.errors.add(:base, "Player cannot be assigned to more than one manual team")
       end
 
       if invalid_player_ids.any?
@@ -56,7 +58,11 @@ module TeamSetups
     end
 
     def overlapping_player_ids
-      team_a_player_ids & team_b_player_ids
+      overlapping = []
+      overlapping += (team_a_player_ids & team_b_player_ids)
+      overlapping += (team_a_player_ids & team_waiting_player_ids)
+      overlapping += (team_b_player_ids & team_waiting_player_ids)
+      overlapping.uniq
     end
 
     def invalid_player_ids
@@ -79,7 +85,8 @@ module TeamSetups
     def generated_teams
       @generated_teams ||= TeamSetups::ManualGeneratorAdapter.call(
         team_a_player_ids:,
-        team_b_player_ids:
+        team_b_player_ids:,
+        team_waiting_player_ids:
       )
     end
 

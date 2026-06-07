@@ -1,10 +1,19 @@
 import { Controller } from "@hotwired/stimulus";
 
 export default class extends Controller {
-  static targets = ["pool", "teamA", "teamB", "teamAInputs", "teamBInputs"];
+  static targets = [
+    "pool",
+    "teamA",
+    "teamB",
+    "teamWaiting",
+    "teamAInputs",
+    "teamBInputs",
+    "teamWaitingInputs",
+  ];
   static values = {
     teamAPlayerIds: Array,
     teamBPlayerIds: Array,
+    teamWaitingPlayerIds: Array,
   };
 
   connect() {
@@ -16,6 +25,7 @@ export default class extends Controller {
     this.state = {
       teamA: (this.teamAPlayerIdsValue || []).map(String),
       teamB: (this.teamBPlayerIdsValue || []).map(String),
+      teamWaiting: (this.teamWaitingPlayerIdsValue || []).map(String),
     };
 
     // Setup listeners for checkbox changes
@@ -26,23 +36,28 @@ export default class extends Controller {
       checkbox.addEventListener("change", () => this.render());
     });
 
-    [this.poolTarget, this.teamATarget, this.teamBTarget].forEach((list) => {
-        list.addEventListener("dragover", (event) => {
-          event.preventDefault();
-          list.classList.add("lineup-column__list--dragover");
-        });
-
-        list.addEventListener("dragleave", () => {
-          list.classList.remove("lineup-column__list--dragover");
-        });
-
-        list.addEventListener("drop", (event) => {
-          event.preventDefault();
-          list.classList.remove("lineup-column__list--dragover");
-          const playerId = event.dataTransfer.getData("text/plain");
-          this.movePlayer(playerId, list.dataset.lineupList);
-        });
+    [
+      this.poolTarget,
+      this.teamATarget,
+      this.teamBTarget,
+      this.teamWaitingTarget,
+    ].forEach((list) => {
+      list.addEventListener("dragover", (event) => {
+        event.preventDefault();
+        list.classList.add("lineup-column__list--dragover");
       });
+
+      list.addEventListener("dragleave", () => {
+        list.classList.remove("lineup-column__list--dragover");
+      });
+
+      list.addEventListener("drop", (event) => {
+        event.preventDefault();
+        list.classList.remove("lineup-column__list--dragover");
+        const playerId = event.dataTransfer.getData("text/plain");
+        this.movePlayer(playerId, list.dataset.lineupList);
+      });
+    });
 
     // Initial render
     this.render();
@@ -67,11 +82,15 @@ export default class extends Controller {
   normalizeState() {
     const selectedIds = this.selectedPlayers().map((player) => player.id);
 
-    this.state.teamA = this.state.teamA.filter((id) =>
-      selectedIds.includes(id),
-    );
+    this.state.teamA = this.state.teamA.filter((id) => selectedIds.includes(id));
     this.state.teamB = this.state.teamB.filter(
       (id) => selectedIds.includes(id) && !this.state.teamA.includes(id),
+    );
+    this.state.teamWaiting = this.state.teamWaiting.filter(
+      (id) =>
+        selectedIds.includes(id) &&
+        !this.state.teamA.includes(id) &&
+        !this.state.teamB.includes(id),
     );
   }
 
@@ -93,11 +112,13 @@ export default class extends Controller {
     // Add click-to-swap functionality
     card.addEventListener("click", (event) => {
       event.stopPropagation();
-      // Only allow swapping between Team A and Team B
-      if (column === "team_a" || column === "team_b") {
-        const targetColumn = column === "team_a" ? "team_b" : "team_a";
+      // Allow circular swapping: Team A -> Team B -> Team 3 -> Team A
+      let targetColumn;
+      if (column === "team_a") targetColumn = "team_b";
+      else if (column === "team_b") targetColumn = "team_waiting";
+      else if (column === "team_waiting") targetColumn = "team_a";
 
-        // Find and swap the player by moving to target column
+      if (targetColumn) {
         this.movePlayer(player.id, targetColumn);
       }
     });
@@ -121,13 +142,20 @@ export default class extends Controller {
     this.normalizeState();
 
     const players = this.selectedPlayers();
-    const assignedIds = new Set([...this.state.teamA, ...this.state.teamB]);
+    const assignedIds = new Set([
+      ...this.state.teamA,
+      ...this.state.teamB,
+      ...this.state.teamWaiting,
+    ]);
     const poolPlayers = players.filter((player) => !assignedIds.has(player.id));
     const teamAPlayers = players.filter((player) =>
       this.state.teamA.includes(player.id),
     );
     const teamBPlayers = players.filter((player) =>
       this.state.teamB.includes(player.id),
+    );
+    const teamWaitingPlayers = players.filter((player) =>
+      this.state.teamWaiting.includes(player.id),
     );
 
     this.poolTarget.replaceChildren(
@@ -138,6 +166,11 @@ export default class extends Controller {
     );
     this.teamBTarget.replaceChildren(
       ...teamBPlayers.map((player) => this.createCard(player, "team_b")),
+    );
+    this.teamWaitingTarget.replaceChildren(
+      ...teamWaitingPlayers.map((player) =>
+        this.createCard(player, "team_waiting"),
+      ),
     );
 
     this.renderInputs(
@@ -150,14 +183,23 @@ export default class extends Controller {
       "match_day[team_b_player_ids][]",
       this.state.teamB,
     );
+    this.renderInputs(
+      this.teamWaitingInputsTarget,
+      "match_day[team_waiting_player_ids][]",
+      this.state.teamWaiting,
+    );
   }
 
   movePlayer(playerId, targetColumn) {
     this.state.teamA = this.state.teamA.filter((id) => id !== playerId);
     this.state.teamB = this.state.teamB.filter((id) => id !== playerId);
+    this.state.teamWaiting = this.state.teamWaiting.filter(
+      (id) => id !== playerId,
+    );
 
     if (targetColumn === "team_a") this.state.teamA.push(playerId);
     if (targetColumn === "team_b") this.state.teamB.push(playerId);
+    if (targetColumn === "team_waiting") this.state.teamWaiting.push(playerId);
 
     this.render();
   }

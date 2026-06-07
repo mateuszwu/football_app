@@ -49,7 +49,8 @@ class UpdateMatchDay
       match_day:,
       selected_player_ids:,
       team_a_player_ids: params.fetch(:team_a_player_ids, []),
-      team_b_player_ids: params.fetch(:team_b_player_ids, [])
+      team_b_player_ids: params.fetch(:team_b_player_ids, []),
+      team_waiting_player_ids: params.fetch(:team_waiting_player_ids, [])
     )
 
     raise ActiveRecord::RecordInvalid.new(match_day) unless result
