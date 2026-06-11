@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_11_132850) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_11_195000) do
   create_table "match_day_players", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.integer "match_day_id", null: false
@@ -81,6 +81,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_11_132850) do
     t.index ["home_team_id"], name: "index_matches_on_home_team_id"
     t.index ["match_day_id", "home_team_id", "away_team_id"], name: "idx_on_match_day_id_home_team_id_away_team_id_f7a6ad2a0b", unique: true
     t.index ["match_day_id"], name: "index_matches_on_match_day_id"
+  end
+
+  create_table "player_season_stats", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.integer "elo"
+    t.integer "player_id", null: false
+    t.integer "season_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["player_id", "season_id"], name: "index_player_season_stats_on_player_id_and_season_id", unique: true
+    t.index ["player_id"], name: "index_player_season_stats_on_player_id"
+    t.index ["season_id"], name: "index_player_season_stats_on_season_id"
   end
 
   create_table "players", force: :cascade do |t|
@@ -159,6 +170,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_11_132850) do
   add_foreign_key "matches", "match_days"
   add_foreign_key "matches", "teams", column: "away_team_id"
   add_foreign_key "matches", "teams", column: "home_team_id"
+  add_foreign_key "player_season_stats", "players"
+  add_foreign_key "player_season_stats", "seasons"
   add_foreign_key "team_players", "players"
   add_foreign_key "team_players", "teams"
   add_foreign_key "team_setups", "match_days"
