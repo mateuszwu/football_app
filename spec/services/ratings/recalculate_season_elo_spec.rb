@@ -4,17 +4,14 @@ RSpec.describe Ratings::RecalculateSeasonElo do
   describe ".call" do
     it "recalculates player Elo ratings correctly based on match results in a season" do
       season = create(:season, initial_elo: 1000, elo_k_factor: 32)
-
       match_day1 = create(:match_day, season: season, status: "finished", played_on: Date.new(2026, 6, 1))
       team_setup1 = create(:team_setup, match_day: match_day1)
       team_a = create(:team, team_setup: team_setup1, team_type: "match")
       team_b = create(:team, team_setup: team_setup1, team_type: "match")
-
       player_a = create(:player)
       player_b = create(:player)
       create(:team_player, team: team_a, player: player_a)
       create(:team_player, team: team_b, player: player_b)
-
       create(
         :match,
         match_day: match_day1,
@@ -25,17 +22,14 @@ RSpec.describe Ratings::RecalculateSeasonElo do
         started_at: Time.zone.parse("2026-06-01 18:00:00"),
         finished_at: Time.zone.parse("2026-06-01 18:50:00")
       )
-
       match_day2 = create(:match_day, season: season, status: "finished", played_on: Date.new(2026, 6, 2))
       team_setup2 = create(:team_setup, match_day: match_day2)
       team_c = create(:team, team_setup: team_setup2, team_type: "match")
       team_d = create(:team, team_setup: team_setup2, team_type: "match")
-
       create(:team_player, team: team_c, player: player_a)
       create(:team_player, team: team_c, player: player_b)
       player_c = create(:player)
       create(:team_player, team: team_d, player: player_c)
-
       create(
         :match,
         match_day: match_day2,
@@ -85,12 +79,10 @@ RSpec.describe Ratings::RecalculateSeasonElo do
 
     it "applies MVP and DEF vote bonuses from the season settings" do
       season = create(:season, initial_elo: 1000, elo_k_factor: 32, mvp_vote_bonus: 12, def_vote_bonus: 7)
-
       match_day = create(:match_day, season: season, status: "finished", played_on: Date.new(2026, 6, 3))
       team_setup = create(:team_setup, match_day: match_day)
       team_a = create(:team, team_setup: team_setup, team_type: "match")
       team_b = create(:team, team_setup: team_setup, team_type: "match")
-
       voter = create(:player, name: "Voter")
       mvp_winner = create(:player, name: "MVP Winner")
       def_winner = create(:player, name: "DEF Winner")
@@ -102,7 +94,6 @@ RSpec.describe Ratings::RecalculateSeasonElo do
       create(:match_day_player, match_day: match_day, player: def_winner)
       vote_token = create(:match_day_vote_token, match_day_player: voter_match_day_player)
       MatchDayVote.create!(match_day_vote_token: vote_token, mvp_player: mvp_winner, def_player: def_winner)
-
       create(
         :match,
         match_day: match_day,
@@ -119,6 +110,35 @@ RSpec.describe Ratings::RecalculateSeasonElo do
       expect(voter.reload.elo).to eq(1000)
       expect(mvp_winner.reload.elo).to eq(1012)
       expect(def_winner.reload.elo).to eq(1007)
+    end
+
+    it "initializes season Elo from existing global Elo and stores season stats" do
+      season = create(:season, initial_elo: 1000, elo_k_factor: 32)
+      match_day = create(:match_day, season: season, status: "finished", played_on: Date.new(2026, 6, 4))
+      team_setup = create(:team_setup, match_day: match_day)
+      team_a = create(:team, team_setup: team_setup, team_type: "match")
+      team_b = create(:team, team_setup: team_setup, team_type: "match")
+      player_a = create(:player, elo: 1200)
+      player_b = create(:player, elo: 1000)
+      create(:team_player, team: team_a, player: player_a)
+      create(:team_player, team: team_b, player: player_b)
+      create(
+        :match,
+        match_day: match_day,
+        home_team: team_a,
+        away_team: team_b,
+        home_score: 1,
+        away_score: 0,
+        started_at: Time.zone.parse("2026-06-04 18:00:00"),
+        finished_at: Time.zone.parse("2026-06-04 18:50:00")
+      )
+
+      Ratings::RecalculateSeasonElo.call(season: season)
+
+      expect(player_a.reload.elo).to eq(1208)
+      expect(player_b.reload.elo).to eq(992)
+      expect(PlayerSeasonStat.find_by!(player: player_a, season: season).elo).to eq(1208)
+      expect(PlayerSeasonStat.find_by!(player: player_b, season: season).elo).to eq(992)
     end
   end
 end

@@ -9,7 +9,7 @@ module Ratings
     end
 
     def call
-      elo_map = Hash.new(season.initial_elo)
+      elo_map = initial_elo_map
 
       finished_match_days.each do |match_day|
         finished_matches(match_day).each do |match|
@@ -25,6 +25,14 @@ module Ratings
     private
 
     attr_reader :season
+
+    def initial_elo_map
+      Hash.new(season.initial_elo).tap do |map|
+        Player.where.not(elo: nil).find_each do |player|
+          map[player.id] = player.elo
+        end
+      end
+    end
 
     def finished_match_days
       season.match_days
@@ -92,6 +100,7 @@ module Ratings
       Player.transaction do
         elo_map.each do |player_id, elo|
           Player.where(id: player_id).update_all(elo: elo)
+          PlayerSeasonStat.find_or_initialize_by(player_id: player_id, season: season).update!(elo: elo)
         end
       end
     end
