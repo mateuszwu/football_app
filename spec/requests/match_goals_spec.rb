@@ -212,7 +212,7 @@ RSpec.describe "Match goals" do
         end
       end
 
-      it "rejects goals when the match is already finished" do
+      it "allows admin goal corrections when the match is already finished" do
         begin
           original_admin_password = ENV["FOOTBALL_APP_ADMIN_PASSWORD"]
           ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = "secret-password"
@@ -233,9 +233,10 @@ RSpec.describe "Match goals" do
           }
 
           expect(response).to redirect_to(match_path(match))
-          expect(flash[:alert]).to eq("Could not add goal")
-          expect(MatchGoal.count).to eq(0)
-          expect(match.reload.home_score).to eq(0)
+          expect(flash[:notice]).to eq("Goal added")
+          expect(MatchGoal.count).to eq(1)
+          expect(match.reload.home_score).to eq(1)
+          expect(match.finished_at).to eq(Time.zone.parse("2026-06-19 20:02:10"))
         ensure
           if original_admin_password.nil?
             ENV.delete("FOOTBALL_APP_ADMIN_PASSWORD")
@@ -348,7 +349,7 @@ RSpec.describe "Match goals" do
         end
       end
 
-      it "rejects undo when the match is already finished" do
+      it "allows admin undo corrections when the match is already finished" do
         begin
           original_admin_password = ENV["FOOTBALL_APP_ADMIN_PASSWORD"]
           ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = "secret-password"
@@ -366,9 +367,10 @@ RSpec.describe "Match goals" do
           delete "/matches/#{match.id}/goals/#{goal.id}"
 
           expect(response).to redirect_to(match_path(match))
-          expect(flash[:alert]).to eq("Could not remove goal")
-          expect(MatchGoal.count).to eq(1)
-          expect(match.reload.home_score).to eq(1)
+          expect(flash[:notice]).to eq("Goal removed")
+          expect(MatchGoal.count).to eq(0)
+          expect(match.reload.home_score).to eq(0)
+          expect(match.finished_at).to eq(Time.zone.parse("2026-06-19 20:02:10"))
         ensure
           if original_admin_password.nil?
             ENV.delete("FOOTBALL_APP_ADMIN_PASSWORD")
