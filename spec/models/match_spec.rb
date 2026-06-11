@@ -145,6 +145,26 @@ RSpec.describe Match do
     end
   end
 
+  describe "#recalculate_score!" do
+    context "when persisted scores have drifted from recorded goals" do
+      it "replaces both scores with goal counts per team" do
+        match = create(:match, home_score: 4, away_score: 2)
+        home_scorer = create(:player)
+        away_scorer = create(:player)
+        create(:team_player, team: match.home_team, player: home_scorer)
+        create(:team_player, team: match.away_team, player: away_scorer)
+        create(:match_goal, match:, scoring_team: match.home_team, scorer: home_scorer, scored_at: Time.zone.now)
+        create(:match_goal, match:, scoring_team: match.away_team, scorer: away_scorer, scored_at: Time.zone.now)
+        create(:match_goal, match:, scoring_team: match.away_team, scorer: away_scorer, scored_at: 1.minute.from_now)
+
+        match.recalculate_score!
+
+        expect(match.reload.home_score).to eq(1)
+        expect(match.away_score).to eq(2)
+      end
+    end
+  end
+
   describe "#winner" do
     context "when the home team wins" do
       it "returns the home team" do

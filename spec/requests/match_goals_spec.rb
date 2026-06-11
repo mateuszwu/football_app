@@ -56,6 +56,38 @@ RSpec.describe "Match goals" do
         end
       end
 
+      it "recalculates the full scoreline from recorded goals when scores drifted" do
+        begin
+          original_admin_password = ENV["FOOTBALL_APP_ADMIN_PASSWORD"]
+          ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = "secret-password"
+          match = create(:match, started_at: Time.zone.parse("2026-06-19 19:15:00"), home_score: 4, away_score: 0)
+          home_scorer = create(:player, name: "Home Scorer", nickname: "home-scorer", phone: "+48123456789")
+          away_scorer = create(:player, name: "Away Scorer", nickname: "away-scorer", phone: "+48987654321")
+          create(:team_player, team: match.home_team, player: home_scorer)
+          create(:team_player, team: match.away_team, player: away_scorer)
+          create(:match_goal, match:, scorer: away_scorer, scoring_team: match.away_team, scored_at: Time.zone.parse("2026-06-19 19:20:00"))
+          post "/admin/session", params: { password: "secret-password" }
+
+          post "/matches/#{match.id}/goals", params: {
+            match_goal: {
+              scoring_team_id: match.home_team.id,
+              scorer_id: home_scorer.id
+            }
+          }
+
+          expect(response).to redirect_to(match_path(match))
+          expect(flash[:notice]).to eq("Goal added")
+          expect(match.reload.home_score).to eq(1)
+          expect(match.away_score).to eq(1)
+        ensure
+          if original_admin_password.nil?
+            ENV.delete("FOOTBALL_APP_ADMIN_PASSWORD")
+          else
+            ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = original_admin_password
+          end
+        end
+      end
+
       it "creates a goal with an assistant" do
         begin
           original_admin_password = ENV["FOOTBALL_APP_ADMIN_PASSWORD"]
@@ -218,6 +250,36 @@ RSpec.describe "Match goals" do
           expect(flash[:notice]).to eq("Goal removed")
           expect(MatchGoal.count).to eq(0)
           expect(match.reload.home_score).to eq(0)
+        ensure
+          if original_admin_password.nil?
+            ENV.delete("FOOTBALL_APP_ADMIN_PASSWORD")
+          else
+            ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = original_admin_password
+          end
+        end
+      end
+
+      it "recalculates the full scoreline from remaining goals when scores drifted" do
+        begin
+          original_admin_password = ENV["FOOTBALL_APP_ADMIN_PASSWORD"]
+          ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = "secret-password"
+          match = create(:match, started_at: Time.zone.parse("2026-06-19 19:15:00"), home_score: 5, away_score: 5)
+          home_scorer = create(:player, name: "Home Scorer", nickname: "home-scorer", phone: "+48123456789")
+          away_scorer = create(:player, name: "Away Scorer", nickname: "away-scorer", phone: "+48987654321")
+          create(:team_player, team: match.home_team, player: home_scorer)
+          create(:team_player, team: match.away_team, player: away_scorer)
+          remaining_goal = create(:match_goal, match:, scorer: away_scorer, scoring_team: match.away_team, scored_at: Time.zone.parse("2026-06-19 19:20:00"))
+          removed_goal = create(:match_goal, match:, scorer: home_scorer, scoring_team: match.home_team, scored_at: Time.zone.parse("2026-06-19 19:25:00"))
+          post "/admin/session", params: { password: "secret-password" }
+
+          delete "/matches/#{match.id}/goals/#{removed_goal.id}"
+
+          expect(response).to redirect_to(match_path(match))
+          expect(flash[:notice]).to eq("Goal removed")
+          expect(MatchGoal.exists?(remaining_goal.id)).to be(true)
+          expect(MatchGoal.exists?(removed_goal.id)).to be(false)
+          expect(match.reload.home_score).to eq(0)
+          expect(match.away_score).to eq(1)
         ensure
           if original_admin_password.nil?
             ENV.delete("FOOTBALL_APP_ADMIN_PASSWORD")
