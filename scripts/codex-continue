@@ -5,8 +5,6 @@ require "json"
 require "fileutils"
 require "open3"
 
-MODEL = ENV.fetch("LOCAL_LLM_MODEL", "lmstudio/qwen/qwen3.5-9b")
-
 ACTIONS = [
   "merge_reviewed_pr",
   "pick_next_ticket",
@@ -21,7 +19,7 @@ def require_tool!(name)
   system("command -v #{name} >/dev/null 2>&1") || abort("Missing required tool: #{name}")
 end
 
-%w[git gh ruby pi].each { |tool| require_tool!(tool) }
+%w[git gh ruby].each { |tool| require_tool!(tool) }
 
 def write(path, content)
   FileUtils.mkdir_p(File.dirname(path))
@@ -34,6 +32,7 @@ end
 
 def sh(*args)
   stdout, stderr, status = Open3.capture3(*args)
+
   {
     stdout: stdout,
     stderr: stderr,
@@ -70,15 +69,6 @@ rescue JSON::ParserError
   nil
 end
 
-def extract_json(raw)
-  start = raw.index("{")
-  finish = raw.rindex("}")
-
-  raise "No JSON object found" unless start && finish && finish > start
-
-  JSON.parse(raw[start..finish])
-end
-
 def current_pr_info
   result = sh(
     "gh",
@@ -96,13 +86,76 @@ rescue JSON::ParserError
   nil
 end
 
+def open_pr?(pr_info)
+  pr_info && pr_info["state"] == "OPEN"
+end
+
+def merged_pr?(pr_info)
+  pr_info && pr_info["state"] == "MERGED"
+end
+
+def task_matches_current_branch?(selected_issue, current_branch)
+  selected_issue && selected_issue["branch"] == current_branch
+end
+
 def ci_green?(ci_status)
   ci_status&.dig("overall", "passed") == true
 end
 
-def print_state(state)
-  puts "Workflow state:"
-  puts JSON.pretty_generate(state)
+def determine_action(pr_info:, selected_issue:, ci_status:, current_branch:, has_task:, has_report:, has_pr_url:)
+  if open_pr?(pr_info)
+    return [
+      "merge_reviewed_pr",
+      "Open PR exists for the current branch, so continue should run the merge/finalization script."
+    ]
+  end
+
+  if merged_pr?(pr_info)
+    return [
+      "pick_next_ticket",
+      "The current PR is already merged, so continue should move to the next ticket."
+    ]
+  end
+
+  unless has_task
+    return [
+      "pick_next_ticket",
+      "There is no active task file, so continue should select the next issue."
+    ]
+  end
+
+  unless task_matches_current_branch?(selected_issue, current_branch)
+    return [
+      "pick_next_ticket",
+      "Selected issue metadata does not match the current branch, so continue should select a fresh ticket."
+    ]
+  end
+
+  unless has_report
+    return [
+      "continue_implementation",
+      "The active task has no Codex report yet, so implementation should continue."
+    ]
+  end
+
+  unless ci_green?(ci_status)
+    return [
+      "run_ci",
+      "Implementation report exists but CI is not green yet, so continue should run local CI."
+    ]
+  end
+
+  if has_pr_url
+    return [
+      "show_pr_link",
+      "CI is green and a PR URL has already been recorded, so continue should show the link."
+    ]
+  end
+
+  [
+    "create_draft_pr",
+    "CI is green for the active branch and no PR URL is recorded, so continue should create the draft PR."
+  ]
 end
 
 FileUtils.mkdir_p(".ai/continue")
@@ -110,14 +163,14 @@ FileUtils.mkdir_p(".ai/continue")
 git_status = sh!("git", "status", "--short", "--branch")
 current_branch = sh!("git", "branch", "--show-current").strip
 pr_info = current_pr_info
-
 selected_issue = json_read(".ai/selected-issue.json")
 ci_status = json_read(".ai/ci-status.json")
 
 state = {
   "current_branch" => current_branch,
   "git_status" => git_status,
-  "has_current_pr" => !pr_info.nil?,
+  "has_current_pr" => open_pr?(pr_info),
+  "has_merged_pr" => merged_pr?(pr_info),
   "current_pr" => pr_info,
   "has_task" => file_exists(".ai/codex-task.md"),
   "has_issue" => file_exists(".ai/issue.json"),
@@ -125,116 +178,26 @@ state = {
   "has_codex_report" => file_exists(".ai/codex-report.md"),
   "has_ci_status" => file_exists(".ai/ci-status.json"),
   "ci_green" => ci_green?(ci_status),
+  "task_matches_current_branch" => task_matches_current_branch?(selected_issue, current_branch),
   "has_pr_url" => file_exists(".ai/pr-url.txt"),
   "pr_url" => read(".ai/pr-url.txt").strip,
-  "selected_issue" => selected_issue,
-  "available_scripts" => {
-    "merge_reviewed_pr" => File.executable?("./scripts/codex-merge-reviewed-pr"),
-    "pick_next_ticket" => File.executable?("./scripts/codex-pick-next-ticket"),
-    "run_ci" => File.executable?("./scripts/codex-run-local-ci"),
-    "create_draft_pr" => File.executable?("./scripts/codex-create-draft-pr")
-  }
+  "selected_issue" => selected_issue
 }
 
 write(".ai/continue/state.json", JSON.pretty_generate(state))
 
-prompt = <<~PROMPT
-  You are a local workflow router for Codex.
-
-  Read the workflow state below and decide exactly one next action.
-
-  Available actions:
-
-  - merge_reviewed_pr
-    Use when there is an existing current PR. In this project, when the user says continue and there is a draft/current PR, the next step is to run the merge script.
-
-  - pick_next_ticket
-    Use when there is no active task and no current PR.
-
-  - continue_implementation
-    Use when there is an active task but no Codex report yet.
-
-  - run_ci
-    Use when implementation appears complete because .ai/codex-report.md exists, but CI has not passed or has not been run.
-
-  - create_draft_pr
-    Use when CI is green and there is no current PR.
-
-  - show_pr_link
-    Use when a PR has already been created and the script should only show the user the PR URL.
-
-  - stop
-    Use if the state is ambiguous or unsafe.
-
-  Hard rules:
-  - Return JSON only.
-  - Pick exactly one action.
-  - Do not invent files or PRs.
-  - If there is a current PR, prefer merge_reviewed_pr.
-  - If CI is green and there is no current PR, prefer create_draft_pr.
-  - If there is no task and no PR, prefer pick_next_ticket.
-  - If there is a task and no report, prefer continue_implementation.
-  - If there is a report but CI is not green, prefer run_ci.
-
-  Required JSON schema:
-
-  {
-    "action": "merge_reviewed_pr|pick_next_ticket|continue_implementation|run_ci|create_draft_pr|show_pr_link|stop",
-    "reason": "...",
-    "message_for_codex": "short instruction for Codex after this script finishes"
-  }
-
-  Workflow state:
-
-  #{JSON.pretty_generate(state)}
-PROMPT
-
-write(".ai/continue/router-prompt.md", prompt)
-
-stdout, stderr, status = Open3.capture3(
-  "pi",
-  "--model", MODEL,
-  "--tools", "read,bash,grep,find,ls",
-  "--mode", "print",
-  stdin_data: prompt
+action, reason = determine_action(
+  pr_info: pr_info,
+  selected_issue: selected_issue,
+  ci_status: ci_status,
+  current_branch: current_branch,
+  has_task: state["has_task"],
+  has_report: state["has_codex_report"],
+  has_pr_url: state["has_pr_url"]
 )
 
-write(".ai/continue/router.raw", stdout)
-write(".ai/continue/router.stderr.log", stderr)
-
-unless status.success?
-  abort <<~MSG
-    Local LLM router failed.
-
-    STDERR:
-    #{stderr.lines.last(80).join}
-  MSG
-end
-
-decision = extract_json(stdout)
-
-action = decision["action"].to_s
-reason = decision["reason"].to_s
-message_for_codex = decision["message_for_codex"].to_s
-
 unless ACTIONS.include?(action)
-  abort "Invalid local LLM action: #{action}"
-end
-
-# Deterministic guardrails override bad local LLM routing.
-if pr_info && action != "merge_reviewed_pr"
-  action = "merge_reviewed_pr"
-  reason = "Guardrail override: current PR exists, so continue should run merge script."
-end
-
-if !pr_info && ci_green?(ci_status) && action != "create_draft_pr"
-  action = "create_draft_pr"
-  reason = "Guardrail override: CI is green and no PR exists, so create draft PR."
-end
-
-if !pr_info && !file_exists(".ai/codex-task.md") && action != "pick_next_ticket"
-  action = "pick_next_ticket"
-  reason = "Guardrail override: no active task and no PR, so pick next ticket."
+  abort "Invalid action: #{action}"
 end
 
 write(
@@ -242,8 +205,7 @@ write(
   JSON.pretty_generate(
     {
       "action" => action,
-      "reason" => reason,
-      "message_for_codex" => message_for_codex
+      "reason" => reason
     }
   )
 )
@@ -254,9 +216,7 @@ puts
 
 case action
 when "merge_reviewed_pr"
-  unless File.executable?("./scripts/codex-merge-reviewed-pr")
-    abort "Missing executable script: ./scripts/codex-merge-reviewed-pr"
-  end
+  abort "Missing executable script: ./scripts/codex-merge-reviewed-pr" unless File.executable?("./scripts/codex-merge-reviewed-pr")
 
   system("./scripts/codex-merge-reviewed-pr") || abort("Merge script failed.")
 
@@ -269,9 +229,7 @@ when "merge_reviewed_pr"
   puts "Read .ai/codex-task.md and implement the selected issue."
 
 when "pick_next_ticket"
-  unless File.executable?("./scripts/codex-pick-next-ticket")
-    abort "Missing executable script: ./scripts/codex-pick-next-ticket"
-  end
+  abort "Missing executable script: ./scripts/codex-pick-next-ticket" unless File.executable?("./scripts/codex-pick-next-ticket")
 
   system("./scripts/codex-pick-next-ticket") || abort("Pick next ticket script failed.")
 
@@ -289,9 +247,7 @@ when "continue_implementation"
   puts "When done, write .ai/codex-report.md and run ./scripts/codex-run-local-ci."
 
 when "run_ci"
-  unless File.executable?("./scripts/codex-run-local-ci")
-    abort "Missing executable script: ./scripts/codex-run-local-ci"
-  end
+  abort "Missing executable script: ./scripts/codex-run-local-ci" unless File.executable?("./scripts/codex-run-local-ci")
 
   system("./scripts/codex-run-local-ci") || begin
     puts
@@ -307,9 +263,7 @@ when "run_ci"
   puts "Run ./scripts/codex-create-draft-pr."
 
 when "create_draft_pr"
-  unless File.executable?("./scripts/codex-create-draft-pr")
-    abort "Missing executable script: ./scripts/codex-create-draft-pr"
-  end
+  abort "Missing executable script: ./scripts/codex-create-draft-pr" unless File.executable?("./scripts/codex-create-draft-pr")
 
   system("./scripts/codex-create-draft-pr") || abort("Create draft PR script failed.")
 
@@ -321,10 +275,7 @@ when "create_draft_pr"
 
 when "show_pr_link"
   pr_url = read(".ai/pr-url.txt").strip
-
-  if pr_url.empty?
-    abort "No .ai/pr-url.txt found."
-  end
+  abort "No .ai/pr-url.txt found." if pr_url.empty?
 
   puts "Draft PR URL:"
   puts pr_url
@@ -333,7 +284,5 @@ when "show_pr_link"
 
 when "stop"
   puts "Workflow stopped."
-  puts "Reason: #{reason}"
-  puts message_for_codex unless message_for_codex.empty?
   exit 1
 end

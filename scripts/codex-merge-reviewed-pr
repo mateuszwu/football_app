@@ -76,6 +76,19 @@ rescue JSON::ParserError
   nil
 end
 
+def sync_main_branch!
+  remote_ref = "origin/#{MAIN_BRANCH}"
+
+  puts "Fetching latest #{remote_ref}..."
+  sh!("git", "fetch", "origin", MAIN_BRANCH)
+
+  puts "Switching to #{MAIN_BRANCH}..."
+  sh!("git", "switch", MAIN_BRANCH)
+
+  puts "Resetting local #{MAIN_BRANCH} to #{remote_ref}..."
+  sh!("git", "reset", "--hard", remote_ref)
+end
+
 def checks_summary(status_check_rollup)
   Array(status_check_rollup).map do |check|
     {
@@ -224,11 +237,7 @@ end
 puts "Merging PR ##{pr_number}..."
 sh!("gh", "pr", "merge", pr_number.to_s, "--squash", "--delete-branch")
 
-puts "Switching to #{MAIN_BRANCH}..."
-sh!("git", "switch", MAIN_BRANCH)
-
-puts "Pulling latest #{MAIN_BRANCH}..."
-sh!("git", "pull", "--ff-only")
+sync_main_branch!
 
 # Remove local branch if it still exists.
 if sh("git", "show-ref", "--verify", "--quiet", "refs/heads/#{branch_before_merge}")[:success]

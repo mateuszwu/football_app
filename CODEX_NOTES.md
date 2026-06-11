@@ -39,6 +39,26 @@ After running a script, follow the printed instructions.
 
 If a draft PR is created, show the PR URL to the user and stop.
 
+## Communication
+
+Keep user-facing updates minimal and outcome-oriented.
+
+Do not narrate your thinking process, internal reasoning, or step-by-step execution by default.
+
+Only interrupt the user when one of these is true:
+
+- a task is finished and ready for review
+- you need approval or a decision
+- you are blocked and need input
+- a script completed with a concrete next action or artifact such as a PR URL
+
+Prefer short status messages like:
+
+- implementation finished
+- CI passed
+- draft PR created
+- review needed
+
 ## Implementation
 
 When a task is selected, read:

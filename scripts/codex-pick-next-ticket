@@ -8,6 +8,8 @@ require "open3"
 MODEL = ENV.fetch("LOCAL_LLM_MODEL", "lmstudio/qwen/qwen3.5-9b")
 ISSUE_LIMIT = ENV.fetch("ISSUE_LIMIT", "200").to_i
 USE_LOCAL_LLM = ENV.fetch("USE_LOCAL_LLM", "1") != "0"
+LOCAL_LLM_CANDIDATE_LIMIT = ENV.fetch("LOCAL_LLM_CANDIDATE_LIMIT", "12").to_i
+LOCAL_LLM_SCORE_DELTA_THRESHOLD = ENV.fetch("LOCAL_LLM_SCORE_DELTA_THRESHOLD", "10").to_i
 MAIN_BRANCH = ENV.fetch("MAIN_BRANCH", "main")
 
 AI_DIR = ".ai"
@@ -26,6 +28,10 @@ end
 def write(path, content)
   FileUtils.mkdir_p(File.dirname(path))
   File.write(path, content)
+end
+
+def read(path)
+  File.exist?(path) ? File.read(path) : ""
 end
 
 def sh!(*args)
@@ -146,7 +152,7 @@ def issue_to_candidate(issue)
   {
     "number" => issue["number"],
     "title" => issue["title"],
-    "body" => issue["body"].to_s[0, 5_000],
+    "body" => issue["body"].to_s[0, 1_500],
     "url" => issue["url"],
     "labels" => label_names(issue),
     "assignees" => Array(issue["assignees"]).map { |a| a["login"] || a["name"] }.compact,
@@ -159,12 +165,41 @@ def issue_to_candidate(issue)
   }
 end
 
+def selection_needs_local_llm?(candidates)
+  return false if candidates.size <= 1
+
+  top_score = candidates[0]["preferred_score"]
+  second_score = candidates[1]["preferred_score"]
+
+  top_score - second_score <= LOCAL_LLM_SCORE_DELTA_THRESHOLD
+end
+
+def llm_candidates(candidates)
+  candidates.first(LOCAL_LLM_CANDIDATE_LIMIT).map do |candidate|
+    candidate.slice(
+      "number",
+      "title",
+      "body",
+      "labels",
+      "milestone",
+      "mvp",
+      "preferred_score",
+      "complexity",
+      "url"
+    )
+  end
+end
+
 def run_local_llm_selection(model)
+  prompt_candidates = llm_candidates(JSON.parse(read(".ai/lowest-mvp-candidates.json")))
+
+  write(".ai/lowest-mvp-candidates-for-llm.json", JSON.pretty_generate(prompt_candidates))
+
   prompt = <<~PROMPT
     You are a local GitHub issue selector for Codex.
 
     Read:
-    - .ai/lowest-mvp-candidates.json
+    - .ai/lowest-mvp-candidates-for-llm.json
 
     Context:
     This is a full-AI project. All tickets are allowed to be handled by AI.
@@ -187,7 +222,7 @@ def run_local_llm_selection(model)
     1. Prefer issues that are clearly described.
     2. Prefer issues with concrete acceptance criteria or expected behavior.
     3. Prefer issues likely implementable from the existing codebase.
-    4. Prefer issues with ai-ok, ai-ready, small, bug, good-first-issue labels.
+    4. Prefer issues with higher preferred_score when they are close.
     5. If all else is equal, prefer lower issue number.
 
     Required JSON schema:
@@ -291,7 +326,7 @@ puts
 
 selection = nil
 
-if USE_LOCAL_LLM && command_available?("pi")
+if USE_LOCAL_LLM && command_available?("pi") && selection_needs_local_llm?(lowest_mvp_candidates)
   puts "Running local LLM selector..."
   selection = run_local_llm_selection(MODEL)
 end
@@ -373,9 +408,9 @@ write(".ai/branch.txt", "#{branch_name}\n")
 
 labels = selected_candidate["labels"].join(", ")
 body = full_issue["body"].to_s
-comments = Array(full_issue["comments"]).map do |comment|
+comments = Array(full_issue["comments"]).first(5).map do |comment|
   author = comment.dig("author", "login") || "unknown"
-  text = comment["body"].to_s
+  text = comment["body"].to_s[0, 600]
   "- #{author}: #{text}"
 end.join("\n\n")
 
@@ -406,7 +441,7 @@ codex_task = <<~MD
 
   ## Issue description
 
-  #{body}
+  #{body[0, 6_000]}
 
   ## Issue comments
 
