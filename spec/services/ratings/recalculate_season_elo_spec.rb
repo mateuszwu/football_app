@@ -82,5 +82,43 @@ RSpec.describe Ratings::RecalculateSeasonElo do
       expect(player_b.reload.elo).to eq(985)
       expect(player_c.reload.elo).to eq(1000)
     end
+
+    it "applies MVP and DEF vote bonuses from the season settings" do
+      season = create(:season, initial_elo: 1000, elo_k_factor: 32, mvp_vote_bonus: 12, def_vote_bonus: 7)
+
+      match_day = create(:match_day, season: season, status: "finished", played_on: Date.new(2026, 6, 3))
+      team_setup = create(:team_setup, match_day: match_day)
+      team_a = create(:team, team_setup: team_setup, team_type: "match")
+      team_b = create(:team, team_setup: team_setup, team_type: "match")
+
+      voter = create(:player, name: "Voter")
+      mvp_winner = create(:player, name: "MVP Winner")
+      def_winner = create(:player, name: "DEF Winner")
+      create(:team_player, team: team_a, player: voter)
+      create(:team_player, team: team_a, player: mvp_winner)
+      create(:team_player, team: team_b, player: def_winner)
+      voter_match_day_player = create(:match_day_player, match_day: match_day, player: voter)
+      create(:match_day_player, match_day: match_day, player: mvp_winner)
+      create(:match_day_player, match_day: match_day, player: def_winner)
+      vote_token = create(:match_day_vote_token, match_day_player: voter_match_day_player)
+      MatchDayVote.create!(match_day_vote_token: vote_token, mvp_player: mvp_winner, def_player: def_winner)
+
+      create(
+        :match,
+        match_day: match_day,
+        home_team: team_a,
+        away_team: team_b,
+        home_score: 1,
+        away_score: 1,
+        started_at: Time.zone.parse("2026-06-03 18:00:00"),
+        finished_at: Time.zone.parse("2026-06-03 18:50:00")
+      )
+
+      Ratings::RecalculateSeasonElo.call(season: season)
+
+      expect(voter.reload.elo).to eq(1000)
+      expect(mvp_winner.reload.elo).to eq(1012)
+      expect(def_winner.reload.elo).to eq(1007)
+    end
   end
 end

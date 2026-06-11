@@ -15,6 +15,8 @@ module Ratings
         finished_matches(match_day).each do |match|
           process_match(match, elo_map)
         end
+
+        apply_vote_bonuses(match_day, elo_map)
       end
 
       persist(elo_map)
@@ -57,8 +59,22 @@ module Ratings
       end
     end
 
+    def apply_vote_bonuses(match_day, elo_map)
+      match_day_votes(match_day).each do |vote|
+        elo_map[vote.mvp_player_id] += vote.mvp_bonus
+        elo_map[vote.def_player_id] += vote.def_bonus
+      end
+    end
+
     def average_elo(players, elo_map)
       players.sum { |p| elo_map[p.id] }.to_f / players.size
+    end
+
+    def match_day_votes(match_day)
+      MatchDayVote
+        .joins(match_day_vote_token: { match_day_player: :match_day })
+        .where(match_days: { id: match_day.id })
+        .includes(:mvp_player, :def_player, match_day_vote_token: { match_day_player: :match_day })
     end
 
     def match_scores(match)
