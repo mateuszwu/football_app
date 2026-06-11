@@ -204,6 +204,24 @@
   margin: 0;
 }
 
+.live-match__admin-panel {
+  border-top: 1px solid #e5e7eb;
+  margin-top: 2rem;
+  padding-top: 2rem;
+}
+
+.live-match__goal-forms {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+}
+
+.live-match__goal-form-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  padding: 1rem;
+}
+
 .checkbox-list {
   display: grid;
   gap: 0.5rem;

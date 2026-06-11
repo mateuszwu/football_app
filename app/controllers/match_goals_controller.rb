@@ -1,0 +1,27 @@
+class MatchGoalsController < ApplicationController
+  before_action :require_admin!
+
+  def create
+    match = Match
+      .includes(home_team: :players, away_team: :players)
+      .find(params[:match_id])
+
+    result = Matches::AddGoal.call(
+      match:,
+      scorer_id: goal_params[:scorer_id],
+      scoring_team_id: goal_params[:scoring_team_id]
+    )
+
+    if result
+      redirect_to match_path(match), notice: "Goal added"
+    else
+      redirect_to match_path(match), alert: "Could not add goal"
+    end
+  end
+
+  private
+
+  def goal_params
+    params.expect(match_goal: [ :scorer_id, :scoring_team_id ])
+  end
+end

@@ -50,6 +50,35 @@ RSpec.describe "Matches" do
           expect(response.body).not_to include("phone")
         end
       end
+
+      it "shows admin goal forms only for admins" do
+        begin
+          original_admin_password = ENV["FOOTBALL_APP_ADMIN_PASSWORD"]
+          ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = "secret-password"
+          match = create(:match, started_at: Time.zone.parse("2026-06-19 19:15:00"))
+          home_player = create(:player, name: "Adam Nowak", nickname: "adam", phone: "+48111111111")
+          away_player = create(:player, name: "Marek Kowalski", nickname: "marek", phone: "+48222222222")
+          create(:team_player, team: match.home_team, player: home_player)
+          create(:team_player, team: match.away_team, player: away_player)
+
+          get "/matches/#{match.id}"
+
+          expect(response.body).not_to include("Add goal")
+
+          post "/admin/session", params: { password: "secret-password" }
+          get "/matches/#{match.id}"
+
+          expect(response.body).to include("Add goal")
+          expect(response.body).to include("Add goal for #{match.home_team.name}")
+          expect(response.body).to include("Add goal for #{match.away_team.name}")
+        ensure
+          if original_admin_password.nil?
+            ENV.delete("FOOTBALL_APP_ADMIN_PASSWORD")
+          else
+            ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = original_admin_password
+          end
+        end
+      end
     end
 
     context "when the match has not started and no players are assigned" do
