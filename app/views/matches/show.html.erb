@@ -1,0 +1,83 @@
+<% content_for :title, "#{match.home_team.name} vs #{match.away_team.name} - Football App" %>
+
+<section class="live-match">
+  <div class="section__header">
+    <p class="eyebrow">Live match</p>
+    <h1><%= match.home_team.name %> vs <%= match.away_team.name %></h1>
+    <p>
+      Sezon:
+      <%= link_to match.match_day.season.name, season_path(match.match_day.season) %>
+      ·
+      Match day:
+      <%= match.match_day.played_on %>
+    </p>
+  </div>
+
+  <div class="live-match__scoreboard">
+    <article class="live-match__team">
+      <p class="live-match__team-label">Home</p>
+      <h2><%= match.home_team.name %></h2>
+      <strong class="live-match__score"><%= match.home_score %></strong>
+    </article>
+
+    <div class="live-match__status-card">
+      <p class="status-badge"><%= match.finished? ? "finished" : (match.in_progress? ? "in_progress" : "not_started") %></p>
+
+      <% if match.finished? %>
+        <p>
+          <% if match.draw? %>
+            Match finished as a draw.
+          <% else %>
+            Winner: <strong><%= match.winner.name %></strong>
+          <% end %>
+        </p>
+      <% elsif match.in_progress? %>
+        <p>Started at <%= match.started_at.strftime("%H:%M") %></p>
+      <% else %>
+        <p>Kick-off not started yet.</p>
+      <% end %>
+    </div>
+
+    <article class="live-match__team">
+      <p class="live-match__team-label">Away</p>
+      <h2><%= match.away_team.name %></h2>
+      <strong class="live-match__score"><%= match.away_score %></strong>
+    </article>
+  </div>
+
+  <div class="live-match__lineups">
+    <article class="live-match__lineup">
+      <h2><%= match.home_team.name %> lineup</h2>
+
+      <% if match.home_team.players.any? %>
+        <ul class="live-match__players">
+          <% match.home_team.players.order(:name).each do |player| %>
+            <li>
+              <strong><%= player.name %></strong>
+              <span><%= player.nickname %></span>
+            </li>
+          <% end %>
+        </ul>
+      <% else %>
+        <p class="empty-state">No players assigned yet.</p>
+      <% end %>
+    </article>
+
+    <article class="live-match__lineup">
+      <h2><%= match.away_team.name %> lineup</h2>
+
+      <% if match.away_team.players.any? %>
+        <ul class="live-match__players">
+          <% match.away_team.players.order(:name).each do |player| %>
+            <li>
+              <strong><%= player.name %></strong>
+              <span><%= player.nickname %></span>
+            </li>
+          <% end %>
+        </ul>
+      <% else %>
+        <p class="empty-state">No players assigned yet.</p>
+      <% end %>
+    </article>
+  </div>
+</section>
