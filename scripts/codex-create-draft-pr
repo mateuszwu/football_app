@@ -7,12 +7,14 @@ require "open3"
 
 MODEL = ENV.fetch("LOCAL_LLM_MODEL", "lmstudio/qwen/qwen3.5-9b")
 MAIN_BRANCH = ENV.fetch("MAIN_BRANCH", "main")
+USE_LOCAL_LLM = ENV.fetch("USE_LOCAL_LLM", "1") != "0"
 
 def require_tool!(name)
   system("command -v #{name} >/dev/null 2>&1") || abort("Missing required tool: #{name}")
 end
 
-%w[git gh ruby pi].each { |tool| require_tool!(tool) }
+%w[git gh ruby].each { |tool| require_tool!(tool) }
+require_tool!("pi") if USE_LOCAL_LLM
 
 def write(path, content)
   FileUtils.mkdir_p(File.dirname(path))
@@ -107,6 +109,42 @@ def stageable_files
     .uniq
 end
 
+def compact_markdown(text, max_length)
+  text.to_s.strip.gsub(/\n{3,}/, "\n\n")[0, max_length]
+end
+
+def deterministic_pr_body(issue_number, issue_title, report, ci_summary, changed_files)
+  summary = compact_markdown(report, 2_000)
+  tests = compact_markdown(ci_summary, 1_500)
+  change_list = changed_files.first(10).map { |path| "- `#{path}`" }.join("\n")
+
+  <<~MD
+    Closes ##{issue_number}
+
+    ## Summary
+    - Implements: #{issue_title}
+    - See Codex report for implementation details
+
+    ## Changes
+    #{change_list.empty? ? "- See committed diff" : change_list}
+
+    ## Tests
+    #{tests.empty? ? "- See local CI artifacts" : tests}
+
+    ## Risk / review notes
+    #{summary.empty? ? "- Review the changed files and local CI artifacts." : summary}
+
+    ## Human review
+    This PR is ready for human review. Do not merge automatically.
+  MD
+end
+
+def deterministic_review_note(changed_files)
+  return "Review the implementation scope and local CI results." if changed_files.empty?
+
+  "Review the changed files: #{changed_files.first(6).join(', ')}#{changed_files.size > 6 ? ', ...' : ''}."
+end
+
 selected = json_read(".ai/selected-issue.json")
 ci_status = json_read(".ai/ci-status.json")
 
@@ -154,149 +192,67 @@ FileUtils.mkdir_p(".ai/pr")
 write(".ai/pr/git-status.txt", sh!("git", "status", "--short"))
 write(".ai/pr/diff-stat.txt", sh!("git", "diff", "--stat"))
 write(".ai/pr/changed-files.txt", sh!("git", "diff", "--name-only"))
-write(".ai/pr/diff.patch", sh!("git", "diff"))
+changed_files = read(".ai/pr/changed-files.txt").lines.map(&:strip).reject(&:empty?)
+report = read(".ai/codex-report.md")
+ci_summary = read(".ai/ci-summary.md")
 
-diff_for_llm = read(".ai/pr/diff.patch")
-if diff_for_llm.length > 80_000
-  diff_for_llm = diff_for_llm[0, 80_000] + "\n\n[DIFF TRUNCATED FOR LOCAL LLM]\n"
-end
+commit_message = safe_commit_message(issue_title.downcase, issue_number)
+pr_title = safe_pr_title(issue_title, issue_number)
+pr_body = deterministic_pr_body(issue_number, issue_title, report, ci_summary, changed_files)
+review_note = deterministic_review_note(changed_files)
 
-prompt = <<~PROMPT
-  You are a local PR preparation assistant.
+if USE_LOCAL_LLM
+  prompt = <<~PROMPT
+    You are a local PR preparation assistant.
 
-  Read the provided issue, Codex report, local CI summary, changed files and diff.
+    Use the provided issue title, report, CI summary, diff stat and changed files to refine PR metadata.
+    Keep the output concise. Do not read or require the full diff.
+    Return JSON only.
 
-  Your job:
-  Generate:
-  - commit message
-  - PR title
-  - PR body
-  - short review note for the user
+    Schema:
+    {
+      "commit_message": "feat(ai-#{issue_number}): short imperative message (##{issue_number})",
+      "pr_title": "feat(ai-#{issue_number}): short title",
+      "pr_body": "markdown body",
+      "review_note": "short message for the user with what to review"
+    }
 
-  Hard rules:
-  - Do not invent changes.
-  - Use only the provided issue, report, CI summary and diff.
-  - The PR must be a draft PR.
-  - The PR body must say that human review is required.
-  - The PR body must include exactly this closing keyword line near the top: Closes ##{issue_number}
-  - Do not omit the closing keyword.
-  - Keep the commit message concise.
-  - The commit message must include issue reference ##{issue_number}.
-  - Prefer this commit format:
-    feat(ai-#{issue_number}): short imperative message (##{issue_number})
-  - If the work is clearly a bugfix, use:
-    fix(ai-#{issue_number}): short imperative message (##{issue_number})
-  - Do not mention files that are not in the changed files list.
-  - Do not claim tests passed unless local CI summary says so.
+    Issue number: #{issue_number}
+    Issue title: #{issue_title}
 
-  Return JSON only. No markdown outside JSON.
+    Codex report:
+    #{compact_markdown(report, 2_000)}
 
-  Schema:
+    Local CI summary:
+    #{compact_markdown(ci_summary, 1_500)}
 
-  {
-    "commit_message": "feat(ai-#{issue_number}): short imperative message (##{issue_number})",
-    "pr_title": "feat(ai-#{issue_number}): short title",
-    "pr_body": "markdown body",
-    "review_note": "short message for the user with what to review"
-  }
+    Diff stat:
+    #{read(".ai/pr/diff-stat.txt")}
 
-  Required PR body structure:
+    Changed files:
+    #{changed_files.join("\n")}
+  PROMPT
 
-  Closes ##{issue_number}
+  write(".ai/pr/local-pr-prompt.md", prompt)
 
-  ## Summary
-  - ...
+  stdout, stderr, status = Open3.capture3(
+    "pi",
+    "--model", MODEL,
+    "--tools", "read,bash,grep,find,ls",
+    "--mode", "print",
+    stdin_data: prompt
+  )
 
-  ## Changes
-  - ...
+  write(".ai/pr/local-pr-generation.raw", stdout)
+  write(".ai/pr/local-pr-generation.stderr.log", stderr)
 
-  ## Tests
-  - ...
-
-  ## Risk / review notes
-  - ...
-
-  ## Human review
-  This PR is ready for human review. Do not merge automatically.
-
-  ===== ISSUE =====
-
-  #{read(".ai/issue.json")}
-
-  ===== SELECTED ISSUE =====
-
-  #{read(".ai/selected-issue.json")}
-
-  ===== CODEX REPORT =====
-
-  #{read(".ai/codex-report.md")}
-
-  ===== LOCAL CI SUMMARY =====
-
-  #{read(".ai/ci-summary.md")}
-
-  ===== GIT STATUS =====
-
-  #{read(".ai/pr/git-status.txt")}
-
-  ===== DIFF STAT =====
-
-  #{read(".ai/pr/diff-stat.txt")}
-
-  ===== CHANGED FILES =====
-
-  #{read(".ai/pr/changed-files.txt")}
-
-  ===== DIFF =====
-
-  #{diff_for_llm}
-PROMPT
-
-write(".ai/pr/local-pr-prompt.md", prompt)
-
-stdout, stderr, status = Open3.capture3(
-  "pi",
-  "--model", MODEL,
-  "--tools", "read,bash,grep,find,ls",
-  "--mode", "print",
-  stdin_data: prompt
-)
-
-write(".ai/pr/local-pr-generation.raw", stdout)
-write(".ai/pr/local-pr-generation.stderr.log", stderr)
-
-unless status.success?
-  abort <<~MSG
-    Local LLM failed while generating PR metadata.
-
-    STDERR:
-    #{stderr.lines.last(80).join}
-  MSG
-end
-
-generated = extract_json(stdout)
-
-commit_message = safe_commit_message(generated["commit_message"], issue_number)
-pr_title = safe_pr_title(generated["pr_title"], issue_number)
-pr_body = generated["pr_body"].to_s.strip
-review_note = generated["review_note"].to_s.strip
-
-if pr_body.empty?
-  pr_body = <<~MD
-    Closes ##{issue_number}
-
-    ## Summary
-
-    #{read(".ai/codex-report.md").strip}
-
-    ## Tests
-
-    #{read(".ai/ci-summary.md").strip}
-
-    ## Human review
-
-    This PR is ready for human review. Do not merge automatically.
-  MD
+  if status.success?
+    generated = extract_json(stdout)
+    commit_message = safe_commit_message(generated["commit_message"], issue_number)
+    pr_title = safe_pr_title(generated["pr_title"], issue_number)
+    pr_body = generated["pr_body"].to_s.strip unless generated["pr_body"].to_s.strip.empty?
+    review_note = generated["review_note"].to_s.strip unless generated["review_note"].to_s.strip.empty?
+  end
 end
 
 closing_line = "Closes ##{issue_number}"
