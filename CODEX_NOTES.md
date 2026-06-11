@@ -17,6 +17,14 @@ Use this order:
 5. When CI is green, stage, commit, push, and create or update the PR manually.
 6. If a PR already exists, show the PR URL to the user and stop.
 
+If the user says `continue` while the current issue already has a draft PR:
+
+1. Check whether the draft PR is green and ready.
+2. If it is ready, merge it.
+3. Then pick the next issue.
+4. Create or switch to the next issue branch.
+5. Start implementing the next issue immediately.
+
 ## Ticket Selection
 
 Choose work in this order:
@@ -116,6 +124,10 @@ Prefer short status messages like:
 - CI passed
 - draft PR created
 - review needed
+
+Interpretation rule:
+
+- when the user says `continue` for a draft PR, treat that as permission to merge the PR if checks are green, then move on to the next issue automatically
 
 ## Implementation
 
