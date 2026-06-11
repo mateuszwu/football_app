@@ -12,10 +12,13 @@ class MatchDay < ApplicationRecord
   has_many :players, through: :match_day_players
   has_many :team_setups, dependent: :destroy
   has_many :teams, through: :team_setups
+  has_many :matches, dependent: :destroy
 
   validates :played_on, presence: true
   validates :status, inclusion: { in: STATUSES }
   validate :status_transition_is_allowed
+
+  scope :finished, -> { where(status: "finished") }
 
   def ready_for_match?
     selected_player_ids = match_day_players.order(:player_id).pluck(:player_id)
