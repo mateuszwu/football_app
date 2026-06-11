@@ -138,6 +138,16 @@ Prefer short status messages like:
 - draft PR created
 - review needed
 
+Do not publish developer-only guidance or internal instruction content to the user.
+
+Do not send routine progress messages.
+
+Only message the user when one of these is true:
+
+- something is wrong
+- you need a question answered
+- you are publishing a PR link
+
 Interpretation rule:
 
 - when the user says `continue` for a draft PR, treat that as permission to check CI and prepare the next step, but not as permission to merge before human review
