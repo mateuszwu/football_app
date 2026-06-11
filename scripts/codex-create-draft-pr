@@ -40,6 +40,9 @@ def sh!(*args)
 end
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 597113b (fix(ai-41): fix gh pr create compatibility with older gh CLI versions (#41))
 def sh(*args)
   stdout, stderr, status = Open3.capture3(*args)
 
@@ -51,8 +54,11 @@ def sh(*args)
   }
 end
 
+<<<<<<< HEAD
 =======
 >>>>>>> 33312bf (introduce codex scripts)
+=======
+>>>>>>> 597113b (fix(ai-41): fix gh pr create compatibility with older gh CLI versions (#41))
 def json_read(path)
   JSON.parse(File.read(path))
 rescue Errno::ENOENT
@@ -359,10 +365,14 @@ if existing_pr_status.success? && !existing_pr_stdout.strip.empty?
   pr_url = existing_pr_stdout.strip
 else
 <<<<<<< HEAD
+<<<<<<< HEAD
   create_result = sh(
 =======
   pr_url = sh!(
 >>>>>>> 33312bf (introduce codex scripts)
+=======
+  create_result = sh(
+>>>>>>> 597113b (fix(ai-41): fix gh pr create compatibility with older gh CLI versions (#41))
     "gh",
     "pr",
     "create",
@@ -375,6 +385,9 @@ else
     pr_title,
     "--body-file",
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 597113b (fix(ai-41): fix gh pr create compatibility with older gh CLI versions (#41))
     ".ai/pr/pr-body.md"
   )
 
@@ -390,6 +403,7 @@ else
 
   pr_url = create_result[:stdout].lines.map(&:strip).find { |line| line.match?(%r{\Ahttps://github\.com/}) }.to_s
   pr_url = sh!("gh", "pr", "view", current_branch, "--json", "url", "--jq", ".url").strip if pr_url.empty?
+<<<<<<< HEAD
 =======
     ".ai/pr/pr-body.md",
     "--json",
@@ -398,6 +412,8 @@ else
     ".url"
   ).strip
 >>>>>>> 33312bf (introduce codex scripts)
+=======
+>>>>>>> 597113b (fix(ai-41): fix gh pr create compatibility with older gh CLI versions (#41))
 end
 
 write(".ai/pr-url.txt", "#{pr_url}\n")
