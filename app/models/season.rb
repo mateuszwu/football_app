@@ -1,5 +1,6 @@
 class Season < ApplicationRecord
   has_many :match_days, dependent: :destroy
+  has_many :player_rating_changes, dependent: :destroy
   has_many :player_season_stats, dependent: :destroy
 
   validates :name, presence: true, uniqueness: true
