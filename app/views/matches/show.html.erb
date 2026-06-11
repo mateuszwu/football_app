@@ -25,14 +25,21 @@
       <h2><%= match.home_team.name %></h2>
       <strong class="live-match__score"><%= match.home_score %></strong>
 
-      <% home_goals = match.match_goals.where(scoring_team: match.home_team).order(:scored_at) %>
+      <% home_goals = match.match_goals.includes(:scorer, :assistant).where(scoring_team: match.home_team).order(:scored_at) %>
       <% if home_goals.any? %>
         <ul class="live-match__team-goals">
           <% home_goals.each do |goal| %>
             <li>
-              ⚽ <%= goal.scorer.nickname.present? ? goal.scorer.nickname : goal.scorer.name %>
+              ⚽ <%= goal.scorer.nickname.presence || goal.scorer.name %>
+              <% details = [] %>
               <% if match.started_at.present? %>
-                <span class="goal-time">(<%= (match.elapsed_seconds(goal.scored_at) / 60) %>')</span>
+                <% details << "#{match.elapsed_seconds(goal.scored_at) / 60}'" %>
+              <% end %>
+              <% if goal.assistant.present? %>
+                <% details << "ass: #{goal.assistant.nickname.presence || goal.assistant.name}" %>
+              <% end %>
+              <% if details.any? %>
+                <span class="goal-time">(<%= details.join(", ") %>)</span>
               <% end %>
             </li>
           <% end %>
@@ -76,14 +83,21 @@
       <h2><%= match.away_team.name %></h2>
       <strong class="live-match__score"><%= match.away_score %></strong>
 
-      <% away_goals = match.match_goals.where(scoring_team: match.away_team).order(:scored_at) %>
+      <% away_goals = match.match_goals.includes(:scorer, :assistant).where(scoring_team: match.away_team).order(:scored_at) %>
       <% if away_goals.any? %>
         <ul class="live-match__team-goals">
           <% away_goals.each do |goal| %>
             <li>
-              ⚽ <%= goal.scorer.nickname.present? ? goal.scorer.nickname : goal.scorer.name %>
+              ⚽ <%= goal.scorer.nickname.presence || goal.scorer.name %>
+              <% details = [] %>
               <% if match.started_at.present? %>
-                <span class="goal-time">(<%= (match.elapsed_seconds(goal.scored_at) / 60) %>')</span>
+                <% details << "#{match.elapsed_seconds(goal.scored_at) / 60}'" %>
+              <% end %>
+              <% if goal.assistant.present? %>
+                <% details << "ass: #{goal.assistant.nickname.presence || goal.assistant.name}" %>
+              <% end %>
+              <% if details.any? %>
+                <span class="goal-time">(<%= details.join(", ") %>)</span>
               <% end %>
             </li>
           <% end %>
@@ -144,6 +158,11 @@
                 <label class="form-field">
                   <span>Scorer</span>
                   <%= form.select :scorer_id, options_from_collection_for_select(team.players.order(:name), :id, :name), {}, required: true %>
+                </label>
+
+                <label class="form-field">
+                  <span>Assistant (optional)</span>
+                  <%= form.select :assistant_id, options_from_collection_for_select(team.players.order(:name), :id, :name), { include_blank: "No assist" } %>
                 </label>
 
                 <%= form.submit "Add goal for #{team.name}", class: "button button--primary" %>

@@ -82,7 +82,7 @@ RSpec.describe "Matches" do
 
         expect(response).to have_http_status(:ok)
         expect(response.body).to include("adam")
-        expect(response.body).to include("(12')")
+        expect(response.body).to include("(12&#39;)")
       end
 
       it "shows admin goal forms only for admins" do
