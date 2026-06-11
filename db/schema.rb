@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_11_125555) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_11_132850) do
   create_table "match_day_players", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.integer "match_day_id", null: false
@@ -88,6 +88,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_11_125555) do
     t.string "approval_status", default: "pending", null: false
     t.datetime "created_at", null: false
     t.text "description", default: "", null: false
+    t.integer "elo"
     t.string "name", null: false
     t.string "nickname", null: false
     t.string "phone", null: false
