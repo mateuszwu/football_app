@@ -1,85 +1,135 @@
-# Codex Notes
+# Codex Context Notes
 
-## Continue Workflow
+## Main Rule
 
-When the user says "continue", treat it as:
+When the user says `continue`, run:
 
-1. Check the current draft PR CI/status.
-2. If green and mergeable, mark the PR ready.
-3. Merge it.
-4. Update local `main`.
-5. Pick the next suitable open ticket, prioritizing the lowest open MVP milestone number first.
-6. Implement it, run checks, push, and open the next draft PR.
+```sh
+./scripts/codex-continue
+```
+
+Then follow the next step printed by the script.
+
+Do not manually choose issues, create branches, run the full CI flow, create PRs, or merge PRs when a dedicated script exists.
+
+Main scripts:
+
+```sh
+./scripts/codex-continue
+./scripts/codex-pick-next-ticket
+./scripts/codex-run-local-ci
+./scripts/codex-create-draft-pr
+./scripts/codex-merge-reviewed-pr
+```
+
+## Workflow
+
+The script `./scripts/codex-continue` determines the current step.
+
+It may:
+
+* merge an existing reviewed PR
+* pick the next ticket
+* tell Codex to continue implementation
+* run local CI
+* create a draft PR
+* show the PR link
+
+After running a script, follow the printed instructions.
+
+If a draft PR is created, show the PR URL to the user and stop.
+
+## Implementation
+
+When a task is selected, read:
+
+```sh
+.ai/codex-task.md
+.ai/selected-issue.json
+.ai/issue.json
+```
+
+Implement the issue with the smallest correct change.
+
+At the end, write:
+
+```sh
+.ai/codex-report.md
+```
+
+Use this structure:
+
+```md
+# Codex report
+
+## Files changed
+
+## Summary
+
+## Tests run
+
+## Test result
+
+## Risks / review notes
+
+## Follow-up notes
+```
+
+Then run:
+
+```sh
+./scripts/codex-run-local-ci
+```
+
+If CI fails, read:
+
+```sh
+.ai/ci-summary.md
+.ai/codex-next-step.md
+```
+
+Fix the smallest remaining issue and rerun CI.
+
+When CI is green, run:
+
+```sh
+./scripts/codex-create-draft-pr
+```
 
 ## Issue Priority
 
-When choosing the next issue, use this order:
-
-1. Lowest open MVP milestone number first: `MVP 1 - ...` before `MVP 2 - ...` before `MVP 3 - ...`, and so on.
-2. Within the same MVP milestone, prefer issues that are already AI-ready or otherwise clearly implementable from the current codebase.
-3. Only move to a higher MVP milestone after the lower MVP milestone no longer has a suitable open issue.
-
-Treat `MVP` as just a milestone name prefix. Determine priority from the numeric prefix in milestone names such as `MVP 1 - Admin and players` or `MVP 6 - MVP/DEF voting`, not from issue age, area, or how recently work was started in a later milestone.
-
-Use GitHub project/milestone metadata to determine the MVP number when it is available. Do not skip ahead to a higher MVP milestone just because a later issue looks smaller, more interesting, or is already partially implemented.
-
-## GitHub PR Workflow Commands
-
-Use these commands for the local GitHub workflow:
+Issue selection is handled by:
 
 ```sh
-git status --short --branch
-gh pr view <number> --json state,isDraft,mergeStateStatus,statusCheckRollup,url
-gh pr ready <number>
-gh pr merge <number> --squash --delete-branch
-gh issue list --limit 25
-gh issue view <number>
-git switch -c ai/<issue-number>-short-description
-git add <changed-files>
-git commit -m "feat(ai-<issue-number>): short imperative message"
-git push -u origin <branch-name>
-gh pr create --draft --base main --head <branch-name> --title "feat(ai-<issue-number>): short title" --body "Closes #<issue-number>
-
-<markdown body>"
+./scripts/codex-pick-next-ticket
 ```
 
-If `gh pr merge` fails because the PR is still a draft immediately after `gh pr ready`, rerun:
+The project prioritizes the lowest open MVP milestone number first:
 
-```sh
-gh pr view <number> --json isDraft,state,mergeStateStatus,statusCheckRollup
-gh pr merge <number> --squash --delete-branch
+```text
+MVP 1 - ...
+MVP 2 - ...
+MVP 3 - ...
 ```
 
-Keep unrelated local files out of the PR. Stage explicit file paths instead of `git add -A` when the worktree has unrelated changes.
+Do not manually skip to a higher MVP.
 
-## Local Validation Commands
+This is a full-AI project. Do not reject issues because they involve auth, security, billing, deployment, migrations, architecture, or complex areas.
 
-Run these before publishing or merging implementation work:
+## Style Rules
 
-```sh
-bundle exec rspec
-bin/rubocop
-bin/brakeman --no-pager
+Prefer loading records inside controller actions instead of setup-style `before_action` callbacks unless the callback clearly helps.
+
+Prefer explicit locals:
+
+```ruby
+render :show, locals: { player: player }
 ```
 
-Focused RSpec runs are useful while developing:
+For non-trivial create/update persistence, prefer service objects with `.call`.
 
-```sh
-bundle exec rspec spec/models/season_spec.rb spec/requests/seasons_spec.rb
-```
+Keep ActiveRecord models lean.
 
-This repo does not use `bin/rails spec` for file-targeted spec runs; use `bundle exec rspec ...`.
+Use query objects for read-focused data shaping and ranking logic.
 
-## Rails Controller Style
-
-Prefer loading records inside controller actions instead of using setup-style `before_action` callbacks such as `set_player`, unless the callback is clearly buying something more than hiding simple setup.
-
-Prefer rendering views with explicit locals, for example `render :show, locals: { player: player }`, instead of relying on controller instance variables.
-
-For non-trivial create/update persistence in controllers, prefer service objects with a single `.call` entrypoint, for example `CreateMatchDay.call(...)` and `UpdateMatchDay.call(...)`, instead of keeping transaction and association-sync logic inside the controller.
-
-## Models And Queries
-
-Keep ActiveRecord models lean. When logic becomes query-heavy or reads like a standalone operation, prefer extracting it into a query object or service object instead of growing the model API.
-
-Use query objects for read-focused data shaping and ranking logic, and service objects for domain operations such as generating fingerprints, tokens, or multi-step persistence workflows.
+Use service objects for domain operations, token/fingerprint generation, and multi-step persistence workflows.
