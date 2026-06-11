@@ -164,4 +164,27 @@ RSpec.describe MatchDayVote do
       end
     end
   end
+
+  describe "#def_bonus" do
+    context "when the vote belongs to a season with a configured DEF bonus" do
+      it "returns the season DEF bonus" do
+        season = create(:season, def_vote_bonus: 9)
+        match_day = create(:match_day, season: season)
+        voter = create(:player, name: "Voter Bonus")
+        mvp_player = create(:player, name: "Winner MVP")
+        def_player = create(:player, name: "Winner DEF")
+        match_day_player = create(:match_day_player, match_day: match_day, player: voter)
+        match_day_vote_token = create(:match_day_vote_token, match_day_player: match_day_player)
+        match_day_vote = described_class.create!(
+          match_day_vote_token: match_day_vote_token,
+          mvp_player: mvp_player,
+          def_player: def_player
+        )
+
+        result = match_day_vote.def_bonus
+
+        expect(result).to eq(9)
+      end
+    end
+  end
 end

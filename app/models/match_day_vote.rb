@@ -10,6 +10,10 @@ class MatchDayVote < ApplicationRecord
     match_day_vote_token.match_day_player.match_day.season.mvp_vote_bonus
   end
 
+  def def_bonus
+    match_day_vote_token.match_day_player.match_day.season.def_vote_bonus
+  end
+
   private
 
   def selected_players_are_not_the_voter
