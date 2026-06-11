@@ -56,6 +56,27 @@ RSpec.describe Ratings::RecalculateSeasonElo do
       #
       # Match 2: Team C (player_a: 1016, player_b: 984 -> avg: 1000) vs Team D (player_c: 1000 -> avg: 1000).
       # Result is 1-1 draw.
+      # For player_a:
+      # player_elo = 1016, opponent_avg_elo = 1000.
+      # expected_a = 1.0 / (1.0 + 10.0**((1000 - 1016) / 400.0)) = 1.0 / (1.0 + 10.0**(-0.04))
+      # 10**(-0.04) ≈ 0.91201
+      # expected_a = 1.0 / 1.91201 ≈ 0.523
+      # delta_a = (32 * (0.5 - 0.523)).round = (32 * -0.023).round = (-0.736).round = -1.
+      # new player_a elo = 1016 - 1 = 1015.
+      #
+      # For player_b:
+      # player_elo = 984, opponent_avg_elo = 1000.
+      # expected_b = 1.0 / (1.0 + 10.0**((1000 - 984) / 400.0)) = 1.0 / (1.0 + 10.0**0.04)
+      # 10**0.04 ≈ 1.096478
+      # expected_b = 1.0 / 2.096478 ≈ 0.477
+      # delta_b = (32 * (0.5 - 0.477)).round = (32 * 0.023).round = (0.736).round = 1.
+      # new player_b elo = 984 + 1 = 985.
+      #
+      # For player_c:
+      # player_elo = 1000, opponent_avg_elo = 1000.
+      # expected_c = 0.5
+      # delta_c = 32 * (0.5 - 0.5) = 0.
+      # new player_c elo = 1000.
 
       expect(player_a.reload.elo).to eq(1015)
       expect(player_b.reload.elo).to eq(985)
