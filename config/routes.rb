@@ -21,6 +21,10 @@ Rails.application.routes.draw do
   get "votes/:token/thank-you", to: "votes#thank_you", as: :vote_thank_you
 
   resources :matches, only: :show do
+    member do
+      patch :finish
+    end
+
     resources :goals, only: %i[create destroy], controller: "match_goals"
   end
   resources :relationships, only: :index

@@ -172,6 +172,12 @@
 
   <% if admin_signed_in? %>
     <section class="live-match__admin-panel">
+      <% if match.in_progress? %>
+        <div class="form-actions">
+          <%= button_to "Finish match", finish_match_path(match), method: :patch, class: "button button--danger", data: { turbo_confirm: "Finish this match?" } %>
+        </div>
+      <% end %>
+
       <h2>Add goal</h2>
 
       <% if match.in_progress? %>

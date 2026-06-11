@@ -144,10 +144,12 @@ RSpec.describe "Matches" do
           get "/matches/#{match.id}"
 
           expect(response.body).not_to include("Add goal")
+          expect(response.body).not_to include("Finish match")
 
           post "/admin/session", params: { password: "secret-password" }
           get "/matches/#{match.id}"
 
+          expect(response.body).to include("Finish match")
           expect(response.body).to include("Add goal")
           expect(response.body).to include("Add goal for #{match.home_team.name}")
           expect(response.body).to include("Add goal for #{match.away_team.name}")
@@ -190,6 +192,92 @@ RSpec.describe "Matches" do
         expect(response.body).to include("finished")
         expect(response.body).to include("Match timer")
         expect(response.body).to include("47:10")
+      end
+    end
+  end
+
+  describe "PATCH /matches/:id/finish" do
+    context "when the visitor is not signed in as admin" do
+      it "does not finish the match" do
+        match = create(:match, started_at: Time.zone.parse("2026-06-19 19:15:00"))
+
+        patch "/matches/#{match.id}/finish"
+
+        expect(response).to redirect_to(root_path)
+        expect(flash[:alert]).to eq("Admin access required")
+        expect(match.reload.finished_at).to be_nil
+      end
+    end
+
+    context "when the visitor is signed in as admin" do
+      it "finishes the match and marks the match day as finished when all matches are done" do
+        begin
+          original_admin_password = ENV["FOOTBALL_APP_ADMIN_PASSWORD"]
+          ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = "secret-password"
+          match_day = create(:match_day, status: "in_progress")
+          match = create(:match, match_day: match_day, started_at: Time.zone.parse("2026-06-19 19:15:00"))
+          post "/admin/session", params: { password: "secret-password" }
+
+          travel_to Time.zone.parse("2026-06-19 20:02:10") do
+            patch "/matches/#{match.id}/finish"
+          end
+
+          expect(response).to redirect_to(match_path(match))
+          expect(flash[:notice]).to eq("Match finished")
+          expect(match.reload.finished_at).to eq(Time.zone.parse("2026-06-19 20:02:10"))
+          expect(match_day.reload.status).to eq("finished")
+        ensure
+          if original_admin_password.nil?
+            ENV.delete("FOOTBALL_APP_ADMIN_PASSWORD")
+          else
+            ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = original_admin_password
+          end
+        end
+      end
+
+      it "keeps the match day in progress when another match is still open" do
+        begin
+          original_admin_password = ENV["FOOTBALL_APP_ADMIN_PASSWORD"]
+          ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = "secret-password"
+          match_day = create(:match_day, status: "in_progress")
+          match = create(:match, match_day: match_day, started_at: Time.zone.parse("2026-06-19 19:15:00"))
+          create(:match, match_day: match_day, started_at: Time.zone.parse("2026-06-19 19:20:00"))
+          post "/admin/session", params: { password: "secret-password" }
+
+          patch "/matches/#{match.id}/finish"
+
+          expect(response).to redirect_to(match_path(match))
+          expect(flash[:notice]).to eq("Match finished")
+          expect(match.reload.finished_at).to be_present
+          expect(match_day.reload.status).to eq("in_progress")
+        ensure
+          if original_admin_password.nil?
+            ENV.delete("FOOTBALL_APP_ADMIN_PASSWORD")
+          else
+            ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = original_admin_password
+          end
+        end
+      end
+
+      it "rejects finishing a match that is not in progress" do
+        begin
+          original_admin_password = ENV["FOOTBALL_APP_ADMIN_PASSWORD"]
+          ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = "secret-password"
+          match = create(:match, started_at: nil, finished_at: nil)
+          post "/admin/session", params: { password: "secret-password" }
+
+          patch "/matches/#{match.id}/finish"
+
+          expect(response).to redirect_to(match_path(match))
+          expect(flash[:alert]).to eq("Could not finish match")
+          expect(match.reload.finished_at).to be_nil
+        ensure
+          if original_admin_password.nil?
+            ENV.delete("FOOTBALL_APP_ADMIN_PASSWORD")
+          else
+            ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = original_admin_password
+          end
+        end
       end
     end
   end
