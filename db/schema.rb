@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_11_121500) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_11_125555) do
   create_table "match_day_players", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.integer "match_day_id", null: false
@@ -54,12 +54,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_11_121500) do
   end
 
   create_table "match_goals", force: :cascade do |t|
+    t.integer "assistant_id"
     t.datetime "created_at", null: false
     t.integer "match_id", null: false
     t.datetime "scored_at", null: false
     t.integer "scorer_id", null: false
     t.integer "scoring_team_id", null: false
     t.datetime "updated_at", null: false
+    t.index ["assistant_id"], name: "index_match_goals_on_assistant_id"
     t.index ["match_id"], name: "index_match_goals_on_match_id"
     t.index ["scorer_id"], name: "index_match_goals_on_scorer_id"
     t.index ["scoring_team_id"], name: "index_match_goals_on_scoring_team_id"
@@ -150,6 +152,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_11_121500) do
   add_foreign_key "match_day_votes", "players", column: "mvp_player_id"
   add_foreign_key "match_days", "seasons"
   add_foreign_key "match_goals", "matches"
+  add_foreign_key "match_goals", "players", column: "assistant_id"
   add_foreign_key "match_goals", "players", column: "scorer_id"
   add_foreign_key "match_goals", "teams", column: "scoring_team_id"
   add_foreign_key "matches", "match_days"

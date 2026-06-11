@@ -1,13 +1,14 @@
 module Matches
   class AddGoal
-    def self.call(match:, scorer_id:, scoring_team_id:, scored_at: Time.current)
-      new(match:, scorer_id:, scoring_team_id:, scored_at:).call
+    def self.call(match:, scorer_id:, scoring_team_id:, assistant_id: nil, scored_at: Time.current)
+      new(match:, scorer_id:, scoring_team_id:, assistant_id:, scored_at:).call
     end
 
-    def initialize(match:, scorer_id:, scoring_team_id:, scored_at:)
+    def initialize(match:, scorer_id:, scoring_team_id:, assistant_id:, scored_at:)
       @match = match
       @scorer_id = scorer_id
       @scoring_team_id = scoring_team_id
+      @assistant_id = assistant_id
       @scored_at = scored_at
     end
 
@@ -18,6 +19,7 @@ module Matches
         goal = match.match_goals.create!(
           scorer_id:,
           scoring_team_id:,
+          assistant_id:,
           scored_at:
         )
 
@@ -31,7 +33,7 @@ module Matches
 
     private
 
-    attr_reader :match, :scored_at, :scorer_id, :scoring_team_id
+    attr_reader :match, :scored_at, :scorer_id, :scoring_team_id, :assistant_id
 
     def score_column
       scoring_team_id.to_i == match.home_team_id ? :home_score : :away_score
