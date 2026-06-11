@@ -7,6 +7,12 @@ class VotesController < ApplicationController
     render :show, locals: { match_day_vote_token: match_day_vote_token, selectable_players: selectable_players, vote: vote }
   end
 
+  def thank_you
+    match_day_vote_token = find_vote_token
+
+    render :thank_you, locals: { match_day_vote_token: match_day_vote_token }
+  end
+
   def create
     match_day_vote_token = find_vote_token
     vote = match_day_vote_token.match_day_vote || MatchDayVote.new(match_day_vote_token: match_day_vote_token)
@@ -14,7 +20,7 @@ class VotesController < ApplicationController
 
     if vote.update(vote_params.merge(match_day_vote_token: match_day_vote_token))
       match_day_vote_token.mark_used!
-      redirect_to vote_path(match_day_vote_token.token), notice: "Glos zapisany"
+      redirect_to vote_thank_you_path(match_day_vote_token.token), notice: "Glos zapisany"
     else
       render :show, locals: { match_day_vote_token: match_day_vote_token, selectable_players: selectable_players, vote: vote }, status: :unprocessable_content
     end

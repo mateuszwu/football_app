@@ -40,9 +40,39 @@ RSpec.describe "Votes" do
     end
   end
 
+  describe "GET /votes/:token/thank-you" do
+    context "when the vote token exists" do
+      it "renders the public thank you page without private phone data" do
+        voter = create(:player, name: "Voter", nickname: "voter", phone: "+48111111111", approval_status: "approved", active: true)
+        match_day = create(:match_day, played_on: Date.new(2026, 6, 5))
+        voter_match_day_player = create(:match_day_player, match_day: match_day, player: voter)
+        vote_token = create(:match_day_vote_token, match_day_player: voter_match_day_player, token: "vote-token")
+
+        get "/votes/#{vote_token.token}/thank-you"
+
+        expect(response).to have_http_status(:ok)
+        expect(response.body).to include("Dziekujemy za glos")
+        expect(response.body).to include("Glos oddany przez")
+        expect(response.body).to include("voter")
+        expect(response.body).to include("2026-06-05")
+        expect(response.body).to include("Twoj glos MVP i DEF zostal zapisany.")
+        expect(response.body).not_to include("+48111111111")
+        expect(response.body).not_to include("phone")
+      end
+    end
+
+    context "when the vote token does not exist" do
+      it "returns not found" do
+        get "/votes/missing-token/thank-you"
+
+        expect(response).to have_http_status(:not_found)
+      end
+    end
+  end
+
   describe "POST /votes/:token" do
     context "when the vote token and params are valid" do
-      it "creates the vote and redirects back to the form" do
+      it "creates the vote and redirects to the thank you page" do
         voter = create(:player, approval_status: "approved", active: true)
         mvp_candidate = create(:player, name: "Adam Nowak", nickname: "adam", phone: "+48222222222", approval_status: "approved", active: true)
         def_candidate = create(:player, name: "Marek Kowalski", nickname: "marek", phone: "+48333333333", approval_status: "approved", active: true)
@@ -59,7 +89,7 @@ RSpec.describe "Votes" do
           }
         }
 
-        expect(response).to redirect_to("/votes/#{vote_token.token}")
+        expect(response).to redirect_to("/votes/#{vote_token.token}/thank-you")
         expect(flash[:notice]).to eq("Glos zapisany")
         expect(vote_token.reload.match_day_vote).to have_attributes(
           mvp_player: mvp_candidate,
@@ -83,7 +113,7 @@ RSpec.describe "Votes" do
           }
         }
 
-        expect(response).to redirect_to("/votes/#{vote_token.token}")
+        expect(response).to redirect_to("/votes/#{vote_token.token}/thank-you")
         expect(vote_token.reload.match_day_vote).to have_attributes(
           mvp_player: selected_player,
           def_player: selected_player

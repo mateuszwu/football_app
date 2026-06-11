@@ -1,0 +1,15 @@
+<% content_for :title, "Dziekujemy za glos - Football App" %>
+
+<section class="section vote-form-page">
+  <div class="section__header">
+    <p class="eyebrow">Glosowanie po meczu</p>
+    <h1>Dziekujemy za glos</h1>
+    <p>
+      Glos oddany przez <strong><%= match_day_vote_token.match_day_player.player.nickname %></strong>
+      <span>&middot;</span>
+      <span><%= match_day_vote_token.match_day_player.match_day.played_on %></span>
+    </p>
+  </div>
+
+  <p>Twoj glos MVP i DEF zostal zapisany.</p>
+</section>
