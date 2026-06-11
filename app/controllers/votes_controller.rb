@@ -1,6 +1,8 @@
 class VotesController < ApplicationController
   def show
     match_day_vote_token = find_vote_token
+    return redirect_to vote_thank_you_path(match_day_vote_token.token) if match_day_vote_token.used?
+
     vote = match_day_vote_token.match_day_vote || MatchDayVote.new
     selectable_players = match_day_vote_token.match_day_player.match_day.players.order(:name)
 
@@ -15,6 +17,8 @@ class VotesController < ApplicationController
 
   def create
     match_day_vote_token = find_vote_token
+    return redirect_to vote_thank_you_path(match_day_vote_token.token) if match_day_vote_token.used?
+
     vote = match_day_vote_token.match_day_vote || MatchDayVote.new(match_day_vote_token: match_day_vote_token)
     selectable_players = match_day_vote_token.match_day_player.match_day.players.order(:name)
 
