@@ -32,6 +32,7 @@ RSpec.describe "Match goals" do
           create(:team_player, team: match.home_team, player: player)
 
           post "/admin/session", params: { password: "secret-password" }
+
           post "/matches/#{match.id}/goals", params: {
             match_goal: {
               scoring_team_id: match.home_team.id,
@@ -67,6 +68,7 @@ RSpec.describe "Match goals" do
           create(:team_player, team: match.home_team, player: assistant)
 
           post "/admin/session", params: { password: "secret-password" }
+
           post "/matches/#{match.id}/goals", params: {
             match_goal: {
               scoring_team_id: match.home_team.id,
@@ -99,6 +101,7 @@ RSpec.describe "Match goals" do
           create(:team_player, team: match.home_team, player: scorer)
 
           post "/admin/session", params: { password: "secret-password" }
+
           post "/matches/#{match.id}/goals", params: {
             match_goal: {
               scoring_team_id: match.home_team.id,
@@ -128,6 +131,7 @@ RSpec.describe "Match goals" do
           create(:team_player, team: match.home_team, player: player)
 
           post "/admin/session", params: { password: "secret-password" }
+
           post "/matches/#{match.id}/goals", params: {
             match_goal: {
               scoring_team_id: match.home_team.id,

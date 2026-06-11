@@ -7,6 +7,7 @@ RSpec.describe MatchGoal do
         match = create(:match)
         scorer = create(:player)
         create(:team_player, team: match.home_team, player: scorer)
+
         goal = build(:match_goal, match: match, scoring_team: match.home_team, scorer: scorer)
 
         expect(goal).to be_valid
@@ -20,6 +21,7 @@ RSpec.describe MatchGoal do
         assistant = create(:player)
         create(:team_player, team: match.home_team, player: scorer)
         create(:team_player, team: match.home_team, player: assistant)
+
         goal = build(:match_goal, match: match, scoring_team: match.home_team, scorer: scorer, assistant: assistant)
 
         expect(goal).to be_valid
@@ -31,6 +33,7 @@ RSpec.describe MatchGoal do
         match = create(:match)
         scorer = create(:player)
         create(:team_player, team: match.home_team, player: scorer)
+
         goal = build(:match_goal, match: match, scoring_team: match.home_team, scorer: scorer, assistant: scorer)
 
         expect(goal).not_to be_valid
@@ -45,6 +48,7 @@ RSpec.describe MatchGoal do
         assistant = create(:player)
         create(:team_player, team: match.home_team, player: scorer)
         create(:team_player, team: match.away_team, player: assistant)
+
         goal = build(:match_goal, match: match, scoring_team: match.home_team, scorer: scorer, assistant: assistant)
 
         expect(goal).not_to be_valid
