@@ -3,6 +3,7 @@ class Match < ApplicationRecord
   belongs_to :home_team, class_name: "Team"
   belongs_to :away_team, class_name: "Team"
   has_many :match_goals, dependent: :destroy
+  has_many :player_rating_changes, dependent: :nullify
 
   validates :home_team_id, uniqueness: { scope: [ :match_day_id, :away_team_id ] }
   validates :home_score, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
