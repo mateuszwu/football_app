@@ -20,6 +20,19 @@ class MatchGoalsController < ApplicationController
     end
   end
 
+  def destroy
+    match = Match.find(params[:match_id])
+    goal = match.match_goals.find(params[:id])
+
+    result = Matches::UndoGoal.call(match:, goal:)
+
+    if result
+      redirect_to match_path(match), notice: "Goal removed"
+    else
+      redirect_to match_path(match), alert: "Could not remove goal"
+    end
+  end
+
   private
 
   def goal_params

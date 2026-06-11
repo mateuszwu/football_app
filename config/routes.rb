@@ -20,7 +20,7 @@ Rails.application.routes.draw do
   post "votes/:token", to: "votes#create"
 
   resources :matches, only: :show do
-    resources :goals, only: :create, controller: "match_goals"
+    resources :goals, only: %i[create destroy], controller: "match_goals"
   end
   resources :relationships, only: :index
   resources :players, only: %i[show new create edit update]

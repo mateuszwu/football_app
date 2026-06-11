@@ -196,3 +196,11 @@ Keep ActiveRecord models lean.
 Use query objects for read-focused data shaping and ranking logic.
 
 Use service objects for domain operations, token/fingerprint generation, and multi-step persistence workflows.
+
+## RSpec Style Rules
+
+Do not use `before`, `after`, `around`, or `let` hooks in specs.
+
+Keep all arrange, act, and assert steps inline inside each `it` block.
+
+Use `begin`/`ensure` inside the `it` block when teardown is needed (e.g. ENV cleanup).
