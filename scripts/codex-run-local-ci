@@ -7,9 +7,7 @@ require "open3"
 require "shellwords"
 require "time"
 
-MODEL = ENV.fetch("LOCAL_LLM_MODEL", "lmstudio/qwen/qwen3.5-9b")
 CACHE_DIR = File.expand_path("tmp/cache", Dir.pwd)
-USE_LOCAL_LLM = ENV.fetch("USE_LOCAL_LLM", "1") != "0"
 
 RUN_ID = Time.now.strftime("%Y%m%d-%H%M%S")
 CI_DIR = File.join(".ai", "ci", RUN_ID)
@@ -22,7 +20,6 @@ def require_tool!(name)
 end
 
 %w[git ruby].each { |tool| require_tool!(tool) }
-require_tool!("pi") if USE_LOCAL_LLM
 
 def write(path, content)
   FileUtils.mkdir_p(File.dirname(path))
@@ -353,51 +350,7 @@ write(File.join(CI_DIR, "llm-input.md"), overview)
 FileUtils.rm_f(LATEST_LINK)
 FileUtils.ln_sf(RUN_ID, LATEST_LINK)
 
-summary_content = deterministic_summary(status, autocorrect_cmd, CI_DIR)
-
-if USE_LOCAL_LLM && !status.dig("overall", "passed")
-  summary_prompt = <<~PROMPT
-    You are a local CI result summarizer for Codex.
-
-    Read:
-    - .ai/ci/latest/status.json
-    - .ai/ci/latest/rubocop-autocorrect-changed-files.txt
-    - .ai/ci/latest/changed-files-after.txt
-    - .ai/ci/latest/extracted/rspec-important.log
-    - .ai/ci/latest/extracted/rubocop-important.log
-    - .ai/ci/latest/extracted/brakeman-important.log
-
-    Focus only on failed checks and concrete next steps.
-    Do not restate passing checks beyond one short status line.
-    Do not invent failures.
-    Return markdown only.
-  PROMPT
-
-  write(File.join(CI_DIR, "summary-prompt.md"), summary_prompt)
-
-  puts
-  puts "Running local LLM CI summarizer..."
-
-  summary_command = [
-    "pi",
-    "--model", MODEL,
-    "--tools", "read,bash,grep,find,ls",
-    "--mode", "print"
-  ]
-
-  stdout, stderr, pi_status = Open3.capture3(*summary_command, stdin_data: summary_prompt)
-
-  write(File.join(CI_DIR, "summary.stderr.log"), stderr)
-
-  if pi_status.success? && !stdout.strip.empty?
-    summary_content = stdout
-  else
-    warn "Pi summarizer failed with status #{pi_status.exitstatus}" unless pi_status.success?
-    warn stderr.lines.last(80).join unless stderr.empty?
-  end
-end
-
-write(File.join(CI_DIR, "summary.md"), summary_content)
+write(File.join(CI_DIR, "summary.md"), deterministic_summary(status, autocorrect_cmd, CI_DIR))
 
 next_step = <<~MD
   # Next step for Codex

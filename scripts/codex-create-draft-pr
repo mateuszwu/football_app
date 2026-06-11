@@ -5,16 +5,13 @@ require "json"
 require "fileutils"
 require "open3"
 
-MODEL = ENV.fetch("LOCAL_LLM_MODEL", "lmstudio/qwen/qwen3.5-9b")
 MAIN_BRANCH = ENV.fetch("MAIN_BRANCH", "main")
-USE_LOCAL_LLM = ENV.fetch("USE_LOCAL_LLM", "1") != "0"
 
 def require_tool!(name)
   system("command -v #{name} >/dev/null 2>&1") || abort("Missing required tool: #{name}")
 end
 
 %w[git gh ruby].each { |tool| require_tool!(tool) }
-require_tool!("pi") if USE_LOCAL_LLM
 
 def write(path, content)
   FileUtils.mkdir_p(File.dirname(path))
@@ -58,15 +55,6 @@ rescue Errno::ENOENT
   abort "Missing required file: #{path}"
 rescue JSON::ParserError => e
   abort "Invalid JSON in #{path}: #{e.message}"
-end
-
-def extract_json(raw)
-  start = raw.index("{")
-  finish = raw.rindex("}")
-
-  raise "No JSON object found" unless start && finish && finish > start
-
-  JSON.parse(raw[start..finish])
 end
 
 def clean_title(text)
@@ -200,60 +188,6 @@ commit_message = safe_commit_message(issue_title.downcase, issue_number)
 pr_title = safe_pr_title(issue_title, issue_number)
 pr_body = deterministic_pr_body(issue_number, issue_title, report, ci_summary, changed_files)
 review_note = deterministic_review_note(changed_files)
-
-if USE_LOCAL_LLM
-  prompt = <<~PROMPT
-    You are a local PR preparation assistant.
-
-    Use the provided issue title, report, CI summary, diff stat and changed files to refine PR metadata.
-    Keep the output concise. Do not read or require the full diff.
-    Return JSON only.
-
-    Schema:
-    {
-      "commit_message": "feat(ai-#{issue_number}): short imperative message (##{issue_number})",
-      "pr_title": "feat(ai-#{issue_number}): short title",
-      "pr_body": "markdown body",
-      "review_note": "short message for the user with what to review"
-    }
-
-    Issue number: #{issue_number}
-    Issue title: #{issue_title}
-
-    Codex report:
-    #{compact_markdown(report, 2_000)}
-
-    Local CI summary:
-    #{compact_markdown(ci_summary, 1_500)}
-
-    Diff stat:
-    #{read(".ai/pr/diff-stat.txt")}
-
-    Changed files:
-    #{changed_files.join("\n")}
-  PROMPT
-
-  write(".ai/pr/local-pr-prompt.md", prompt)
-
-  stdout, stderr, status = Open3.capture3(
-    "pi",
-    "--model", MODEL,
-    "--tools", "read,bash,grep,find,ls",
-    "--mode", "print",
-    stdin_data: prompt
-  )
-
-  write(".ai/pr/local-pr-generation.raw", stdout)
-  write(".ai/pr/local-pr-generation.stderr.log", stderr)
-
-  if status.success?
-    generated = extract_json(stdout)
-    commit_message = safe_commit_message(generated["commit_message"], issue_number)
-    pr_title = safe_pr_title(generated["pr_title"], issue_number)
-    pr_body = generated["pr_body"].to_s.strip unless generated["pr_body"].to_s.strip.empty?
-    review_note = generated["review_note"].to_s.strip unless generated["review_note"].to_s.strip.empty?
-  end
-end
 
 closing_line = "Closes ##{issue_number}"
 
