@@ -204,6 +204,24 @@
   margin: 0;
 }
 
+.live-match__admin-panel {
+  border-top: 1px solid #e5e7eb;
+  margin-top: 2rem;
+  padding-top: 2rem;
+}
+
+.live-match__goal-forms {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+}
+
+.live-match__goal-form-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  padding: 1rem;
+}
+
 .checkbox-list {
   display: grid;
   gap: 0.5rem;
@@ -447,3 +465,22 @@
 .live-match__players span {
   color: #4b5563;
 }
+
+.live-match__team-goals {
+  list-style: none;
+  margin: 1rem 0 0 0;
+  padding: 0;
+  font-size: 0.875rem;
+  color: #374151;
+  text-align: center;
+}
+
+.live-match__team-goals li {
+  margin-bottom: 0.25rem;
+}
+
+.goal-time {
+  color: #6b7280;
+  font-weight: 500;
+}
+

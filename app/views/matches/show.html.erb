@@ -24,6 +24,20 @@
       <p class="live-match__team-label">Home</p>
       <h2><%= match.home_team.name %></h2>
       <strong class="live-match__score"><%= match.home_score %></strong>
+
+      <% home_goals = match.match_goals.where(scoring_team: match.home_team).order(:scored_at) %>
+      <% if home_goals.any? %>
+        <ul class="live-match__team-goals">
+          <% home_goals.each do |goal| %>
+            <li>
+              ⚽ <%= goal.scorer.nickname.present? ? goal.scorer.nickname : goal.scorer.name %>
+              <% if match.started_at.present? %>
+                <span class="goal-time">(<%= (match.elapsed_seconds(goal.scored_at) / 60) %>')</span>
+              <% end %>
+            </li>
+          <% end %>
+        </ul>
+      <% end %>
     </article>
 
     <div class="live-match__status-card">
@@ -61,6 +75,20 @@
       <p class="live-match__team-label">Away</p>
       <h2><%= match.away_team.name %></h2>
       <strong class="live-match__score"><%= match.away_score %></strong>
+
+      <% away_goals = match.match_goals.where(scoring_team: match.away_team).order(:scored_at) %>
+      <% if away_goals.any? %>
+        <ul class="live-match__team-goals">
+          <% away_goals.each do |goal| %>
+            <li>
+              ⚽ <%= goal.scorer.nickname.present? ? goal.scorer.nickname : goal.scorer.name %>
+              <% if match.started_at.present? %>
+                <span class="goal-time">(<%= (match.elapsed_seconds(goal.scored_at) / 60) %>')</span>
+              <% end %>
+            </li>
+          <% end %>
+        </ul>
+      <% end %>
     </article>
   </div>
 
@@ -99,4 +127,33 @@
       <% end %>
     </article>
   </div>
+
+  <% if admin_signed_in? %>
+    <section class="live-match__admin-panel">
+      <h2>Add goal</h2>
+
+      <% if match.in_progress? %>
+        <div class="live-match__goal-forms">
+          <% [match.home_team, match.away_team].each do |team| %>
+            <article class="live-match__goal-form-card">
+              <h3><%= team.name %></h3>
+
+              <%= form_with url: match_goals_path(match), scope: :match_goal, method: :post, local: true, class: "admin-form" do |form| %>
+                <%= form.hidden_field :scoring_team_id, value: team.id %>
+
+                <label class="form-field">
+                  <span>Scorer</span>
+                  <%= form.select :scorer_id, options_from_collection_for_select(team.players.order(:name), :id, :name), {}, required: true %>
+                </label>
+
+                <%= form.submit "Add goal for #{team.name}", class: "button button--primary" %>
+              <% end %>
+            </article>
+          <% end %>
+        </div>
+      <% else %>
+        <p class="empty-state">Goals can be added only while the match is in progress.</p>
+      <% end %>
+    </section>
+  <% end %>
 </section>

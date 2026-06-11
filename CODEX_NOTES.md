@@ -20,10 +20,11 @@ Use this order:
 If the user says `continue` while the current issue already has a draft PR:
 
 1. Check whether the draft PR is green and ready.
-2. If it is ready, merge it.
-3. Then pick the next issue.
-4. Create or switch to the next issue branch.
-5. Start implementing the next issue immediately.
+2. If it is green, tell the user review is needed.
+3. Do not merge until the user explicitly asks to merge or says the PR was reviewed.
+4. After merge, pick the next issue.
+5. Create or switch to the next issue branch.
+6. Start implementing the next issue immediately.
 
 ## Ticket Selection
 
@@ -90,7 +91,19 @@ Do not append `(#issue)` to the commit subject.
 
 Open a draft PR first when implementation is ready for CI.
 
-Use the issue number and behavior change in the PR title. Keep the PR description short and factual:
+Use the same format as commits for the PR title:
+
+```text
+<type>(<origin>-<issue-number>): <message>
+```
+
+Example:
+
+```text
+feat(ai-42): Create match_events table
+```
+
+Keep the PR description short and factual:
 
 - which issue it closes, using `Closes #<issue-number>`
 - what changed
@@ -127,7 +140,7 @@ Prefer short status messages like:
 
 Interpretation rule:
 
-- when the user says `continue` for a draft PR, treat that as permission to merge the PR if checks are green, then move on to the next issue automatically
+- when the user says `continue` for a draft PR, treat that as permission to check CI and prepare the next step, but not as permission to merge before human review
 
 ## Implementation
 

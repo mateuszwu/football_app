@@ -19,7 +19,9 @@ Rails.application.routes.draw do
   get "votes/:token", to: "votes#show", as: :vote
   post "votes/:token", to: "votes#create"
 
-  resources :matches, only: :show
+  resources :matches, only: :show do
+    resources :goals, only: :create, controller: "match_goals"
+  end
   resources :relationships, only: :index
   resources :players, only: %i[show new create edit update]
   resources :seasons, only: :show
