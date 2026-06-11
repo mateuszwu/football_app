@@ -142,6 +142,31 @@
     </article>
   </div>
 
+  <% recent_goals = match.match_goals.includes(:scorer, :assistant, :scoring_team).order(scored_at: :desc) %>
+  <% if recent_goals.any? %>
+    <section class="live-match__events">
+      <h2>Recent events</h2>
+      <ol class="live-match__event-list">
+        <% recent_goals.each do |goal| %>
+          <li class="live-match__event">
+            <span class="live-match__event-icon">⚽</span>
+            <span class="live-match__event-body">
+              <strong><%= goal.scorer.nickname.presence || goal.scorer.name %></strong>
+              <% if goal.assistant.present? %>
+                <span class="live-match__event-assist">(ass: <%= goal.assistant.nickname.presence || goal.assistant.name %>)</span>
+              <% end %>
+              &mdash;
+              <span class="live-match__event-team"><%= goal.scoring_team.name %></span>
+            </span>
+            <% if match.started_at.present? %>
+              <span class="live-match__event-time"><%= match.elapsed_seconds(goal.scored_at) / 60 %>'</span>
+            <% end %>
+          </li>
+        <% end %>
+      </ol>
+    </section>
+  <% end %>
+
   <% if admin_signed_in? %>
     <section class="live-match__admin-panel">
       <h2>Add goal</h2>
