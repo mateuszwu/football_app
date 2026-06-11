@@ -45,8 +45,8 @@ module Ratings
 
       return if home_players.empty? || away_players.empty?
 
-      home_avg = average_elo(home_players, elo_map)
-      away_avg = average_elo(away_players, elo_map)
+      home_avg = EffectiveTeamElo.call(players: home_players, elo_map: elo_map)
+      away_avg = EffectiveTeamElo.call(players: away_players, elo_map: elo_map)
 
       home_score, away_score = match_scores(match)
 
@@ -64,10 +64,6 @@ module Ratings
         elo_map[vote.mvp_player_id] += vote.mvp_bonus
         elo_map[vote.def_player_id] += vote.def_bonus
       end
-    end
-
-    def average_elo(players, elo_map)
-      players.sum { |p| elo_map[p.id] }.to_f / players.size
     end
 
     def match_day_votes(match_day)
