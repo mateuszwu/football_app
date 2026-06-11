@@ -193,6 +193,33 @@ RSpec.describe "Matches" do
         expect(response.body).to include("Match timer")
         expect(response.body).to include("47:10")
       end
+
+      it "hides admin modification controls even for signed-in admins" do
+        begin
+          original_admin_password = ENV["FOOTBALL_APP_ADMIN_PASSWORD"]
+          ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = "secret-password"
+          match = create(
+            :match,
+            started_at: Time.zone.parse("2026-06-19 19:15:00"),
+            finished_at: Time.zone.parse("2026-06-19 20:02:10")
+          )
+          post "/admin/session", params: { password: "secret-password" }
+
+          get "/matches/#{match.id}"
+
+          expect(response).to have_http_status(:ok)
+          expect(response.body).not_to include("Finish match")
+          expect(response.body).not_to include("Add goal for #{match.home_team.name}")
+          expect(response.body).not_to include("Add goal for #{match.away_team.name}")
+          expect(response.body).to include("Goals can be added only while the match is in progress.")
+        ensure
+          if original_admin_password.nil?
+            ENV.delete("FOOTBALL_APP_ADMIN_PASSWORD")
+          else
+            ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = original_admin_password
+          end
+        end
+      end
     end
   end
 
