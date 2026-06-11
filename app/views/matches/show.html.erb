@@ -1,5 +1,11 @@
 <% content_for :title, "#{match.home_team.name} vs #{match.away_team.name} - Football App" %>
 
+<%
+  timer_seconds = match.elapsed_seconds
+  timer_minutes = timer_seconds / 60
+  timer_remainder_seconds = timer_seconds % 60
+%>
+
 <section class="live-match">
   <div class="section__header">
     <p class="eyebrow">Live match</p>
@@ -22,6 +28,19 @@
 
     <div class="live-match__status-card">
       <p class="status-badge"><%= match.finished? ? "finished" : (match.in_progress? ? "in_progress" : "not_started") %></p>
+
+      <div
+        class="live-match__timer"
+        data-controller="match-timer"
+        data-match-timer-started-at-value="<%= match.started_at&.iso8601 %>"
+        data-match-timer-finished-at-value="<%= match.finished_at&.iso8601 %>"
+        data-match-timer-status-value="<%= match.finished? ? "finished" : (match.in_progress? ? "in_progress" : "not_started") %>"
+      >
+        <p class="live-match__timer-label">Match timer</p>
+        <p class="live-match__timer-value" data-match-timer-target="clock">
+          <%= format("%02d:%02d", timer_minutes, timer_remainder_seconds) %>
+        </p>
+      </div>
 
       <% if match.finished? %>
         <p>

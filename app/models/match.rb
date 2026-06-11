@@ -44,6 +44,16 @@ class Match < ApplicationRecord
     home_win? ? away_team : (away_win? ? home_team : nil)
   end
 
+  def timer_reference_time
+    finished_at || Time.current
+  end
+
+  def elapsed_seconds(reference_time = timer_reference_time)
+    return 0 if started_at.blank?
+
+    [ (reference_time.to_i - started_at.to_i), 0 ].max
+  end
+
   private
 
   def teams_are_distinct
