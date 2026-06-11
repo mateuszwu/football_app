@@ -5,16 +5,22 @@ require "json"
 require "fileutils"
 require "open3"
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 8ff0d48 (feat(ai-41): add matches schema and update local CI (#41))
 require "shellwords"
 require "time"
 
 MODEL = ENV.fetch("LOCAL_LLM_MODEL", "lmstudio/qwen/qwen3.5-9b")
 CACHE_DIR = File.expand_path("tmp/cache", Dir.pwd)
+<<<<<<< HEAD
 =======
 require "time"
 
 MODEL = ENV.fetch("LOCAL_LLM_MODEL", "lmstudio/qwen/qwen3.5-9b")
 >>>>>>> 33312bf (introduce codex scripts)
+=======
+>>>>>>> 8ff0d48 (feat(ai-41): add matches schema and update local CI (#41))
 
 RUN_ID = Time.now.strftime("%Y%m%d-%H%M%S")
 CI_DIR = File.join(".ai", "ci", RUN_ID)
@@ -53,14 +59,20 @@ def run_capture(command, log_path)
 end
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 8ff0d48 (feat(ai-41): add matches schema and update local CI (#41))
 def project_command(command)
   escaped_cache_dir = Shellwords.escape(CACHE_DIR)
 
   "XDG_CACHE_HOME=#{escaped_cache_dir} asdf exec #{command}"
 end
 
+<<<<<<< HEAD
 =======
 >>>>>>> 33312bf (introduce codex scripts)
+=======
+>>>>>>> 8ff0d48 (feat(ai-41): add matches schema and update local CI (#41))
 def tail(text, lines = 350)
   text.lines.last(lines).join
 end
@@ -114,6 +126,7 @@ end
 
 def rubocop_autocorrect_command
 <<<<<<< HEAD
+<<<<<<< HEAD
   if system("#{project_command('bin/rubocop --help')} 2>/dev/null | grep -q -- '--autocorrect-all'")
     project_command("bin/rubocop --autocorrect-all")
   else
@@ -124,6 +137,12 @@ def rubocop_autocorrect_command
   else
     "bin/rubocop -A"
 >>>>>>> 33312bf (introduce codex scripts)
+=======
+  if system("#{project_command('bin/rubocop --help')} 2>/dev/null | grep -q -- '--autocorrect-all'")
+    project_command("bin/rubocop --autocorrect-all")
+  else
+    project_command("bin/rubocop -A")
+>>>>>>> 8ff0d48 (feat(ai-41): add matches schema and update local CI (#41))
   end
 end
 
@@ -138,10 +157,14 @@ results = {}
 
 # 1. RSpec first: verifies behavior before style/security checks.
 <<<<<<< HEAD
+<<<<<<< HEAD
 results["rspec"] = run_check("rspec", project_command("bundle exec rspec"), CI_DIR)
 =======
 results["rspec"] = run_check("rspec", "bundle exec rspec", CI_DIR)
 >>>>>>> 33312bf (introduce codex scripts)
+=======
+results["rspec"] = run_check("rspec", project_command("bundle exec rspec"), CI_DIR)
+>>>>>>> 8ff0d48 (feat(ai-41): add matches schema and update local CI (#41))
 
 # 2. RuboCop autocorrect by default.
 # Codex should not waste tokens fixing what RuboCop can fix mechanically.
@@ -155,6 +178,7 @@ write(File.join(CI_DIR, "rubocop-autocorrect-changed-files.txt"), `git diff --na
 # 3. RuboCop check after autocorrect.
 # Anything left here is what Codex may need to fix.
 <<<<<<< HEAD
+<<<<<<< HEAD
 results["rubocop"] = run_check("rubocop", project_command("bin/rubocop"), CI_DIR)
 
 # 4. Brakeman.
@@ -165,6 +189,12 @@ results["rubocop"] = run_check("rubocop", "bin/rubocop", CI_DIR)
 # 4. Brakeman.
 results["brakeman"] = run_check("brakeman", "bin/brakeman --no-pager", CI_DIR)
 >>>>>>> 33312bf (introduce codex scripts)
+=======
+results["rubocop"] = run_check("rubocop", project_command("bin/rubocop"), CI_DIR)
+
+# 4. Brakeman.
+results["brakeman"] = run_check("brakeman", project_command("bin/brakeman --no-pager"), CI_DIR)
+>>>>>>> 8ff0d48 (feat(ai-41): add matches schema and update local CI (#41))
 
 write(File.join(CI_DIR, "git-status-after.txt"), `git status --short --branch`)
 write(File.join(CI_DIR, "diff-stat-after.txt"), `git diff --stat`)
