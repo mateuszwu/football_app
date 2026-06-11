@@ -39,6 +39,7 @@ def sh!(*args)
   stdout
 end
 
+<<<<<<< HEAD
 def sh(*args)
   stdout, stderr, status = Open3.capture3(*args)
 
@@ -50,6 +51,8 @@ def sh(*args)
   }
 end
 
+=======
+>>>>>>> 33312bf (introduce codex scripts)
 def json_read(path)
   JSON.parse(File.read(path))
 rescue Errno::ENOENT
@@ -355,7 +358,11 @@ existing_pr_stdout, _existing_pr_stderr, existing_pr_status = Open3.capture3(
 if existing_pr_status.success? && !existing_pr_stdout.strip.empty?
   pr_url = existing_pr_stdout.strip
 else
+<<<<<<< HEAD
   create_result = sh(
+=======
+  pr_url = sh!(
+>>>>>>> 33312bf (introduce codex scripts)
     "gh",
     "pr",
     "create",
@@ -367,6 +374,7 @@ else
     "--title",
     pr_title,
     "--body-file",
+<<<<<<< HEAD
     ".ai/pr/pr-body.md"
   )
 
@@ -382,6 +390,14 @@ else
 
   pr_url = create_result[:stdout].lines.map(&:strip).find { |line| line.match?(%r{\Ahttps://github\.com/}) }.to_s
   pr_url = sh!("gh", "pr", "view", current_branch, "--json", "url", "--jq", ".url").strip if pr_url.empty?
+=======
+    ".ai/pr/pr-body.md",
+    "--json",
+    "url",
+    "--jq",
+    ".url"
+  ).strip
+>>>>>>> 33312bf (introduce codex scripts)
 end
 
 write(".ai/pr-url.txt", "#{pr_url}\n")

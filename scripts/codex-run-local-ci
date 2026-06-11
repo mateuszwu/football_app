@@ -4,11 +4,17 @@
 require "json"
 require "fileutils"
 require "open3"
+<<<<<<< HEAD
 require "shellwords"
 require "time"
 
 MODEL = ENV.fetch("LOCAL_LLM_MODEL", "lmstudio/qwen/qwen3.5-9b")
 CACHE_DIR = File.expand_path("tmp/cache", Dir.pwd)
+=======
+require "time"
+
+MODEL = ENV.fetch("LOCAL_LLM_MODEL", "lmstudio/qwen/qwen3.5-9b")
+>>>>>>> 33312bf (introduce codex scripts)
 
 RUN_ID = Time.now.strftime("%Y%m%d-%H%M%S")
 CI_DIR = File.join(".ai", "ci", RUN_ID)
@@ -46,12 +52,15 @@ def run_capture(command, log_path)
   }
 end
 
+<<<<<<< HEAD
 def project_command(command)
   escaped_cache_dir = Shellwords.escape(CACHE_DIR)
 
   "XDG_CACHE_HOME=#{escaped_cache_dir} asdf exec #{command}"
 end
 
+=======
+>>>>>>> 33312bf (introduce codex scripts)
 def tail(text, lines = 350)
   text.lines.last(lines).join
 end
@@ -104,10 +113,17 @@ def run_check(name, command, ci_dir)
 end
 
 def rubocop_autocorrect_command
+<<<<<<< HEAD
   if system("#{project_command('bin/rubocop --help')} 2>/dev/null | grep -q -- '--autocorrect-all'")
     project_command("bin/rubocop --autocorrect-all")
   else
     project_command("bin/rubocop -A")
+=======
+  if system("bin/rubocop --help 2>/dev/null | grep -q -- '--autocorrect-all'")
+    "bin/rubocop --autocorrect-all"
+  else
+    "bin/rubocop -A"
+>>>>>>> 33312bf (introduce codex scripts)
   end
 end
 
@@ -121,7 +137,11 @@ write(File.join(CI_DIR, "changed-files-before.txt"), `git diff --name-only`)
 results = {}
 
 # 1. RSpec first: verifies behavior before style/security checks.
+<<<<<<< HEAD
 results["rspec"] = run_check("rspec", project_command("bundle exec rspec"), CI_DIR)
+=======
+results["rspec"] = run_check("rspec", "bundle exec rspec", CI_DIR)
+>>>>>>> 33312bf (introduce codex scripts)
 
 # 2. RuboCop autocorrect by default.
 # Codex should not waste tokens fixing what RuboCop can fix mechanically.
@@ -134,10 +154,17 @@ write(File.join(CI_DIR, "rubocop-autocorrect-changed-files.txt"), `git diff --na
 
 # 3. RuboCop check after autocorrect.
 # Anything left here is what Codex may need to fix.
+<<<<<<< HEAD
 results["rubocop"] = run_check("rubocop", project_command("bin/rubocop"), CI_DIR)
 
 # 4. Brakeman.
 results["brakeman"] = run_check("brakeman", project_command("bin/brakeman --no-pager"), CI_DIR)
+=======
+results["rubocop"] = run_check("rubocop", "bin/rubocop", CI_DIR)
+
+# 4. Brakeman.
+results["brakeman"] = run_check("brakeman", "bin/brakeman --no-pager", CI_DIR)
+>>>>>>> 33312bf (introduce codex scripts)
 
 write(File.join(CI_DIR, "git-status-after.txt"), `git status --short --branch`)
 write(File.join(CI_DIR, "diff-stat-after.txt"), `git diff --stat`)
