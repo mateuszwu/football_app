@@ -211,6 +211,39 @@ RSpec.describe "Match goals" do
           end
         end
       end
+
+      it "rejects goals when the match is already finished" do
+        begin
+          original_admin_password = ENV["FOOTBALL_APP_ADMIN_PASSWORD"]
+          ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = "secret-password"
+          match = create(
+            :match,
+            started_at: Time.zone.parse("2026-06-19 19:15:00"),
+            finished_at: Time.zone.parse("2026-06-19 20:02:10")
+          )
+          player = create(:player, name: "Scorer", nickname: "scorer", phone: "+48123456789")
+          create(:team_player, team: match.home_team, player: player)
+          post "/admin/session", params: { password: "secret-password" }
+
+          post "/matches/#{match.id}/goals", params: {
+            match_goal: {
+              scoring_team_id: match.home_team.id,
+              scorer_id: player.id
+            }
+          }
+
+          expect(response).to redirect_to(match_path(match))
+          expect(flash[:alert]).to eq("Could not add goal")
+          expect(MatchGoal.count).to eq(0)
+          expect(match.reload.home_score).to eq(0)
+        ensure
+          if original_admin_password.nil?
+            ENV.delete("FOOTBALL_APP_ADMIN_PASSWORD")
+          else
+            ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = original_admin_password
+          end
+        end
+      end
     end
   end
 
@@ -294,6 +327,36 @@ RSpec.describe "Match goals" do
           original_admin_password = ENV["FOOTBALL_APP_ADMIN_PASSWORD"]
           ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = "secret-password"
           match = create(:match, started_at: nil, finished_at: nil)
+          player = create(:player, name: "Scorer", nickname: "scorer", phone: "+48123456789")
+          create(:team_player, team: match.home_team, player: player)
+          goal = create(:match_goal, match:, scorer: player, scoring_team: match.home_team, scored_at: Time.zone.now)
+          match.update!(home_score: 1)
+          post "/admin/session", params: { password: "secret-password" }
+
+          delete "/matches/#{match.id}/goals/#{goal.id}"
+
+          expect(response).to redirect_to(match_path(match))
+          expect(flash[:alert]).to eq("Could not remove goal")
+          expect(MatchGoal.count).to eq(1)
+          expect(match.reload.home_score).to eq(1)
+        ensure
+          if original_admin_password.nil?
+            ENV.delete("FOOTBALL_APP_ADMIN_PASSWORD")
+          else
+            ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = original_admin_password
+          end
+        end
+      end
+
+      it "rejects undo when the match is already finished" do
+        begin
+          original_admin_password = ENV["FOOTBALL_APP_ADMIN_PASSWORD"]
+          ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = "secret-password"
+          match = create(
+            :match,
+            started_at: Time.zone.parse("2026-06-19 19:15:00"),
+            finished_at: Time.zone.parse("2026-06-19 20:02:10")
+          )
           player = create(:player, name: "Scorer", nickname: "scorer", phone: "+48123456789")
           create(:team_player, team: match.home_team, player: player)
           goal = create(:match_goal, match:, scorer: player, scoring_team: match.home_team, scored_at: Time.zone.now)
