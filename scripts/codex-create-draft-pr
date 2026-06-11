@@ -39,6 +39,17 @@ def sh!(*args)
   stdout
 end
 
+def sh(*args)
+  stdout, stderr, status = Open3.capture3(*args)
+
+  {
+    stdout: stdout,
+    stderr: stderr,
+    success: status.success?,
+    exit_code: status.exitstatus
+  }
+end
+
 def json_read(path)
   JSON.parse(File.read(path))
 rescue Errno::ENOENT
@@ -344,7 +355,7 @@ existing_pr_stdout, _existing_pr_stderr, existing_pr_status = Open3.capture3(
 if existing_pr_status.success? && !existing_pr_stdout.strip.empty?
   pr_url = existing_pr_stdout.strip
 else
-  pr_url = sh!(
+  create_result = sh(
     "gh",
     "pr",
     "create",
@@ -356,12 +367,21 @@ else
     "--title",
     pr_title,
     "--body-file",
-    ".ai/pr/pr-body.md",
-    "--json",
-    "url",
-    "--jq",
-    ".url"
-  ).strip
+    ".ai/pr/pr-body.md"
+  )
+
+  unless create_result[:success]
+    abort <<~MSG
+      Command failed:
+      gh pr create --draft --base #{MAIN_BRANCH} --head #{current_branch} --title #{pr_title} --body-file .ai/pr/pr-body.md
+
+      STDERR:
+      #{create_result[:stderr]}
+    MSG
+  end
+
+  pr_url = create_result[:stdout].lines.map(&:strip).find { |line| line.match?(%r{\Ahttps://github\.com/}) }.to_s
+  pr_url = sh!("gh", "pr", "view", current_branch, "--json", "url", "--jq", ".url").strip if pr_url.empty?
 end
 
 write(".ai/pr-url.txt", "#{pr_url}\n")

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_06_081000) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_07_212741) do
   create_table "match_day_players", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.integer "match_day_id", null: false
@@ -51,6 +51,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_06_081000) do
     t.index ["season_id", "played_on"], name: "index_match_days_on_season_id_and_played_on", unique: true
     t.index ["season_id"], name: "index_match_days_on_season_id"
     t.index ["status"], name: "index_match_days_on_status"
+  end
+
+  create_table "matches", force: :cascade do |t|
+    t.integer "away_score", default: 0, null: false
+    t.integer "away_team_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "finished_at"
+    t.integer "home_score", default: 0, null: false
+    t.integer "home_team_id", null: false
+    t.integer "match_day_id", null: false
+    t.datetime "started_at"
+    t.datetime "updated_at", null: false
+    t.index ["away_team_id"], name: "index_matches_on_away_team_id"
+    t.index ["home_team_id"], name: "index_matches_on_home_team_id"
+    t.index ["match_day_id", "home_team_id", "away_team_id"], name: "idx_on_match_day_id_home_team_id_away_team_id_f7a6ad2a0b", unique: true
+    t.index ["match_day_id"], name: "index_matches_on_match_day_id"
   end
 
   create_table "players", force: :cascade do |t|
@@ -121,6 +137,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_06_081000) do
   add_foreign_key "match_day_votes", "players", column: "def_player_id"
   add_foreign_key "match_day_votes", "players", column: "mvp_player_id"
   add_foreign_key "match_days", "seasons"
+  add_foreign_key "matches", "match_days"
+  add_foreign_key "matches", "teams", column: "away_team_id"
+  add_foreign_key "matches", "teams", column: "home_team_id"
   add_foreign_key "team_players", "players"
   add_foreign_key "team_players", "teams"
   add_foreign_key "team_setups", "match_days"
