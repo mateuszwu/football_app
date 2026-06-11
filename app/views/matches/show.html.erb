@@ -24,6 +24,20 @@
       <p class="live-match__team-label">Home</p>
       <h2><%= match.home_team.name %></h2>
       <strong class="live-match__score"><%= match.home_score %></strong>
+
+      <% home_goals = match.match_goals.where(scoring_team: match.home_team).order(:scored_at) %>
+      <% if home_goals.any? %>
+        <ul class="live-match__team-goals">
+          <% home_goals.each do |goal| %>
+            <li>
+              ⚽ <%= goal.scorer.nickname.present? ? goal.scorer.nickname : goal.scorer.name %>
+              <% if match.started_at.present? %>
+                <span class="goal-time">(<%= (match.elapsed_seconds(goal.scored_at) / 60) %>')</span>
+              <% end %>
+            </li>
+          <% end %>
+        </ul>
+      <% end %>
     </article>
 
     <div class="live-match__status-card">
@@ -61,6 +75,20 @@
       <p class="live-match__team-label">Away</p>
       <h2><%= match.away_team.name %></h2>
       <strong class="live-match__score"><%= match.away_score %></strong>
+
+      <% away_goals = match.match_goals.where(scoring_team: match.away_team).order(:scored_at) %>
+      <% if away_goals.any? %>
+        <ul class="live-match__team-goals">
+          <% away_goals.each do |goal| %>
+            <li>
+              ⚽ <%= goal.scorer.nickname.present? ? goal.scorer.nickname : goal.scorer.name %>
+              <% if match.started_at.present? %>
+                <span class="goal-time">(<%= (match.elapsed_seconds(goal.scored_at) / 60) %>')</span>
+              <% end %>
+            </li>
+          <% end %>
+        </ul>
+      <% end %>
     </article>
   </div>
 

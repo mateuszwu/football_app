@@ -51,6 +51,40 @@ RSpec.describe "Matches" do
         end
       end
 
+      it "renders scored goals on the match scoreboard" do
+        season = create(:season, name: "Summer 2026")
+        match_day = create(:match_day, season: season, played_on: Date.new(2026, 6, 19), status: "in_progress")
+        team_setup = create(:team_setup, match_day: match_day)
+        home_team = create(:team, team_setup: team_setup, name: "Team A", team_type: "match")
+        away_team = create(:team, team_setup: team_setup, name: "Team B", team_type: "match")
+        home_player = create(:player, name: "Adam Nowak", nickname: "adam", phone: "+48111111111")
+        away_player = create(:player, name: "Marek Kowalski", nickname: "marek", phone: "+48222222222")
+        create(:team_player, team: home_team, player: home_player)
+        create(:team_player, team: away_team, player: away_player)
+        match = create(
+          :match,
+          match_day: match_day,
+          home_team: home_team,
+          away_team: away_team,
+          home_score: 1,
+          away_score: 0,
+          started_at: Time.zone.parse("2026-06-19 19:15:00")
+        )
+        create(
+          :match_goal,
+          match: match,
+          scoring_team: home_team,
+          scorer: home_player,
+          scored_at: Time.zone.parse("2026-06-19 19:27:00")
+        )
+
+        get "/matches/#{match.id}"
+
+        expect(response).to have_http_status(:ok)
+        expect(response.body).to include("adam")
+        expect(response.body).to include("(12')")
+      end
+
       it "shows admin goal forms only for admins" do
         begin
           original_admin_password = ENV["FOOTBALL_APP_ADMIN_PASSWORD"]
