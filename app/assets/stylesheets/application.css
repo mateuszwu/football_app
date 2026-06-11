@@ -348,3 +348,77 @@
 .vote-form-page {
   max-width: 36rem;
 }
+
+.live-match {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.live-match__scoreboard {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+}
+
+.live-match__team,
+.live-match__status-card,
+.live-match__lineup {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  padding: 1.25rem;
+}
+
+.live-match__team {
+  text-align: center;
+}
+
+.live-match__team h2,
+.live-match__status-card p,
+.live-match__lineup h2 {
+  margin-top: 0;
+}
+
+.live-match__team-label {
+  color: #4b5563;
+  font-size: 0.875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.live-match__score {
+  display: block;
+  font-size: 3rem;
+  line-height: 1;
+}
+
+.live-match__status-card {
+  display: grid;
+  gap: 0.75rem;
+  place-items: center;
+  text-align: center;
+}
+
+.live-match__lineups {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+}
+
+.live-match__players {
+  display: grid;
+  gap: 0.75rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.live-match__players li {
+  align-items: baseline;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.live-match__players span {
+  color: #4b5563;
+}
