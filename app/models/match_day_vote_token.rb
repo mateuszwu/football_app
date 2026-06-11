@@ -4,6 +4,10 @@ class MatchDayVoteToken < ApplicationRecord
 
   validates :token, presence: true, uniqueness: true
 
+  def used?
+    used_at.present?
+  end
+
   def mark_used!
     return if used_at.present?
 

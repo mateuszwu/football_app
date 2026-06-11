@@ -29,6 +29,17 @@ RSpec.describe "Votes" do
         expect(response.body).not_to include("+48333333333")
         expect(response.body).not_to include("phone")
       end
+
+      it "redirects used tokens to the thank you page" do
+        voter = create(:player, name: "Voter", nickname: "voter", phone: "+48111111111", approval_status: "approved", active: true)
+        match_day = create(:match_day, played_on: Date.new(2026, 6, 5))
+        voter_match_day_player = create(:match_day_player, match_day: match_day, player: voter)
+        vote_token = create(:match_day_vote_token, match_day_player: voter_match_day_player, token: "vote-token", used_at: Time.zone.parse("2026-06-05 21:30:00"))
+
+        get "/votes/#{vote_token.token}"
+
+        expect(response).to redirect_to("/votes/#{vote_token.token}/thank-you")
+      end
     end
 
     context "when the vote token does not exist" do
@@ -119,6 +130,34 @@ RSpec.describe "Votes" do
           def_player: selected_player
         )
         expect(vote_token.used_at).to be_present
+      end
+
+      it "does not update an already used token" do
+        voter = create(:player, name: "Voter", nickname: "voter", phone: "+48111111111", approval_status: "approved", active: true)
+        original_mvp = create(:player, name: "Original MVP", nickname: "original-mvp", phone: "+48222222222", approval_status: "approved", active: true)
+        original_def = create(:player, name: "Original DEF", nickname: "original-def", phone: "+48333333333", approval_status: "approved", active: true)
+        new_choice = create(:player, name: "New Choice", nickname: "new-choice", phone: "+48444444444", approval_status: "approved", active: true)
+        match_day = create(:match_day)
+        voter_match_day_player = create(:match_day_player, match_day: match_day, player: voter)
+        create(:match_day_player, match_day: match_day, player: original_mvp)
+        create(:match_day_player, match_day: match_day, player: original_def)
+        create(:match_day_player, match_day: match_day, player: new_choice)
+        vote_token = create(:match_day_vote_token, match_day_player: voter_match_day_player, token: "vote-token", used_at: Time.zone.parse("2026-06-05 21:30:00"))
+        MatchDayVote.create!(match_day_vote_token: vote_token, mvp_player: original_mvp, def_player: original_def)
+
+        post "/votes/#{vote_token.token}", params: {
+          match_day_vote: {
+            mvp_player_id: new_choice.id,
+            def_player_id: new_choice.id
+          }
+        }
+
+        expect(response).to redirect_to("/votes/#{vote_token.token}/thank-you")
+        expect(vote_token.reload.match_day_vote).to have_attributes(
+          mvp_player: original_mvp,
+          def_player: original_def
+        )
+        expect(vote_token.used_at).to eq(Time.zone.parse("2026-06-05 21:30:00"))
       end
     end
 
