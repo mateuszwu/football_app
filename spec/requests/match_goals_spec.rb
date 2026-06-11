@@ -92,6 +92,39 @@ RSpec.describe "Match goals" do
         end
       end
 
+      it "creates an unassisted goal when assistant_id is blank" do
+        begin
+          original_admin_password = ENV["FOOTBALL_APP_ADMIN_PASSWORD"]
+          ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = "secret-password"
+          match = create(:match, started_at: Time.zone.parse("2026-06-19 19:15:00"))
+          scorer = create(:player, name: "Scorer", nickname: "scorer", phone: "+48123456789")
+          create(:team_player, team: match.home_team, player: scorer)
+
+          post "/admin/session", params: { password: "secret-password" }
+
+          post "/matches/#{match.id}/goals", params: {
+            match_goal: {
+              scoring_team_id: match.home_team.id,
+              scorer_id: scorer.id,
+              assistant_id: ""
+            }
+          }
+
+          expect(response).to redirect_to(match_path(match))
+          expect(flash[:notice]).to eq("Goal added")
+          expect(match.reload.home_score).to eq(1)
+
+          goal = MatchGoal.find_by!(match:, scorer:)
+          expect(goal.assistant).to be_nil
+        ensure
+          if original_admin_password.nil?
+            ENV.delete("FOOTBALL_APP_ADMIN_PASSWORD")
+          else
+            ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = original_admin_password
+          end
+        end
+      end
+
       it "rejects goals when the assistant is the scorer" do
         begin
           original_admin_password = ENV["FOOTBALL_APP_ADMIN_PASSWORD"]
