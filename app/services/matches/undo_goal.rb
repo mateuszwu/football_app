@@ -14,21 +14,17 @@ module Matches
       return false unless goal.match_id == match.id
 
       Match.transaction do
-        match.decrement!(score_column)
         goal.destroy!
+        match.recalculate_score!
       end
 
       true
-    rescue ActiveRecord::RecordNotDestroyed
+    rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotDestroyed
       false
     end
 
     private
 
     attr_reader :match, :goal
-
-    def score_column
-      goal.scoring_team_id == match.home_team_id ? :home_score : :away_score
-    end
   end
 end

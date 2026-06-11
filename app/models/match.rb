@@ -55,6 +55,13 @@ class Match < ApplicationRecord
     [ (reference_time.to_i - started_at.to_i), 0 ].max
   end
 
+  def recalculate_score!
+    update!(
+      home_score: match_goals.where(scoring_team_id: home_team_id).count,
+      away_score: match_goals.where(scoring_team_id: away_team_id).count
+    )
+  end
+
   private
 
   def teams_are_distinct

@@ -23,7 +23,7 @@ module Matches
           scored_at:
         )
 
-        match.increment!(score_column)
+        match.recalculate_score!
 
         goal
       end
@@ -34,9 +34,5 @@ module Matches
     private
 
     attr_reader :match, :scored_at, :scorer_id, :scoring_team_id, :assistant_id
-
-    def score_column
-      scoring_team_id.to_i == match.home_team_id ? :home_score : :away_score
-    end
   end
 end
