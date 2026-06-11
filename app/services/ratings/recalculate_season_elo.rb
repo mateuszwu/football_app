@@ -9,7 +9,6 @@ module Ratings
     end
 
     def call
-      # Build a mutable map of player_id => current elo, seeded with initial_elo
       elo_map = Hash.new(season.initial_elo)
 
       finished_match_days.each do |match_day|
@@ -27,7 +26,7 @@ module Ratings
 
     def finished_match_days
       season.match_days
-            .where(status: "finished")
+            .finished
             .order(:played_on, :id)
     end
 

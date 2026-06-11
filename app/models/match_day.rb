@@ -18,6 +18,8 @@ class MatchDay < ApplicationRecord
   validates :status, inclusion: { in: STATUSES }
   validate :status_transition_is_allowed
 
+  scope :finished, -> { where(status: "finished") }
+
   def ready_for_match?
     selected_player_ids = match_day_players.order(:player_id).pluck(:player_id)
     return false if selected_player_ids.empty?
