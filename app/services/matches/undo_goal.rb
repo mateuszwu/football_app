@@ -10,7 +10,7 @@ module Matches
     end
 
     def call
-      return false unless match.in_progress?
+      return false unless match.started_at.present?
       return false unless goal.match_id == match.id
 
       Match.transaction do

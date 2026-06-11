@@ -161,7 +161,7 @@
             <% if match.started_at.present? %>
               <span class="live-match__event-time"><%= match.elapsed_seconds(goal.scored_at) / 60 %>'</span>
             <% end %>
-            <% if admin_signed_in? && match.in_progress? %>
+            <% if admin_signed_in? && match.started_at.present? %>
               <%= button_to "Undo", match_goal_path(match, goal), method: :delete, class: "button button--danger button--small", data: { turbo_confirm: "Remove this goal?" } %>
             <% end %>
           </li>
@@ -180,7 +180,7 @@
 
       <h2>Add goal</h2>
 
-      <% if match.in_progress? %>
+      <% if match.started_at.present? %>
         <div class="live-match__goal-forms">
           <% [match.home_team, match.away_team].each do |team| %>
             <article class="live-match__goal-form-card">
@@ -205,7 +205,7 @@
           <% end %>
         </div>
       <% else %>
-        <p class="empty-state">Goals can be added only while the match is in progress.</p>
+        <p class="empty-state">Goals can be added only after the match starts.</p>
       <% end %>
     </section>
   <% end %>

@@ -13,7 +13,7 @@ module Matches
     end
 
     def call
-      return false unless match.in_progress?
+      return false unless match.started_at.present?
 
       Match.transaction do
         goal = match.match_goals.create!(
