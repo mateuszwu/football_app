@@ -1,0 +1,504 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "json"
+require "fileutils"
+require "open3"
+require "time"
+
+MODEL = ENV.fetch("LOCAL_LLM_MODEL", "lmstudio/qwen/qwen3.5-9b")
+
+RUN_ID = Time.now.strftime("%Y%m%d-%H%M%S")
+CI_DIR = File.join(".ai", "ci", RUN_ID)
+LATEST_LINK = File.join(".ai", "ci", "latest")
+
+FileUtils.mkdir_p(CI_DIR)
+
+def require_tool!(name)
+  system("command -v #{name} >/dev/null 2>&1") || abort("Missing required tool: #{name}")
+end
+
+%w[git ruby pi].each { |tool| require_tool!(tool) }
+
+def write(path, content)
+  FileUtils.mkdir_p(File.dirname(path))
+  File.write(path, content)
+end
+
+def read(path)
+  File.exist?(path) ? File.read(path) : ""
+end
+
+def run_capture(command, log_path)
+  started_at = Time.now
+  stdout, stderr, status = Open3.capture3(command)
+
+  write(log_path, stdout + stderr)
+
+  {
+    command: command,
+    exit_code: status.exitstatus,
+    passed: status.success?,
+    duration_seconds: (Time.now - started_at).round,
+    log_file: log_path
+  }
+end
+
+def tail(text, lines = 350)
+  text.lines.last(lines).join
+end
+
+def grep_blocks(text, patterns, context: 3, max_blocks: 80)
+  regexes = patterns.map { |pattern| Regexp.new(pattern, Regexp::IGNORECASE) }
+  lines = text.lines
+  blocks = []
+  used = {}
+
+  lines.each_with_index do |line, index|
+    next unless regexes.any? { |regex| line.match?(regex) }
+
+    from = [ 0, index - context ].max
+    to = [ lines.length - 1, index + context ].min
+    key = [ from, to ]
+
+    next if used[key]
+
+    used[key] = true
+
+    block = (from..to).map { |i| "#{i + 1}: #{lines[i]}" }.join
+    blocks << block
+
+    break if blocks.size >= max_blocks
+  end
+
+  blocks.join("\n\n---\n\n")
+end
+
+def run_check(name, command, ci_dir)
+  puts
+  puts "==> Running #{name}"
+  puts "Command: #{command}"
+
+  log_path = File.join(ci_dir, "#{name}.log")
+  result = run_capture(command, log_path)
+
+  write(File.join(ci_dir, "#{name}.status"), result[:exit_code].to_s)
+  write(File.join(ci_dir, "#{name}.duration"), result[:duration_seconds].to_s)
+  write(File.join(ci_dir, "#{name}.command"), command)
+
+  if result[:passed]
+    puts "PASS #{name}"
+  else
+    puts "FAIL #{name} with status #{result[:exit_code]}"
+  end
+
+  result
+end
+
+def rubocop_autocorrect_command
+  if system("bin/rubocop --help 2>/dev/null | grep -q -- '--autocorrect-all'")
+    "bin/rubocop --autocorrect-all"
+  else
+    "bin/rubocop -A"
+  end
+end
+
+puts "Preparing local CI run..."
+
+write(File.join(CI_DIR, "run-id.txt"), "#{RUN_ID}\n")
+write(File.join(CI_DIR, "git-status-before.txt"), `git status --short --branch`)
+write(File.join(CI_DIR, "diff-stat-before.txt"), `git diff --stat`)
+write(File.join(CI_DIR, "changed-files-before.txt"), `git diff --name-only`)
+
+results = {}
+
+# 1. RSpec first: verifies behavior before style/security checks.
+results["rspec"] = run_check("rspec", "bundle exec rspec", CI_DIR)
+
+# 2. RuboCop autocorrect by default.
+# Codex should not waste tokens fixing what RuboCop can fix mechanically.
+autocorrect_cmd = rubocop_autocorrect_command
+results["rubocop_autocorrect"] = run_check("rubocop_autocorrect", autocorrect_cmd, CI_DIR)
+
+write(File.join(CI_DIR, "git-status-after-rubocop-autocorrect.txt"), `git status --short --branch`)
+write(File.join(CI_DIR, "rubocop-autocorrect-diff-stat.txt"), `git diff --stat`)
+write(File.join(CI_DIR, "rubocop-autocorrect-changed-files.txt"), `git diff --name-only`)
+
+# 3. RuboCop check after autocorrect.
+# Anything left here is what Codex may need to fix.
+results["rubocop"] = run_check("rubocop", "bin/rubocop", CI_DIR)
+
+# 4. Brakeman.
+results["brakeman"] = run_check("brakeman", "bin/brakeman --no-pager", CI_DIR)
+
+write(File.join(CI_DIR, "git-status-after.txt"), `git status --short --branch`)
+write(File.join(CI_DIR, "diff-stat-after.txt"), `git diff --stat`)
+write(File.join(CI_DIR, "changed-files-after.txt"), `git diff --name-only`)
+
+puts
+puts "Extracting deterministic failure snippets..."
+
+EXTRACTED_DIR = File.join(CI_DIR, "extracted")
+FileUtils.mkdir_p(EXTRACTED_DIR)
+
+patterns = {
+  "rspec" => [
+    "Failures:",
+    "^\\s*\\d+\\)",
+    "Failure/Error:",
+    "expected:",
+    "got:",
+    "Diff:",
+    "# ./",
+    "Finished in",
+    "\\d+ examples?, \\d+ failures?",
+    "Randomized with seed",
+    "Error:",
+    "Exception"
+  ],
+  "rubocop_autocorrect" => [
+    "Inspecting",
+    "Corrected",
+    "correction",
+    "Offenses:",
+    "^\\S+:\\d+:\\d+:",
+    "C:",
+    "W:",
+    "E:",
+    "F:",
+    "\\d+ files inspected",
+    "\\d+ offenses? detected",
+    "\\d+ offenses? corrected"
+  ],
+  "rubocop" => [
+    "Offenses:",
+    "Inspecting",
+    "^\\S+:\\d+:\\d+:",
+    "convention:",
+    "warning:",
+    "error:",
+    "fatal:",
+    "C:",
+    "W:",
+    "E:",
+    "F:",
+    "\\d+ files inspected",
+    "\\d+ offenses? detected"
+  ],
+  "brakeman" => [
+    "Confidence:",
+    "Warning Type:",
+    "Message:",
+    "File:",
+    "Line:",
+    "Code:",
+    "No warnings found",
+    "Security Warnings",
+    "Scan Information"
+  ]
+}
+
+results.each do |name, result|
+  log = read(result[:log_file])
+
+  write(File.join(EXTRACTED_DIR, "#{name}-tail.log"), tail(log, 350))
+  write(
+    File.join(EXTRACTED_DIR, "#{name}-important.log"),
+    grep_blocks(log, patterns.fetch(name), context: 3)
+  )
+end
+
+status = results.transform_values do |result|
+  {
+    "command" => result[:command],
+    "exit_code" => result[:exit_code],
+    "duration_seconds" => result[:duration_seconds],
+    "passed" => result[:passed],
+    "log_file" => result[:log_file]
+  }
+end
+
+status["overall"] = {
+  "passed" => results["rspec"][:passed] &&
+              results["rubocop"][:passed] &&
+              results["brakeman"][:passed]
+}
+
+status["note"] = "rubocop_autocorrect may return non-zero even after applying corrections. Overall CI only requires final rubocop check to pass."
+
+write(File.join(CI_DIR, "status.json"), JSON.pretty_generate(status))
+
+overview = +"# Local CI raw overview\n\n"
+
+results.each do |name, result|
+  overview << "## #{name}\n"
+  overview << "- command: #{result[:command]}\n"
+  overview << "- passed: #{result[:passed]}\n"
+  overview << "- exit_code: #{result[:exit_code]}\n"
+  overview << "- duration_seconds: #{result[:duration_seconds]}\n"
+  overview << "- log_file: #{result[:log_file]}\n\n"
+end
+
+overview << "## Git status before\n"
+overview << read(File.join(CI_DIR, "git-status-before.txt"))
+overview << "\n\n"
+
+overview << "## Git status after RuboCop autocorrect\n"
+overview << read(File.join(CI_DIR, "git-status-after-rubocop-autocorrect.txt"))
+overview << "\n\n"
+
+overview << "## RuboCop autocorrect changed files\n"
+overview << read(File.join(CI_DIR, "rubocop-autocorrect-changed-files.txt"))
+overview << "\n\n"
+
+overview << "## RuboCop autocorrect diff stat\n"
+overview << read(File.join(CI_DIR, "rubocop-autocorrect-diff-stat.txt"))
+overview << "\n\n"
+
+overview << "## Git status after all checks\n"
+overview << read(File.join(CI_DIR, "git-status-after.txt"))
+overview << "\n\n"
+
+overview << "## Final diff stat\n"
+overview << read(File.join(CI_DIR, "diff-stat-after.txt"))
+overview << "\n\n"
+
+overview << "## Final changed files\n"
+overview << read(File.join(CI_DIR, "changed-files-after.txt"))
+overview << "\n\n"
+
+results.each_key do |name|
+  overview << "## #{name} important extract\n"
+  overview << read(File.join(EXTRACTED_DIR, "#{name}-important.log"))[0, 20_000]
+  overview << "\n\n"
+end
+
+write(File.join(CI_DIR, "llm-input.md"), overview)
+
+FileUtils.rm_f(LATEST_LINK)
+FileUtils.ln_sf(RUN_ID, LATEST_LINK)
+
+summary_prompt = <<~PROMPT
+  You are a local CI result summarizer for Codex.
+
+  Read:
+  - .ai/ci/latest/status.json
+  - .ai/ci/latest/git-status-before.txt
+  - .ai/ci/latest/git-status-after-rubocop-autocorrect.txt
+  - .ai/ci/latest/rubocop-autocorrect-changed-files.txt
+  - .ai/ci/latest/rubocop-autocorrect-diff-stat.txt
+  - .ai/ci/latest/git-status-after.txt
+  - .ai/ci/latest/diff-stat-after.txt
+  - .ai/ci/latest/changed-files-after.txt
+  - .ai/ci/latest/llm-input.md
+  - .ai/ci/latest/extracted/rspec-important.log
+  - .ai/ci/latest/extracted/rubocop_autocorrect-important.log
+  - .ai/ci/latest/extracted/rubocop-important.log
+  - .ai/ci/latest/extracted/brakeman-important.log
+  - tail logs only if important logs are insufficient
+
+  Your job:
+  Summarize local CI results for Codex.
+
+  Important RuboCop rule:
+  RuboCop autocorrect has already been run.
+  Codex should only fix remaining RuboCop offenses from the final `bin/rubocop` run.
+  Codex should not manually fix formatting/style that autocorrect already handled.
+  If RuboCop autocorrect changed files, mention that they should be included in the PR if related to the implementation.
+
+  Hard rules:
+  - Do not invent failures.
+  - Use only information from the files above.
+  - If evidence is missing or unclear, say so.
+  - Group related failures.
+  - Ignore noise unless it affects the fix.
+  - Do not suggest broad rewrites.
+  - Do not edit files.
+  - Do not weaken tests.
+  - Prefer fixing implementation over changing specs, unless the test is clearly outdated by the issue requirements.
+
+  Write a concise markdown report with exactly this structure:
+
+  # Local CI summary for Codex
+
+  ## Overall result
+  passed|failed|unknown
+
+  ## Commands run
+  - rspec:
+  - rubocop autocorrect:
+  - rubocop final:
+  - brakeman:
+
+  ## RuboCop autocorrect result
+  - status:
+  - files changed by autocorrect:
+  - remaining action for Codex:
+
+  ## RSpec result
+  - status:
+  - failure groups:
+  - likely relevant files:
+  - recommended next step:
+
+  ## RuboCop final result
+  - status:
+  - remaining offenses:
+  - autofix already attempted:
+  - recommended next step:
+
+  ## Brakeman result
+  - status:
+  - warnings:
+  - severity:
+  - recommended next step:
+
+  ## Changed files / scope
+  - changed files:
+  - scope risk:
+
+  ## What Codex should do next
+  Concrete numbered steps.
+
+  ## What Codex should avoid
+  Concrete bullets.
+
+  ## Full logs available
+  - .ai/ci/latest/rspec.log
+  - .ai/ci/latest/rubocop_autocorrect.log
+  - .ai/ci/latest/rubocop.log
+  - .ai/ci/latest/brakeman.log
+PROMPT
+
+summary_prompt_path = File.join(CI_DIR, "summary-prompt.md")
+write(summary_prompt_path, summary_prompt)
+
+puts
+puts "Running local LLM CI summarizer..."
+
+summary_command = [
+  "pi",
+  "--model", MODEL,
+  "--tools", "read,bash,grep,find,ls",
+  "--mode", "print"
+]
+
+stdout, stderr, pi_status = Open3.capture3(*summary_command, stdin_data: summary_prompt)
+
+write(File.join(CI_DIR, "summary.md"), stdout)
+write(File.join(CI_DIR, "summary.stderr.log"), stderr)
+
+unless pi_status.success?
+  warn "Pi summarizer failed with status #{pi_status.exitstatus}"
+  warn stderr.lines.last(80).join
+
+  fallback = <<~MD
+    # Local CI summary for Codex
+
+    ## Overall result
+    #{status.dig("overall", "passed") ? "passed" : "failed"}
+
+    ## Commands run
+    - rspec: bundle exec rspec
+    - rubocop autocorrect: #{autocorrect_cmd}
+    - rubocop final: bin/rubocop
+    - brakeman: bin/brakeman --no-pager
+
+    ## RuboCop autocorrect result
+    - status: #{status.dig("rubocop_autocorrect", "passed") ? "passed" : "failed/non-zero"}
+    - files changed by autocorrect:
+    #{read(File.join(CI_DIR, "rubocop-autocorrect-changed-files.txt")).lines.map { |line| "  - #{line.strip}" }.join("\n")}
+    - remaining action for Codex: inspect final RuboCop output only if final RuboCop failed.
+
+    ## RSpec result
+    - status: #{status.dig("rspec", "passed") ? "passed" : "failed"}
+    - failure groups: local LLM summary failed; inspect .ai/ci/latest/extracted/rspec-important.log
+    - likely relevant files: unknown
+    - recommended next step: inspect extracted RSpec logs
+
+    ## RuboCop final result
+    - status: #{status.dig("rubocop", "passed") ? "passed" : "failed"}
+    - remaining offenses: local LLM summary failed; inspect .ai/ci/latest/extracted/rubocop-important.log
+    - autofix already attempted: yes
+    - recommended next step: fix only remaining final RuboCop offenses
+
+    ## Brakeman result
+    - status: #{status.dig("brakeman", "passed") ? "passed" : "failed"}
+    - warnings: local LLM summary failed; inspect .ai/ci/latest/extracted/brakeman-important.log
+    - severity: unknown
+    - recommended next step: inspect extracted Brakeman logs
+
+    ## Changed files / scope
+    - changed files:
+    #{read(File.join(CI_DIR, "changed-files-after.txt")).lines.map { |line| "  - #{line.strip}" }.join("\n")}
+    - scope risk: unknown
+
+    ## What Codex should do next
+    1. Read extracted logs from .ai/ci/latest/extracted/.
+    2. Fix only failures left after autocorrect.
+    3. Re-run ./scripts/codex-run-local-ci.
+
+    ## What Codex should avoid
+    - Do not manually fix RuboCop offenses that autocorrect already handled.
+    - Do not read full logs unless extracted logs are insufficient.
+    - Do not broaden scope.
+    - Do not weaken tests without clear justification.
+
+    ## Full logs available
+    - .ai/ci/latest/rspec.log
+    - .ai/ci/latest/rubocop_autocorrect.log
+    - .ai/ci/latest/rubocop.log
+    - .ai/ci/latest/brakeman.log
+  MD
+
+  write(File.join(CI_DIR, "summary.md"), fallback)
+end
+
+next_step = <<~MD
+  # Next step for Codex
+
+  Read:
+
+  - .ai/ci/latest/summary.md
+  - .ai/ci/latest/status.json
+  - .ai/ci/latest/extracted/rspec-important.log if RSpec failed
+  - .ai/ci/latest/extracted/rubocop-important.log if final RuboCop failed
+  - .ai/ci/latest/extracted/brakeman-important.log if Brakeman failed
+
+  RuboCop autocorrect has already been run.
+
+  If CI failed:
+  - Fix only the failures that remain after autocorrect.
+  - Do not manually fix formatting/style already handled by RuboCop autocorrect.
+  - Do not broaden scope.
+  - Do not weaken tests unless clearly justified.
+  - Prefer fixing implementation over changing specs.
+  - Re-run `./scripts/codex-run-local-ci`.
+
+  If CI passed:
+  - Include RuboCop autocorrect changes in the PR if they are related.
+  - Update `.ai/codex-report.md`.
+  - Run `./scripts/codex-create-pr` dry run.
+MD
+
+write(File.join(CI_DIR, "codex-next-step.md"), next_step)
+
+FileUtils.cp(File.join(CI_DIR, "summary.md"), ".ai/ci-summary.md")
+FileUtils.cp(File.join(CI_DIR, "codex-next-step.md"), ".ai/codex-next-step.md")
+FileUtils.cp(File.join(CI_DIR, "status.json"), ".ai/ci-status.json")
+
+puts
+puts "Local CI summary:"
+puts "-----------------"
+puts read(File.join(CI_DIR, "summary.md"))
+
+puts
+puts "Files written:"
+puts "- #{File.join(CI_DIR, "status.json")}"
+puts "- #{File.join(CI_DIR, "summary.md")}"
+puts "- #{File.join(CI_DIR, "codex-next-step.md")}"
+puts "- .ai/ci-summary.md"
+puts "- .ai/codex-next-step.md"
+puts "- .ai/ci-status.json"
+
+exit(status.dig("overall", "passed") ? 0 : 1)
