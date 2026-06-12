@@ -12,6 +12,15 @@ class Team < ApplicationRecord
     LINEUP_SOURCE_COPIED
   ].freeze
 
+  RESULT_WIN = "win"
+  RESULT_DRAW = "draw"
+  RESULT_LOSS = "loss"
+  RESULTS = [
+    RESULT_WIN,
+    RESULT_DRAW,
+    RESULT_LOSS
+  ].freeze
+
   belongs_to :match, optional: true
   belongs_to :team_setup
   belongs_to :source_team, class_name: "Team", optional: true
@@ -23,6 +32,7 @@ class Team < ApplicationRecord
   validates :name, presence: true
   validates :team_type, presence: true, inclusion: { in: TEAM_TYPES }
   validates :lineup_source, presence: true, inclusion: { in: LINEUP_SOURCES }
+  validates :result, inclusion: { in: RESULTS }, allow_nil: true
   validates :score, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
 
   def fingerprint
