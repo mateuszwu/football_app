@@ -35,15 +35,19 @@ Do not leave a picked ticket in `todo`.
 Use this order:
 
 1. Read `.ai/gh_issues/README.md`.
-2. Pick the lowest-numbered ticket that is not `done`.
-3. Check whether that ticket is already fully implemented in the codebase.
-4. If it is fully implemented, mark it `done`, notify the user, and move to the next ticket.
-5. If it is partially implemented, mark it `in_progress`, finish the remaining work, and continue.
-6. If it is not implemented, mark it `in_progress` and implement it.
-7. Run local validation manually.
-8. Stage, commit, push, and create a draft PR.
-9. Put the ticket description from `.ai/gh_issues/<ticket-file>.json` into the PR description.
-10. Share the PR link with the user for review and stop.
+2. Treat the ticket description as a note, not as something to implement blindly.
+3. Pick the lowest-numbered ticket that is not `done`.
+4. Compare the ticket with the current codebase before changing anything.
+5. If something already exists and is correct for this app, leave it as it is.
+6. If something exists but is wrong, incomplete, or mismatched with the app, change it.
+7. If naming, conventions, or structure in the ticket do not fit the app, adjust the implementation to match the codebase.
+8. If the ticket is fully implemented already, mark it `done`, notify the user, and move to the next ticket.
+9. If the ticket is partially implemented, mark it `in_progress`, finish only the remaining correct work, and continue.
+10. If it is not implemented, mark it `in_progress` and implement it.
+11. Run local validation manually.
+12. Stage, commit, push, and create a draft PR.
+13. Put the ticket description from `.ai/gh_issues/<ticket-file>.json` into the PR description.
+14. Share the PR link with the user for review and stop.
 
 Do not merge without explicit user permission.
 
@@ -151,6 +155,10 @@ Do not send routine progress updates.
 ## Implementation
 
 Implement the smallest correct change for the active ticket.
+
+Do not force the code to mirror ticket wording when the existing app uses a better or already-established convention.
+
+Prefer adapting the ticket to the app over bending the app to the ticket.
 
 Do not create extra progress report files.
 
