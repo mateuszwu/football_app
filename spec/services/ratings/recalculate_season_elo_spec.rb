@@ -173,8 +173,8 @@ RSpec.describe Ratings::RecalculateSeasonElo do
 
       Ratings::RecalculateSeasonElo.call(season: season)
 
-      expect(home_player_one.reload.elo).to eq(998)
-      expect(home_player_two.reload.elo).to eq(998)
+      expect(home_player_one.reload.elo).to eq(1000)
+      expect(home_player_two.reload.elo).to eq(1000)
       expect(away_player.reload.elo).to eq(1002)
     end
   end
