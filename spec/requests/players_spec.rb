@@ -1,6 +1,19 @@
 require "rails_helper"
 
 RSpec.describe "Players" do
+  def encrypted_cookie_value(value)
+    request = ActionDispatch::Request.new(Rails.application.env_config.deep_dup)
+    jar = ActionDispatch::Cookies::CookieJar.build(request, {})
+    jar.encrypted[:pending_player_edit_token] = value
+    jar[:pending_player_edit_token]
+  end
+
+  def decrypted_cookie_value(value)
+    request = ActionDispatch::Request.new(Rails.application.env_config.deep_dup)
+    jar = ActionDispatch::Cookies::CookieJar.build(request, { "pending_player_edit_token" => value })
+    jar.encrypted[:pending_player_edit_token]
+  end
+
   describe "GET /players/new" do
     it "renders the public submission form without private phone data" do
       get "/players/new"
@@ -18,7 +31,7 @@ RSpec.describe "Players" do
 
   describe "POST /players" do
     context "when the submission is valid" do
-      it "creates a pending player, writes the edit cookie, and redirects to the edit form" do
+      it "creates a pending player, writes an encrypted edit cookie, and redirects to the edit form" do
         post "/players", params: {
           player: {
             name: "Adam Nowak",
@@ -40,18 +53,22 @@ RSpec.describe "Players" do
         expect(player.role_code).to eq("DEF")
         expect(player.approval_status).to eq("pending")
         expect(player.active).to eq(true)
-        expect(cookies[:pending_player_edit_token]).to be_present
+        encrypted_cookie = cookies[:pending_player_edit_token]
+
+        expect(encrypted_cookie).to be_present
 
         payload, = JWT.decode(
-          cookies[:pending_player_edit_token],
+          decrypted_cookie_value(encrypted_cookie),
           Rails.application.secret_key_base,
           true,
           algorithm: Players::GenerateEditToken::ALGORITHM
         )
 
         expect(payload["player_id"]).to eq(player.id)
+        expect(payload["purpose"]).to eq(Players::GenerateEditToken::PURPOSE)
         expect(payload["exp"]).to be_within(5).of(Players::GenerateEditToken::EXPIRATION.from_now.to_i)
         expect(response.location).not_to include("token")
+        expect(Array(response.headers["Set-Cookie"]).join("\n")).to include("httponly")
       end
     end
 
@@ -84,7 +101,7 @@ RSpec.describe "Players" do
     context "when the cookie belongs to the same pending player" do
       it "renders the edit form" do
         player = create(:player, approval_status: "pending", active: true)
-        cookies[:pending_player_edit_token] = Players::GenerateEditToken.call(player: player)
+        cookies[:pending_player_edit_token] = encrypted_cookie_value(Players::GenerateEditToken.call(player: player))
 
         get "/players/#{player.id}/edit"
 
@@ -100,7 +117,7 @@ RSpec.describe "Players" do
       it "redirects away from the edit page" do
         player = create(:player, approval_status: "pending", active: true)
         other_player = create(:player, approval_status: "pending", active: true)
-        cookies[:pending_player_edit_token] = Players::GenerateEditToken.call(player: other_player)
+        cookies[:pending_player_edit_token] = encrypted_cookie_value(Players::GenerateEditToken.call(player: other_player))
 
         get "/players/#{player.id}/edit"
 
@@ -119,13 +136,46 @@ RSpec.describe "Players" do
         expect(flash[:alert]).to eq("Brak dostepu do edycji tego zgloszenia.")
       end
     end
+
+    context "when the cookie token is expired" do
+      it "redirects away from the edit page" do
+        player = create(:player, approval_status: "pending", active: true)
+        expired_token = JWT.encode(
+          {
+            "player_id" => player.id,
+            "purpose" => Players::GenerateEditToken::PURPOSE,
+            "exp" => 1.minute.ago.to_i
+          },
+          Rails.application.secret_key_base,
+          Players::GenerateEditToken::ALGORITHM
+        )
+        cookies[:pending_player_edit_token] = encrypted_cookie_value(expired_token)
+
+        get "/players/#{player.id}/edit"
+
+        expect(response).to redirect_to("/players/new")
+        expect(flash[:alert]).to eq("Brak dostepu do edycji tego zgloszenia.")
+      end
+    end
+
+    context "when the player is no longer pending" do
+      it "redirects away from the edit page" do
+        player = create(:player, approval_status: "approved", active: true)
+        cookies[:pending_player_edit_token] = encrypted_cookie_value(Players::GenerateEditToken.call(player: player))
+
+        get "/players/#{player.id}/edit"
+
+        expect(response).to redirect_to("/players/new")
+        expect(flash[:alert]).to eq("Brak dostepu do edycji tego zgloszenia.")
+      end
+    end
   end
 
   describe "PATCH /players/:id" do
     context "when the cookie belongs to the same pending player" do
       it "updates the player submission" do
         player = create(:player, approval_status: "pending", active: true, name: "Old Name", nickname: "oldnick")
-        cookies[:pending_player_edit_token] = Players::GenerateEditToken.call(player: player)
+        cookies[:pending_player_edit_token] = encrypted_cookie_value(Players::GenerateEditToken.call(player: player))
 
         patch "/players/#{player.id}", params: {
           player: {
@@ -150,7 +200,28 @@ RSpec.describe "Players" do
     context "when the cookie is invalid" do
       it "does not update the player submission" do
         player = create(:player, approval_status: "pending", active: true, name: "Old Name")
-        cookies[:pending_player_edit_token] = "not-a-token"
+        cookies[:pending_player_edit_token] = encrypted_cookie_value("not-a-token")
+
+        patch "/players/#{player.id}", params: {
+          player: {
+            name: "New Name",
+            nickname: player.nickname,
+            phone: player.phone,
+            description: player.description,
+            role_code: player.role_code
+          }
+        }
+
+        expect(response).to redirect_to("/players/new")
+        expect(flash[:alert]).to eq("Brak dostepu do edycji tego zgloszenia.")
+        expect(player.reload.name).to eq("Old Name")
+      end
+    end
+
+    context "when the player is no longer pending" do
+      it "does not update the player submission" do
+        player = create(:player, approval_status: "approved", active: true, name: "Old Name")
+        cookies[:pending_player_edit_token] = encrypted_cookie_value(Players::GenerateEditToken.call(player: player))
 
         patch "/players/#{player.id}", params: {
           player: {
