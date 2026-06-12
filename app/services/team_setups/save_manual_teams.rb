@@ -23,7 +23,11 @@ module TeamSetups
       end
 
       team_setup = match_day.team_setups.first_or_create!
-      team_setup.teams.where(team_type: "baseline").destroy_all
+      team_setup.update!(
+        setup_method: TeamSetup::SETUP_METHOD_MANUAL,
+        accepted_at: Time.current
+      )
+      team_setup.teams.where(team_type: Team::TEAM_TYPE_BASELINE).destroy_all
 
       generated_teams.each do |team_definition|
         create_team(
@@ -77,7 +81,11 @@ module TeamSetups
     def create_team(team_setup:, team_name:, team_type:, player_ids:)
       return if player_ids.empty?
 
-      team = team_setup.teams.create!(name: team_name, team_type: team_type)
+      team = team_setup.teams.create!(
+        name: team_name,
+        team_type: team_type,
+        lineup_source: Team::LINEUP_SOURCE_MANUAL
+      )
       player_ids.each do |player_id|
         team.team_players.create!(player_id:)
       end

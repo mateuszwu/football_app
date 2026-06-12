@@ -27,6 +27,15 @@ RSpec.describe TeamSetup do
         expect(team_setup.errors[:reroll_count]).to include("must be greater than or equal to 0")
       end
     end
+
+    context "when setup method is unsupported" do
+      it "is invalid" do
+        team_setup = build(:team_setup, setup_method: "legacy")
+
+        expect(team_setup).not_to be_valid
+        expect(team_setup.errors[:setup_method]).to include("is not included in the list")
+      end
+    end
   end
 
   describe "associations" do
@@ -65,6 +74,12 @@ RSpec.describe TeamSetup do
       team_setup = create(:team_setup)
 
       expect(team_setup.reroll_count).to eq(0)
+    end
+
+    it "uses the manual setup method in the factory" do
+      team_setup = create(:team_setup)
+
+      expect(team_setup.setup_method).to eq(TeamSetup::SETUP_METHOD_MANUAL)
     end
   end
 end

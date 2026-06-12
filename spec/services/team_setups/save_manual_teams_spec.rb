@@ -5,8 +5,8 @@ RSpec.describe TeamSetups::SaveManualTeams do
     context "when the team assignments are valid" do
       it "creates a baseline team setup with team players" do
         match_day = create(:match_day)
-        player_one = create(:player)
-        player_two = create(:player)
+        player_one = create(:player, name: "Player One", role_code: "DEF")
+        player_two = create(:player, name: "Player Two", role_code: "MID")
 
         result = described_class.call(
           match_day: match_day,
@@ -19,8 +19,13 @@ RSpec.describe TeamSetups::SaveManualTeams do
 
         expect(result).to be(true)
         expect(match_day.team_setups.count).to eq(1)
+        expect(match_day.team_setups.first.setup_method).to eq(TeamSetup::SETUP_METHOD_MANUAL)
+        expect(match_day.team_setups.first.accepted_at).to be_present
         expect(match_day.teams.find_by!(name: "Team A").players).to contain_exactly(player_one)
         expect(match_day.teams.find_by!(name: "Team B").players).to contain_exactly(player_two)
+        expect(match_day.teams.find_by!(name: "Team A").lineup_source).to eq(Team::LINEUP_SOURCE_MANUAL)
+        expect(match_day.teams.find_by!(name: "Team A").team_players.first.player_name).to eq("Player One")
+        expect(match_day.teams.find_by!(name: "Team B").team_players.first.role_code).to eq("MID")
       end
     end
 
