@@ -3,6 +3,8 @@ import { Controller } from "@hotwired/stimulus";
 export default class extends Controller {
   static targets = ["pool", "columnsContainer"];
   static values = {
+    inputNamePrefix: { type: String, default: "match_day[teams_data]" },
+    players: Array,
     teams: Array,
   };
 
@@ -12,17 +14,14 @@ export default class extends Controller {
 
     this.state = {
       teams: (this.teamsValue || []).map((team) => ({
+        id: team.id || null,
         name: team.name,
         player_ids: (team.player_ids || []).map(String),
       })),
     };
+    this.selectedCard = null;
 
-    const playerCheckboxes = Array.from(
-      document.querySelectorAll('input[name="match_day[player_ids][]"]'),
-    );
-    playerCheckboxes.forEach((checkbox) => {
-      checkbox.addEventListener("change", () => this.render());
-    });
+    this.setupSelectedPlayerListeners();
 
     this.setupPoolListeners();
 
@@ -52,6 +51,13 @@ export default class extends Controller {
   }
 
   selectedPlayers() {
+    if ((this.playersValue || []).length > 0) {
+      return this.playersValue.map((player) => ({
+        id: String(player.id),
+        label: player.label,
+      }));
+    }
+
     const playerCheckboxes = Array.from(
       document.querySelectorAll('input[name="match_day[player_ids][]"]'),
     );
@@ -88,7 +94,11 @@ export default class extends Controller {
     card.className = "lineup-card";
     card.draggable = true;
     card.dataset.playerId = player.id;
+    card.dataset.teamIndex = teamIndex;
     card.textContent = player.label;
+    if (this.selectedCard?.playerId === player.id) {
+      card.classList.add("lineup-card--selected");
+    }
 
     card.addEventListener("dragstart", (event) => {
       event.dataTransfer.setData("text/plain", player.id);
@@ -103,18 +113,21 @@ export default class extends Controller {
   }
 
   handleCardClick(playerId, columnType, teamIndex) {
-    let nextTeamIndex;
-
-    if (columnType === "pool") {
-      nextTeamIndex = 0;
-    } else {
-      nextTeamIndex = teamIndex + 1;
-      if (nextTeamIndex >= this.state.teams.length) {
-        nextTeamIndex = -1;
-      }
+    if (!this.selectedCard) {
+      this.selectedCard = { playerId, columnType, teamIndex };
+      this.render();
+      return;
     }
 
-    this.movePlayer(playerId, nextTeamIndex);
+    if (this.selectedCard.playerId === playerId) {
+      this.selectedCard = null;
+      this.render();
+      return;
+    }
+
+    this.swapPlayers(this.selectedCard, { playerId, columnType, teamIndex });
+    this.selectedCard = null;
+    this.render();
   }
 
   render() {
@@ -150,7 +163,7 @@ export default class extends Controller {
     nameInput.type = "text";
     nameInput.value = team.name;
     nameInput.className = "lineup-column__name-input";
-    nameInput.name = `match_day[teams_data][${index}][name]`;
+    nameInput.name = `${this.inputNamePrefixValue}[${index}][name]`;
     nameInput.dataset.teamIndex = index;
     nameInput.dataset.action = "blur->lineup-editor#renameTeam";
     header.appendChild(nameInput);
@@ -193,10 +206,18 @@ export default class extends Controller {
     section.appendChild(list);
 
     const inputsContainer = document.createElement("div");
+    if (team.id) {
+      const idInput = document.createElement("input");
+      idInput.type = "hidden";
+      idInput.name = `${this.inputNamePrefixValue}[${index}][id]`;
+      idInput.value = team.id;
+      inputsContainer.appendChild(idInput);
+    }
+
     team.player_ids.forEach((id) => {
       const input = document.createElement("input");
       input.type = "hidden";
-      input.name = `match_day[teams_data][${index}][player_ids][]`;
+      input.name = `${this.inputNamePrefixValue}[${index}][player_ids][]`;
       input.value = id;
       inputsContainer.appendChild(input);
     });
@@ -233,5 +254,43 @@ export default class extends Controller {
     }
 
     this.render();
+  }
+
+  swapPlayers(firstCard, secondCard) {
+    const firstTeamIndex = this.findTeamIndexForPlayer(firstCard.playerId);
+    const secondTeamIndex = this.findTeamIndexForPlayer(secondCard.playerId);
+    if (firstTeamIndex === secondTeamIndex) return;
+
+    this.removePlayer(firstCard.playerId);
+    this.removePlayer(secondCard.playerId);
+
+    if (secondTeamIndex !== -1) {
+      this.state.teams[secondTeamIndex].player_ids.push(firstCard.playerId);
+    }
+
+    if (firstTeamIndex !== -1) {
+      this.state.teams[firstTeamIndex].player_ids.push(secondCard.playerId);
+    }
+  }
+
+  findTeamIndexForPlayer(playerId) {
+    return this.state.teams.findIndex((team) => team.player_ids.includes(playerId));
+  }
+
+  removePlayer(playerId) {
+    this.state.teams.forEach((team) => {
+      team.player_ids = team.player_ids.filter((id) => id !== playerId);
+    });
+  }
+
+  setupSelectedPlayerListeners() {
+    if ((this.playersValue || []).length > 0) return;
+
+    const playerCheckboxes = Array.from(
+      document.querySelectorAll('input[name="match_day[player_ids][]"]'),
+    );
+    playerCheckboxes.forEach((checkbox) => {
+      checkbox.addEventListener("change", () => this.render());
+    });
   }
 }

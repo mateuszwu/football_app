@@ -1,21 +1,28 @@
 module Teams
   class CopyTeamsToMatch
-    def self.call(match:)
-      new(match:).call
+    SOURCE_AUTO = :auto
+    SOURCE_BASELINE = :baseline
+    SOURCE_PREVIOUS = :previous
+
+    def self.call(match:, source: SOURCE_AUTO)
+      new(match:, source:).call
     end
 
-    def initialize(match:)
+    def initialize(match:, source:)
       @match = match
+      @source = source
     end
 
     def call
       return false unless source_teams.size >= 2
+      return false unless source_teams.count(&:playing?) >= 2
 
       Team.transaction do
-        match.teams.destroy_all
+        existing_match_teams = match.teams.order(:created_at, :id).to_a
 
         copied_teams = source_teams.map { |source_team| copy_team(source_team) }
         match.update!(home_team: copied_teams.first, away_team: copied_teams.second)
+        Team.where(id: existing_match_teams.map(&:id)).destroy_all
       end
 
       true
@@ -23,24 +30,30 @@ module Teams
 
     private
 
-    attr_reader :match
+    attr_reader :match, :source
 
     def source_teams
-      @source_teams ||= previous_match_teams.presence || baseline_teams
+      @source_teams ||= case source
+      when SOURCE_BASELINE
+        baseline_teams
+      when SOURCE_PREVIOUS
+        previous_match_teams
+      else
+        previous_match_teams.presence || baseline_teams
+      end
     end
 
     def previous_match_teams
       return [] unless previous_match
 
-      [ previous_match.home_team, previous_match.away_team ].compact
+      previous_match.teams.order(:position, :created_at, :id)
     end
 
     def baseline_teams
       match.match_day
         .teams
-        .where(team_type: Team::TEAM_TYPE_BASELINE, playing: true)
+        .where(team_type: Team::TEAM_TYPE_BASELINE)
         .order(:position, :created_at, :id)
-        .limit(2)
     end
 
     def previous_match
