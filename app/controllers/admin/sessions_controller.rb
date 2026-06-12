@@ -5,11 +5,9 @@ module Admin
 
     def create
       if valid_admin_password?
-        session[:admin_authenticated] = true
         session[:admin] = true
         redirect_to root_path, notice: "Signed in as admin"
       else
-        session[:admin_authenticated] = false
         session[:admin] = false
         flash.now[:alert] = "Invalid admin password"
         render :new, status: :unprocessable_content
@@ -17,7 +15,6 @@ module Admin
     end
 
     def destroy
-      session[:admin_authenticated] = false
       session[:admin] = false
       redirect_to root_path, notice: "Signed out"
     end

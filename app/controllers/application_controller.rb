@@ -5,7 +5,6 @@ class ApplicationController < ActionController::Base
   # Changes to the importmap will invalidate the etag for HTML responses
   stale_when_importmap_changes
 
-  helper_method :admin_authenticated?
   helper_method :admin_signed_in?
   helper_method :current_season
 
@@ -15,16 +14,12 @@ class ApplicationController < ActionController::Base
     Season.current_active
   end
 
-  def admin_authenticated?
-    session[:admin_authenticated] == true || session[:admin] == true
-  end
-
   def admin_signed_in?
-    admin_authenticated?
+    session[:admin] == true
   end
 
   def require_admin!
-    return if admin_authenticated?
+    return if admin_signed_in?
 
     redirect_to root_path, alert: "Admin access required"
   end

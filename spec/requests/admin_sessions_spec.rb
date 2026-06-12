@@ -33,7 +33,7 @@ RSpec.describe "Admin sessions" do
               before_action :require_admin!
 
               def index
-                render plain: "#{admin_authenticated?}-#{admin_signed_in?}"
+                render plain: admin_signed_in?.to_s
               end
             end
           )
@@ -42,7 +42,7 @@ RSpec.describe "Admin sessions" do
           get "/admin/protected_test"
 
           expect(response).to have_http_status(:ok)
-          expect(response.body).to eq("true-true")
+          expect(response.body).to eq("true")
         ensure
           if original_admin_password.nil?
             ENV.delete("FOOTBALL_APP_ADMIN_PASSWORD")
@@ -116,7 +116,7 @@ RSpec.describe "Admin sessions" do
               before_action :require_admin!
 
               def index
-                render plain: "#{admin_authenticated?}-#{admin_signed_in?}"
+                render plain: admin_signed_in?.to_s
               end
             end
           )
