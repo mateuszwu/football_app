@@ -23,4 +23,14 @@ class Team < ApplicationRecord
   validates :team_type, presence: true, inclusion: { in: TEAM_TYPES }
   validates :lineup_source, presence: true, inclusion: { in: LINEUP_SOURCES }
   validates :score, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
+
+  def fingerprint
+    Teams::GenerateFingerprint.call(team: self)
+  end
+
+  def modified_from_source?
+    return false unless source_team
+
+    fingerprint != source_team.fingerprint
+  end
 end

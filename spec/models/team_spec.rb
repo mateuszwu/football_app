@@ -115,4 +115,54 @@ RSpec.describe Team do
       end
     end
   end
+
+  describe "#fingerprint" do
+    it "delegates to the team fingerprint generator" do
+      team = create(:team)
+      fingerprint = "1-2-3"
+      allow(Teams::GenerateFingerprint).to receive(:call).with(team: team).and_return(fingerprint)
+
+      result = team.fingerprint
+
+      expect(result).to eq(fingerprint)
+      expect(Teams::GenerateFingerprint).to have_received(:call).with(team: team)
+    end
+  end
+
+  describe "#modified_from_source?" do
+    it "returns false when there is no source team" do
+      team = create(:team)
+
+      expect(team.modified_from_source?).to be(false)
+    end
+
+    it "returns false when the source team has the same player fingerprint" do
+      source_team = create(:team)
+      team = create(:team, source_team: source_team)
+      player_one = create(:player)
+      player_two = create(:player, nickname: "player-two", phone: "+48123000999")
+
+      create(:team_player, team: source_team, player: player_two)
+      create(:team_player, team: source_team, player: player_one)
+      create(:team_player, team: team, player: player_one)
+      create(:team_player, team: team, player: player_two)
+
+      expect(team.modified_from_source?).to be(false)
+    end
+
+    it "returns true when the source team has a different player fingerprint" do
+      source_team = create(:team)
+      team = create(:team, source_team: source_team)
+      shared_player = create(:player)
+      source_only_player = create(:player, nickname: "source-only", phone: "+48123000998")
+      current_only_player = create(:player, nickname: "current-only", phone: "+48123000997")
+
+      create(:team_player, team: source_team, player: shared_player)
+      create(:team_player, team: source_team, player: source_only_player)
+      create(:team_player, team: team, player: shared_player)
+      create(:team_player, team: team, player: current_only_player)
+
+      expect(team.modified_from_source?).to be(true)
+    end
+  end
 end
