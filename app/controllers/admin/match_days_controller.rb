@@ -87,7 +87,7 @@ module Admin
     end
 
     def form_state_for(match_day, players)
-      Admin::MatchDays::FormState.new(match_day:, params:, players:)
+      TeamSetups::MatchDayFormState.new(match_day:, params:, players:)
     end
   end
 end

@@ -1,6 +1,6 @@
 require "rails_helper"
 
-RSpec.describe Admin::MatchDays::FormState do
+RSpec.describe TeamSetups::MatchDayFormState do
   describe "#locals" do
     it "returns persisted defaults for a new match day" do
       match_day = MatchDay.new

@@ -59,11 +59,15 @@ class UpdateMatchDay
   end
 
   def team_setup_method
-    params[:setup_method] == TeamSetup::SETUP_METHOD_AUTO ? TeamSetup::SETUP_METHOD_AUTO : TeamSetup::SETUP_METHOD_MANUAL
+    return TeamSetup::SETUP_METHOD_AUTO if params[:setup_method] == TeamSetup::SETUP_METHOD_AUTO
+
+    TeamSetup::SETUP_METHOD_MANUAL
   end
 
   def team_lineup_source
-    team_setup_method == TeamSetup::SETUP_METHOD_AUTO ? Team::LINEUP_SOURCE_AUTO : Team::LINEUP_SOURCE_MANUAL
+    return Team::LINEUP_SOURCE_AUTO if team_setup_method == TeamSetup::SETUP_METHOD_AUTO
+
+    Team::LINEUP_SOURCE_MANUAL
   end
 
   def team_algorithm_version
