@@ -10,6 +10,10 @@
 <% end %>
 
 <%= form_with model: [:admin, match_day], class: "admin-form" do |form| %>
+  <%= hidden_field_tag "match_day[setup_method]", setup_method %>
+  <%= hidden_field_tag "match_day[algorithm_version]", algorithm_version %>
+  <%= hidden_field_tag "match_day[reroll_count]", reroll_count %>
+
   <div class="form-field">
     <%= form.label :season_id, "Sezon" %>
     <%= form.collection_select :season_id, seasons, :id, :name, { prompt: "Wybierz sezon" }, required: true %>
@@ -31,7 +35,7 @@
       <div class="checkbox-list">
         <% players.each do |player| %>
           <label class="checkbox-list__item">
-            <%= check_box_tag "match_day[player_ids][]", player.id, match_day.player_ids.include?(player.id) %>
+            <%= check_box_tag "match_day[player_ids][]", player.id, selected_player_ids.include?(player.id) %>
             <span><%= player.name %> (<%= player.nickname %>)</span>
           </label>
         <% end %>
@@ -44,11 +48,30 @@
   <div class="form-field">
     <div class="field-header">
       <label>Manualny builder bazowych zespolow</label>
-      <button type="button" class="button button--small button--secondary" data-action="lineup-editor#addTeam">
-        Dodaj zespol
-      </button>
+      <div class="form-actions">
+        <button type="submit" name="preview_auto_proposal" value="1" class="button button--small button--secondary">
+          Generuj auto
+        </button>
+        <% if setup_method == TeamSetup::SETUP_METHOD_AUTO %>
+          <button type="submit" name="reroll_auto_proposal" value="1" class="button button--small button--secondary">
+            Przelosuj
+          </button>
+        <% end %>
+        <button type="button" class="button button--small button--secondary" data-action="lineup-editor#addTeam">
+          Dodaj zespol
+        </button>
+      </div>
     </div>
-    <p class="field-hint">Przeciagnij zaznaczonych zawodnikow do zespolow.</p>
+    <div class="form-field">
+      <%= label_tag "match_day_team_count", "Liczba zespolow do wygenerowania" %>
+      <%= number_field_tag "match_day[team_count]", team_count, min: 2, step: 1, class: "input" %>
+    </div>
+    <p class="field-hint">
+      Przeciagnij zaznaczonych zawodnikow do zespolow.
+      <% if setup_method == TeamSetup::SETUP_METHOD_AUTO %>
+        Auto proposal <%= algorithm_version.presence || Teams::GenerateProposal::ALGORITHM_VERSION %>, zespoly: <%= team_count %>, rerolle: <%= reroll_count %>.
+      <% end %>
+    </p>
 
     <% if players.any? %>
       <div

@@ -48,9 +48,35 @@ class CreateMatchDay
     result = TeamSetups::SaveManualTeams.call(
       match_day:,
       selected_player_ids:,
-      teams_data: params.fetch(:teams_data, [])
+      teams_data: params.fetch(:teams_data, []),
+      setup_method: team_setup_method,
+      lineup_source: team_lineup_source,
+      algorithm_version: team_algorithm_version,
+      reroll_count: team_reroll_count
     )
 
     raise ActiveRecord::RecordInvalid.new(match_day) unless result
+  end
+
+  def team_setup_method
+    return TeamSetup::SETUP_METHOD_AUTO if params[:setup_method] == TeamSetup::SETUP_METHOD_AUTO
+
+    TeamSetup::SETUP_METHOD_MANUAL
+  end
+
+  def team_lineup_source
+    return Team::LINEUP_SOURCE_AUTO if team_setup_method == TeamSetup::SETUP_METHOD_AUTO
+
+    Team::LINEUP_SOURCE_MANUAL
+  end
+
+  def team_algorithm_version
+    return nil unless team_setup_method == TeamSetup::SETUP_METHOD_AUTO
+
+    params[:algorithm_version].presence || Teams::GenerateProposal::ALGORITHM_VERSION
+  end
+
+  def team_reroll_count
+    params[:reroll_count].to_i
   end
 end

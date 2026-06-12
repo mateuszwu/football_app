@@ -12,19 +12,26 @@ module Admin
       match_day = MatchDay.new(season: current_season, played_on: Date.current)
       seasons = available_seasons
       players = available_players
+      form_state = form_state_for(match_day, players)
 
-      render :new, locals: form_locals(match_day:, seasons:, players:)
+      render :new, locals: form_locals(match_day:, seasons:, players:, form_state:)
     end
 
     def create
       match_day = MatchDay.new(match_day_params)
       seasons = available_seasons
       players = available_players
+      form_state = form_state_for(match_day, players)
 
-      if CreateMatchDay.call(match_day:, params: match_day_form_params, available_players: players)
+      if form_state.preview_auto_proposal_requested?
+        render :new, locals: form_locals(match_day:, seasons:, players:, form_state:)
+        return
+      end
+
+      if CreateMatchDay.call(match_day:, params: form_state.form_params, available_players: players)
         redirect_to admin_match_days_path, notice: "Match day created"
       else
-        render :new, locals: form_locals(match_day:, seasons:, players:), status: :unprocessable_content
+        render :new, locals: form_locals(match_day:, seasons:, players:, form_state:), status: :unprocessable_content
       end
     end
 
@@ -32,19 +39,27 @@ module Admin
       match_day = MatchDay.find(params[:id])
       seasons = available_seasons
       players = available_players
+      form_state = form_state_for(match_day, players)
 
-      render :edit, locals: form_locals(match_day:, seasons:, players:)
+      render :edit, locals: form_locals(match_day:, seasons:, players:, form_state:)
     end
 
     def update
       match_day = MatchDay.find(params[:id])
       seasons = available_seasons
       players = available_players
+      form_state = form_state_for(match_day, players)
 
-      if UpdateMatchDay.call(match_day:, params: match_day_form_params, available_players: players)
+      if form_state.preview_auto_proposal_requested?
+        match_day.assign_attributes(match_day_params)
+        render :edit, locals: form_locals(match_day:, seasons:, players:, form_state:)
+        return
+      end
+
+      if UpdateMatchDay.call(match_day:, params: form_state.form_params, available_players: players)
         redirect_to admin_match_days_path, notice: "Match day updated"
       else
-        render :edit, locals: form_locals(match_day:, seasons:, players:), status: :unprocessable_content
+        render :edit, locals: form_locals(match_day:, seasons:, players:, form_state:), status: :unprocessable_content
       end
     end
 
@@ -62,49 +77,17 @@ module Admin
       params.require(:match_day).permit(:season_id, :played_on)
     end
 
-    def match_day_form_params
-      teams_params = params.fetch(:match_day, {}).fetch(:teams_data, [])
-
-      teams_data = if teams_params.is_a?(Hash)
-                     teams_params.values
-      else
-                     Array(teams_params)
-      end
-
-      match_day_params.to_h.symbolize_keys.merge(
-        player_ids: params.fetch(:match_day, {}).fetch(:player_ids, []),
-        teams_data: teams_data.map { |t| { name: t[:name], player_ids: t[:player_ids] || [] } }
-      )
-    end
-
-    def form_locals(match_day:, seasons:, players:)
+    def form_locals(match_day:, seasons:, players:, form_state:)
       {
         match_day:,
         seasons:,
         players:,
-        teams_data: current_teams_data(match_day)
+        **form_state.locals
       }
     end
 
-    def current_teams_data(match_day)
-      submitted_teams = params.fetch(:match_day, {}).fetch(:teams_data, nil)
-      if submitted_teams
-        if submitted_teams.is_a?(Hash)
-          return submitted_teams.values.map { |t| { name: t[:name], player_ids: t[:player_ids] || [] } }
-        else
-          return Array(submitted_teams).map { |t| { name: t[:name], player_ids: t[:player_ids] || [] } }
-        end
-      end
-
-      baseline_teams = match_day.teams.where(team_type: "baseline").order(:created_at)
-      if baseline_teams.any?
-        baseline_teams.map { |t| { name: t.name, player_ids: t.player_ids.map(&:to_s) } }
-      else
-        [
-          { name: "Team A", player_ids: [] },
-          { name: "Team B", player_ids: [] }
-        ]
-      end
+    def form_state_for(match_day, players)
+      TeamSetups::MatchDayFormState.new(match_day:, params:, players:)
     end
   end
 end
