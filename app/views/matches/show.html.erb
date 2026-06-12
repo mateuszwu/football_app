@@ -25,7 +25,7 @@
       <h2><%= match.home_team.name %></h2>
       <strong class="live-match__score"><%= match.home_score %></strong>
 
-      <% home_goals = match.match_goals.active.includes(:scorer, :assistant).where(scoring_team: match.home_team).order(:scored_at) %>
+      <% home_goals = match.match_goals.active.includes(scorer_team_player: :player, assistant_team_player: :player).where(scoring_team: match.home_team).order(:scored_at) %>
       <% if home_goals.any? %>
         <ul class="live-match__team-goals">
           <% home_goals.each do |goal| %>
@@ -83,7 +83,7 @@
       <h2><%= match.away_team.name %></h2>
       <strong class="live-match__score"><%= match.away_score %></strong>
 
-      <% away_goals = match.match_goals.active.includes(:scorer, :assistant).where(scoring_team: match.away_team).order(:scored_at) %>
+      <% away_goals = match.match_goals.active.includes(scorer_team_player: :player, assistant_team_player: :player).where(scoring_team: match.away_team).order(:scored_at) %>
       <% if away_goals.any? %>
         <ul class="live-match__team-goals">
           <% away_goals.each do |goal| %>
@@ -142,7 +142,7 @@
     </article>
   </div>
 
-<% recent_goals = match.match_goals.active.includes(:scorer, :assistant, :scoring_team).order(scored_at: :desc) %>
+<% recent_goals = match.match_goals.active.includes(:scoring_team, scorer_team_player: :player, assistant_team_player: :player).order(scored_at: :desc) %>
   <% if recent_goals.any? %>
     <section class="live-match__events">
       <h2>Recent events</h2>
@@ -230,12 +230,12 @@
 
                 <label class="form-field">
                   <span>Scorer</span>
-                  <%= form.select :scorer_id, options_from_collection_for_select(team.players.order(:name), :id, :name), {}, required: true %>
+                  <%= form.select :scorer_team_player_id, options_from_collection_for_select(team.team_players.includes(:player).order(:player_name), :id, :player_name), {}, required: true %>
                 </label>
 
                 <label class="form-field">
                   <span>Assistant (optional)</span>
-                  <%= form.select :assistant_id, options_from_collection_for_select(team.players.order(:name), :id, :name), { include_blank: "No assist" } %>
+                  <%= form.select :assistant_team_player_id, options_from_collection_for_select(team.team_players.includes(:player).order(:player_name), :id, :player_name), { include_blank: "No assist" } %>
                 </label>
 
                 <%= form.submit "Add goal for #{team.name}", class: "button button--primary" %>

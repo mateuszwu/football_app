@@ -1,6 +1,8 @@
 class TeamPlayer < ApplicationRecord
   belongs_to :team
   belongs_to :player
+  has_many :scored_match_goals, class_name: "MatchGoal", foreign_key: :scorer_team_player_id, dependent: :restrict_with_exception
+  has_many :assisted_match_goals, class_name: "MatchGoal", foreign_key: :assistant_team_player_id, dependent: :restrict_with_exception
 
   before_validation :sync_player_snapshot, if: :player
 
