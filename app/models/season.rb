@@ -1,18 +1,35 @@
 class Season < ApplicationRecord
+  STATUS_ACTIVE = "active".freeze
+  STATUS_CLOSED = "closed".freeze
+  STATUS_ARCHIVED = "archived".freeze
+  STATUSES = [ STATUS_ACTIVE, STATUS_CLOSED, STATUS_ARCHIVED ].freeze
+
   has_many :match_days, dependent: :destroy
   has_many :player_rating_changes, dependent: :destroy
   has_many :player_season_stats, dependent: :destroy
 
   validates :name, presence: true, uniqueness: true
   validates :starts_on, presence: true
+  validates :status, inclusion: { in: STATUSES }
   validates :initial_elo, numericality: { only_integer: true, greater_than: 0 }
   validates :elo_k_factor, numericality: { only_integer: true, greater_than: 0 }
   validates :mvp_vote_bonus, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
   validates :def_vote_bonus, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
+  validates :elo_k_value, numericality: { greater_than: 0 }
+  validates :player_advantage_elo, numericality: { greater_than_or_equal_to: 0 }
+  validates :season_elo_carryover_factor, numericality: { greater_than_or_equal_to: 0, less_than_or_equal_to: 1 }
+  validates :goal_points, numericality: { greater_than_or_equal_to: 0 }
+  validates :assist_points, numericality: { greater_than_or_equal_to: 0 }
+  validates :mvp_max_points, numericality: { greater_than_or_equal_to: 0 }
+  validates :def_max_points, numericality: { greater_than_or_equal_to: 0 }
+  validates :voting_bonus_cap, numericality: { greater_than_or_equal_to: 0 }
+  validates :expected_voters_count, numericality: { only_integer: true, greater_than: 0 }
 
   validate :ends_on_is_after_starts_on
 
-  scope :active, -> { where(active: true) }
+  scope :active, -> { where(status: STATUS_ACTIVE) }
+  scope :closed, -> { where(status: STATUS_CLOSED) }
+  scope :archived, -> { where(status: STATUS_ARCHIVED) }
 
   def self.current_active
     active.order(starts_on: :desc, created_at: :desc).first

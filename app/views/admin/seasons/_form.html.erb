@@ -25,9 +25,9 @@
     <%= form.date_field :ends_on %>
   </div>
 
-  <div class="form-checkbox">
-    <%= form.check_box :active %>
-    <%= form.label :active, "Aktywny" %>
+  <div class="form-field">
+    <%= form.label :status, "Status" %>
+    <%= form.select :status, Season::STATUSES, {}, required: true %>
   </div>
 
   <div class="form-field">
@@ -48,6 +48,56 @@
   <div class="form-field">
     <%= form.label :def_vote_bonus, "DEF bonus" %>
     <%= form.number_field :def_vote_bonus, min: 0, required: true %>
+  </div>
+
+  <div class="form-field">
+    <%= form.label :elo_k_value, "Elo K value" %>
+    <%= form.number_field :elo_k_value, min: 0, step: 0.01, required: true %>
+  </div>
+
+  <div class="form-field">
+    <%= form.label :player_advantage_elo, "Player advantage Elo" %>
+    <%= form.number_field :player_advantage_elo, min: 0, step: 0.01, required: true %>
+  </div>
+
+  <div class="form-field">
+    <%= form.label :season_elo_carryover_factor, "Carryover factor" %>
+    <%= form.number_field :season_elo_carryover_factor, min: 0, max: 1, step: 0.01, required: true %>
+  </div>
+
+  <div class="form-field">
+    <%= form.label :goal_points, "Goal points" %>
+    <%= form.number_field :goal_points, min: 0, step: 0.01, required: true %>
+  </div>
+
+  <div class="form-field">
+    <%= form.label :assist_points, "Assist points" %>
+    <%= form.number_field :assist_points, min: 0, step: 0.01, required: true %>
+  </div>
+
+  <div class="form-field">
+    <%= form.label :mvp_max_points, "MVP max points" %>
+    <%= form.number_field :mvp_max_points, min: 0, step: 0.01, required: true %>
+  </div>
+
+  <div class="form-field">
+    <%= form.label :def_max_points, "DEF max points" %>
+    <%= form.number_field :def_max_points, min: 0, step: 0.01, required: true %>
+  </div>
+
+  <div class="form-field">
+    <%= form.label :voting_bonus_cap, "Voting bonus cap" %>
+    <%= form.number_field :voting_bonus_cap, min: 0, step: 0.01, required: true %>
+  </div>
+
+  <div class="form-field">
+    <%= form.label :expected_voters_count, "Expected voters count" %>
+    <%= form.number_field :expected_voters_count, min: 1, required: true %>
+  </div>
+
+  <div class="form-checkbox">
+    <%= form.check_box :elo_settings_locked %>
+    <%= form.label :elo_settings_locked, "Elo settings locked" %>
   </div>
 
   <div class="form-actions">

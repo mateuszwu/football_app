@@ -82,13 +82,51 @@ RSpec.describe Season do
         expect(season.errors[:def_vote_bonus]).to include("must be greater than or equal to 0")
       end
     end
+
+    context "when extended season settings use supported values" do
+      it "is valid" do
+        season = build(
+          :season,
+          status: Season::STATUS_ACTIVE,
+          elo_k_value: 16.5,
+          player_advantage_elo: 40,
+          season_elo_carryover_factor: 0.5,
+          goal_points: 1.0,
+          assist_points: 0.8,
+          mvp_max_points: 4.0,
+          def_max_points: 3.0,
+          voting_bonus_cap: 5.0,
+          expected_voters_count: 5
+        )
+
+        expect(season).to be_valid
+      end
+    end
+
+    context "when status is unsupported" do
+      it "is invalid" do
+        season = build(:season, status: "draft")
+
+        expect(season).not_to be_valid
+        expect(season.errors[:status]).to include("is not included in the list")
+      end
+    end
+
+    context "when carryover factor is outside the supported range" do
+      it "is invalid" do
+        season = build(:season, season_elo_carryover_factor: 1.5)
+
+        expect(season).not_to be_valid
+        expect(season.errors[:season_elo_carryover_factor]).to include("must be less than or equal to 1")
+      end
+    end
   end
 
   describe ".active" do
-    context "when seasons have mixed active states" do
+    context "when seasons have mixed statuses" do
       it "returns active seasons only" do
-        active_season = create(:season, active: true)
-        create(:season, active: false)
+        active_season = create(:season, status: Season::STATUS_ACTIVE)
+        create(:season, status: Season::STATUS_ARCHIVED)
 
         result = described_class.active
 
@@ -97,11 +135,39 @@ RSpec.describe Season do
     end
   end
 
+  describe ".closed" do
+    context "when seasons have mixed statuses" do
+      it "returns closed seasons only" do
+        closed_season = create(:season, status: Season::STATUS_CLOSED)
+        create(:season, status: Season::STATUS_ACTIVE)
+        create(:season, status: Season::STATUS_ARCHIVED)
+
+        result = described_class.closed
+
+        expect(result).to contain_exactly(closed_season)
+      end
+    end
+  end
+
+  describe ".archived" do
+    context "when seasons have mixed statuses" do
+      it "returns archived seasons only" do
+        archived_season = create(:season, status: Season::STATUS_ARCHIVED)
+        create(:season, status: Season::STATUS_ACTIVE)
+        create(:season, status: Season::STATUS_CLOSED)
+
+        result = described_class.archived
+
+        expect(result).to contain_exactly(archived_season)
+      end
+    end
+  end
+
   describe ".current_active" do
     context "when there is one active season" do
       it "returns the active season" do
-        active_season = create(:season, active: true)
-        create(:season, active: false)
+        active_season = create(:season, status: Season::STATUS_ACTIVE)
+        create(:season, status: Season::STATUS_ARCHIVED)
 
         result = described_class.current_active
 
@@ -111,8 +177,8 @@ RSpec.describe Season do
 
     context "when there are multiple active seasons" do
       it "returns the latest one by start date" do
-        create(:season, name: "Spring 2026", active: true, starts_on: Date.new(2026, 3, 1))
-        latest_season = create(:season, name: "Summer 2026", active: true, starts_on: Date.new(2026, 6, 1))
+        create(:season, name: "Spring 2026", status: Season::STATUS_ACTIVE, starts_on: Date.new(2026, 3, 1))
+        latest_season = create(:season, name: "Summer 2026", status: Season::STATUS_ACTIVE, starts_on: Date.new(2026, 6, 1))
 
         result = described_class.current_active
 
@@ -122,7 +188,7 @@ RSpec.describe Season do
 
     context "when there is no active season" do
       it "returns nil" do
-        create(:season, active: false)
+        create(:season, status: Season::STATUS_ARCHIVED)
 
         result = described_class.current_active
 

@@ -52,7 +52,26 @@ module Admin
     def season_params
       params
         .require(:season)
-        .permit(:name, :starts_on, :ends_on, :active, :initial_elo, :elo_k_factor, :mvp_vote_bonus, :def_vote_bonus)
+        .permit(
+          :name,
+          :starts_on,
+          :ends_on,
+          :status,
+          :initial_elo,
+          :elo_k_factor,
+          :mvp_vote_bonus,
+          :def_vote_bonus,
+          :elo_k_value,
+          :player_advantage_elo,
+          :season_elo_carryover_factor,
+          :goal_points,
+          :assist_points,
+          :mvp_max_points,
+          :def_max_points,
+          :voting_bonus_cap,
+          :expected_voters_count,
+          :elo_settings_locked
+        )
     end
   end
 end

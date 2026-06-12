@@ -18,8 +18,8 @@ RSpec.describe "Current season helper" do
             end
           )
 
-          create(:season, name: "Spring 2026", active: false)
-          create(:season, name: "Summer 2026", active: true, starts_on: Date.new(2026, 6, 1))
+          create(:season, name: "Spring 2026", status: Season::STATUS_ARCHIVED)
+          create(:season, name: "Summer 2026", status: Season::STATUS_ACTIVE, starts_on: Date.new(2026, 6, 1))
 
           get "/current_season_test"
 
@@ -47,7 +47,7 @@ RSpec.describe "Current season helper" do
             end
           )
 
-          create(:season, name: "Spring 2026", active: false)
+          create(:season, name: "Spring 2026", status: Season::STATUS_ARCHIVED)
 
           get "/current_season_test"
 
