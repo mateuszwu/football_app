@@ -12,24 +12,26 @@ module Admin
       match_day = MatchDay.new(season: current_season, played_on: Date.current)
       seasons = available_seasons
       players = available_players
+      form_state = form_state_for(match_day, players)
 
-      render :new, locals: form_locals(match_day:, seasons:, players:)
+      render :new, locals: form_locals(match_day:, seasons:, players:, form_state:)
     end
 
     def create
       match_day = MatchDay.new(match_day_params)
       seasons = available_seasons
       players = available_players
+      form_state = form_state_for(match_day, players)
 
-      if preview_auto_proposal_requested?
-        render_auto_proposal(match_day:, seasons:, players:, template: :new)
+      if form_state.preview_auto_proposal_requested?
+        render :new, locals: form_locals(match_day:, seasons:, players:, form_state:)
         return
       end
 
-      if CreateMatchDay.call(match_day:, params: match_day_form_params, available_players: players)
+      if CreateMatchDay.call(match_day:, params: form_state.form_params, available_players: players)
         redirect_to admin_match_days_path, notice: "Match day created"
       else
-        render :new, locals: form_locals(match_day:, seasons:, players:), status: :unprocessable_content
+        render :new, locals: form_locals(match_day:, seasons:, players:, form_state:), status: :unprocessable_content
       end
     end
 
@@ -37,25 +39,27 @@ module Admin
       match_day = MatchDay.find(params[:id])
       seasons = available_seasons
       players = available_players
+      form_state = form_state_for(match_day, players)
 
-      render :edit, locals: form_locals(match_day:, seasons:, players:)
+      render :edit, locals: form_locals(match_day:, seasons:, players:, form_state:)
     end
 
     def update
       match_day = MatchDay.find(params[:id])
       seasons = available_seasons
       players = available_players
+      form_state = form_state_for(match_day, players)
 
-      if preview_auto_proposal_requested?
+      if form_state.preview_auto_proposal_requested?
         match_day.assign_attributes(match_day_params)
-        render_auto_proposal(match_day:, seasons:, players:, template: :edit)
+        render :edit, locals: form_locals(match_day:, seasons:, players:, form_state:)
         return
       end
 
-      if UpdateMatchDay.call(match_day:, params: match_day_form_params, available_players: players)
+      if UpdateMatchDay.call(match_day:, params: form_state.form_params, available_players: players)
         redirect_to admin_match_days_path, notice: "Match day updated"
       else
-        render :edit, locals: form_locals(match_day:, seasons:, players:), status: :unprocessable_content
+        render :edit, locals: form_locals(match_day:, seasons:, players:, form_state:), status: :unprocessable_content
       end
     end
 
@@ -73,115 +77,17 @@ module Admin
       params.require(:match_day).permit(:season_id, :played_on)
     end
 
-    def match_day_form_params
-      teams_params = params.fetch(:match_day, {}).fetch(:teams_data, [])
-
-      teams_data = if teams_params.is_a?(Hash)
-                     teams_params.values
-      else
-                     Array(teams_params)
-      end
-
-      match_day_params.to_h.symbolize_keys.merge(
-        player_ids: params.fetch(:match_day, {}).fetch(:player_ids, []),
-        teams_data: teams_data.map { |t| { name: t[:name], player_ids: t[:player_ids] || [] } },
-        setup_method: params.fetch(:match_day, {}).fetch(:setup_method, nil),
-        algorithm_version: params.fetch(:match_day, {}).fetch(:algorithm_version, nil),
-        reroll_count: params.fetch(:match_day, {}).fetch(:reroll_count, 0)
-      )
-    end
-
-    def form_locals(match_day:, seasons:, players:)
-      metadata = current_setup_metadata(match_day)
-
+    def form_locals(match_day:, seasons:, players:, form_state:)
       {
         match_day:,
         seasons:,
         players:,
-        teams_data: current_teams_data(match_day),
-        selected_player_ids: current_selected_player_ids(match_day),
-        setup_method: metadata[:setup_method],
-        algorithm_version: metadata[:algorithm_version],
-        reroll_count: metadata[:reroll_count]
+        **form_state.locals
       }
     end
 
-    def current_teams_data(match_day)
-      submitted_teams = params.fetch(:match_day, {}).fetch(:teams_data, nil)
-      if submitted_teams
-        if submitted_teams.is_a?(Hash)
-          return submitted_teams.values.map { |t| { name: t[:name], player_ids: t[:player_ids] || [] } }
-        else
-          return Array(submitted_teams).map { |t| { name: t[:name], player_ids: t[:player_ids] || [] } }
-        end
-      end
-
-      baseline_teams = match_day.teams.where(team_type: "baseline").order(:created_at)
-      if baseline_teams.any?
-        baseline_teams.map { |t| { name: t.name, player_ids: t.player_ids.map(&:to_s) } }
-      else
-        [
-          { name: "Team A", player_ids: [] },
-          { name: "Team B", player_ids: [] }
-        ]
-      end
-    end
-
-    def current_selected_player_ids(match_day)
-      submitted_player_ids = params.fetch(:match_day, {}).fetch(:player_ids, nil)
-      return Array(submitted_player_ids).reject(&:blank?).map(&:to_i) if submitted_player_ids
-
-      match_day.player_ids
-    end
-
-    def current_setup_metadata(match_day)
-      submitted = params.fetch(:match_day, {})
-      team_setup = match_day.team_setups.order(:created_at).last
-
-      {
-        setup_method: submitted[:setup_method].presence || team_setup&.setup_method || TeamSetup::SETUP_METHOD_MANUAL,
-        algorithm_version: submitted[:algorithm_version].presence || team_setup&.algorithm_version,
-        reroll_count: submitted[:reroll_count].presence&.to_i || team_setup&.reroll_count || 0
-      }
-    end
-
-    def preview_auto_proposal_requested?
-      params[:preview_auto_proposal].present? || params[:reroll_auto_proposal].present?
-    end
-
-    def render_auto_proposal(match_day:, seasons:, players:, template:)
-      generated_teams = Teams::GenerateProposal.call(
-        players: selected_players_for_preview(players),
-        options: { season: season_for_preview(match_day) }
-      )
-      reroll_count = params[:reroll_auto_proposal].present? ? params.dig(:match_day, :reroll_count).to_i + 1 : params.dig(:match_day, :reroll_count).to_i
-
-      render template, locals: {
-        match_day:,
-        seasons:,
-        players:,
-        teams_data: generated_teams.map { |team| { name: team[:name], player_ids: team[:player_ids].map(&:to_s) } },
-        selected_player_ids: current_selected_player_ids(match_day),
-        setup_method: TeamSetup::SETUP_METHOD_AUTO,
-        algorithm_version: Teams::GenerateProposal::ALGORITHM_VERSION,
-        reroll_count:
-      }
-    end
-
-    def selected_players_for_preview(players)
-      player_ids = Array(params.fetch(:match_day, {}).fetch(:player_ids, [])).reject(&:blank?)
-
-      players.where(id: player_ids).includes(:player_season_stats)
-    end
-
-    def season_for_preview(match_day)
-      season_id = params.fetch(:match_day, {}).fetch(:season_id, nil)
-
-      if season_id.present?
-        Season.find_by(id: season_id)
-      else
-        match_day.season
-      end
+    def form_state_for(match_day, players)
+      Admin::MatchDays::FormState.new(match_day:, params:, players:)
     end
   end
 end

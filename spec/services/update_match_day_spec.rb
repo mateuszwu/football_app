@@ -99,17 +99,19 @@ RSpec.describe UpdateMatchDay do
         season = create(:season)
         first_player = create(:player, approval_status: "approved", active: true)
         second_player = create(:player, name: "Second", nickname: "second", phone: "+48999999998", approval_status: "approved", active: true)
+        third_player = create(:player, name: "Third", nickname: "third", phone: "+48999999997", approval_status: "approved", active: true)
         match_day = create(:match_day, season:, played_on: Date.new(2026, 6, 5))
         params = {
           season_id: season.id,
           played_on: Date.new(2026, 6, 12),
-          player_ids: [ first_player.id.to_s, second_player.id.to_s ],
+          player_ids: [ first_player.id.to_s, second_player.id.to_s, third_player.id.to_s ],
           setup_method: TeamSetup::SETUP_METHOD_AUTO,
           algorithm_version: Teams::GenerateProposal::ALGORITHM_VERSION,
           reroll_count: 3,
           teams_data: [
             { name: "Team A", player_ids: [ first_player.id.to_s ] },
-            { name: "Team B", player_ids: [ second_player.id.to_s ] }
+            { name: "Team B", player_ids: [ second_player.id.to_s ] },
+            { name: "Team C", player_ids: [ third_player.id.to_s ] }
           ]
         }
 
@@ -124,6 +126,7 @@ RSpec.describe UpdateMatchDay do
         expect(match_day.team_setups.first.algorithm_version).to eq(Teams::GenerateProposal::ALGORITHM_VERSION)
         expect(match_day.team_setups.first.reroll_count).to eq(3)
         expect(match_day.teams.find_by!(name: "Team A").lineup_source).to eq(Team::LINEUP_SOURCE_AUTO)
+        expect(match_day.teams.find_by!(name: "Team C").lineup_source).to eq(Team::LINEUP_SOURCE_AUTO)
       end
     end
 

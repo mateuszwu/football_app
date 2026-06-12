@@ -62,10 +62,14 @@
         </button>
       </div>
     </div>
+    <div class="form-field">
+      <%= label_tag "match_day_team_count", "Liczba zespolow do wygenerowania" %>
+      <%= number_field_tag "match_day[team_count]", team_count, min: 2, step: 1, class: "input" %>
+    </div>
     <p class="field-hint">
       Przeciagnij zaznaczonych zawodnikow do zespolow.
       <% if setup_method == TeamSetup::SETUP_METHOD_AUTO %>
-        Auto proposal <%= algorithm_version.presence || Teams::GenerateProposal::ALGORITHM_VERSION %>, rerolle: <%= reroll_count %>.
+        Auto proposal <%= algorithm_version.presence || Teams::GenerateProposal::ALGORITHM_VERSION %>, zespoly: <%= team_count %>, rerolle: <%= reroll_count %>.
       <% end %>
     </p>
 

@@ -10,34 +10,28 @@ module Teams
     def initialize(players:, options: {})
       @players = Array(players)
       @season = options[:season]
+      @requested_team_count = options[:team_count]
     end
 
     def call
       return [] if players.empty?
 
-      assigned_teams = [
-        build_team("Team A"),
-        build_team("Team B")
-      ]
+      assigned_teams = build_active_teams
 
       sorted_players.each_with_index do |player, index|
-        if index < 2
+        if index < assigned_teams.size
           assign_player(assigned_teams[index], player)
-        elsif waiting_team_required?(index)
-          waiting_team[:player_ids] << player.id
         else
           assign_player(lower_elo_team(assigned_teams), player)
         end
       end
 
-      teams = assigned_teams
-      teams << waiting_team if waiting_team[:player_ids].any?
-      teams
+      assigned_teams
     end
 
     private
 
-    attr_reader :players, :season
+    attr_reader :players, :requested_team_count, :season
 
     def sorted_players
       @sorted_players ||= players.sort_by do |player|
@@ -71,12 +65,25 @@ module Teams
       }
     end
 
-    def waiting_team
-      @waiting_team ||= build_team("Waiting")
+    def build_active_teams
+      Array.new(team_count) do |index|
+        build_team(team_name(index))
+      end
     end
 
-    def waiting_team_required?(index)
-      players.count.odd? && index == players.count - 1
+    def team_count
+      @team_count ||= begin
+        normalized_count = requested_team_count.to_i
+        normalized_count = 2 if normalized_count < 2
+        [ normalized_count, players.count ].min
+      end
+    end
+
+    def team_name(index)
+      suffix = ("A".ord + index).chr
+      return "Team #{suffix}" if index < 26
+
+      "Team #{index + 1}"
     end
   end
 end

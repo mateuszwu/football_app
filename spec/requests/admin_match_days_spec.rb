@@ -90,6 +90,7 @@ RSpec.describe "Admin match days" do
           expect(response.body).to include("Manualny builder bazowych zespolow")
           expect(response.body).to include("Team A")
           expect(response.body).to include("Team B")
+          expect(response.body).to include("Liczba zespolow do wygenerowania")
           expect(response.body).to include("data-controller=\"lineup-editor\"")
           expect(response.body).to include("data-lineup-editor-teams-value")
           expect(response.body).to include("selected=\"selected\"")
@@ -241,6 +242,7 @@ RSpec.describe "Admin match days" do
               season_id: season.id,
               played_on: "2026-06-05",
               player_ids: [ first_player.id.to_s, second_player.id.to_s, third_player.id.to_s ],
+              team_count: "3",
               reroll_count: "0"
             }
           }
@@ -248,8 +250,8 @@ RSpec.describe "Admin match days" do
           expect(response).to have_http_status(:ok)
           expect(MatchDay.count).to eq(0)
           expect(response.body).to include("Przelosuj")
-          expect(response.body).to include("Auto proposal v1, rerolle: 0.")
-          expect(response.body).to include("Waiting")
+          expect(response.body).to include("Auto proposal v1, zespoly: 3, rerolle: 0.")
+          expect(response.body).to include("Team C")
         ensure
           if original_admin_password.nil?
             ENV.delete("FOOTBALL_APP_ADMIN_PASSWORD")
@@ -266,19 +268,21 @@ RSpec.describe "Admin match days" do
           season = create(:season)
           first_player = create(:player, approval_status: "approved", active: true)
           second_player = create(:player, name: "Second", nickname: "second", phone: "+48999999998", approval_status: "approved", active: true)
+          third_player = create(:player, name: "Third", nickname: "third", phone: "+48999999997", approval_status: "approved", active: true)
 
           post "/admin/session", params: { password: "secret-password" }
           post "/admin/match_days", params: {
             match_day: {
               season_id: season.id,
               played_on: "2026-06-05",
-              player_ids: [ first_player.id.to_s, second_player.id.to_s ],
+              player_ids: [ first_player.id.to_s, second_player.id.to_s, third_player.id.to_s ],
               setup_method: TeamSetup::SETUP_METHOD_AUTO,
               algorithm_version: Teams::GenerateProposal::ALGORITHM_VERSION,
               reroll_count: "2",
               teams_data: [
                 { name: "Team A", player_ids: [ first_player.id.to_s ] },
-                { name: "Team B", player_ids: [ second_player.id.to_s ] }
+                { name: "Team B", player_ids: [ second_player.id.to_s ] },
+                { name: "Team C", player_ids: [ third_player.id.to_s ] }
               ]
             }
           }
@@ -290,6 +294,7 @@ RSpec.describe "Admin match days" do
           expect(match_day.team_setups.first.reroll_count).to eq(2)
           expect(match_day.teams.find_by!(name: "Team A").lineup_source).to eq(Team::LINEUP_SOURCE_AUTO)
           expect(match_day.teams.find_by!(name: "Team B").lineup_source).to eq(Team::LINEUP_SOURCE_AUTO)
+          expect(match_day.teams.find_by!(name: "Team C").lineup_source).to eq(Team::LINEUP_SOURCE_AUTO)
         ensure
           if original_admin_password.nil?
             ENV.delete("FOOTBALL_APP_ADMIN_PASSWORD")
