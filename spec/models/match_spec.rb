@@ -190,12 +190,12 @@ RSpec.describe Match do
         match = create(:match, home_score: 4, away_score: 2)
         home_scorer = create(:player)
         away_scorer = create(:player)
-        create(:team_player, team: match.home_team, player: home_scorer)
-        create(:team_player, team: match.away_team, player: away_scorer)
-        create(:match_goal, match:, scoring_team: match.home_team, scorer: home_scorer, scored_at: Time.zone.now)
-        create(:match_goal, match:, scoring_team: match.away_team, scorer: away_scorer, scored_at: Time.zone.now)
-        create(:match_goal, match:, scoring_team: match.away_team, scorer: away_scorer, scored_at: 1.minute.from_now)
-        create(:match_goal, match:, scoring_team: match.home_team, scorer: home_scorer, scored_at: 2.minutes.from_now, undone_at: Time.zone.now)
+        home_scorer_team_player = create(:team_player, team: match.home_team, player: home_scorer)
+        away_scorer_team_player = create(:team_player, team: match.away_team, player: away_scorer)
+        create(:match_goal, match: match, scoring_team: match.home_team, scorer_team_player: home_scorer_team_player, scored_at: Time.zone.now)
+        create(:match_goal, match: match, scoring_team: match.away_team, scorer_team_player: away_scorer_team_player, scored_at: Time.zone.now)
+        create(:match_goal, match: match, scoring_team: match.away_team, scorer_team_player: away_scorer_team_player, scored_at: 1.minute.from_now)
+        create(:match_goal, match: match, scoring_team: match.home_team, scorer_team_player: home_scorer_team_player, scored_at: 2.minutes.from_now, undone_at: Time.zone.now)
 
         match.recalculate_score!
 

@@ -59,7 +59,7 @@ RSpec.describe "Matches" do
         away_team = create(:team, team_setup: team_setup, name: "Team B", team_type: "match")
         home_player = create(:player, name: "Adam Nowak", nickname: "adam", phone: "+48111111111")
         away_player = create(:player, name: "Marek Kowalski", nickname: "marek", phone: "+48222222222")
-        create(:team_player, team: home_team, player: home_player)
+        home_team_player = create(:team_player, team: home_team, player: home_player)
         create(:team_player, team: away_team, player: away_player)
         match = create(
           :match,
@@ -74,7 +74,7 @@ RSpec.describe "Matches" do
           :match_goal,
           match: match,
           scoring_team: home_team,
-          scorer: home_player,
+          scorer_team_player: home_team_player,
           scored_at: Time.zone.parse("2026-06-19 19:27:00")
         )
 
@@ -94,8 +94,8 @@ RSpec.describe "Matches" do
         home_player = create(:player, name: "Adam Nowak", nickname: "adam", phone: "+48111111111")
         home_player2 = create(:player, name: "Jan Kowalski", nickname: "jan", phone: "+48333333333")
         away_player = create(:player, name: "Marek Wisniewski", nickname: "marek", phone: "+48222222222")
-        create(:team_player, team: home_team, player: home_player)
-        create(:team_player, team: home_team, player: home_player2)
+        home_team_player = create(:team_player, team: home_team, player: home_player)
+        home_team_player2 = create(:team_player, team: home_team, player: home_player2)
         create(:team_player, team: away_team, player: away_player)
         match = create(
           :match,
@@ -110,15 +110,15 @@ RSpec.describe "Matches" do
           :match_goal,
           match: match,
           scoring_team: home_team,
-          scorer: home_player,
-          assistant: home_player2,
+          scorer_team_player: home_team_player,
+          assistant_team_player: home_team_player2,
           scored_at: Time.zone.parse("2026-06-19 19:27:00")
         )
         create(
           :match_goal,
           match: match,
           scoring_team: home_team,
-          scorer: home_player2,
+          scorer_team_player: home_team_player2,
           scored_at: Time.zone.parse("2026-06-19 19:40:00")
         )
 

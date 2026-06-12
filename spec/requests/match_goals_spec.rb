@@ -6,12 +6,12 @@ RSpec.describe "Match goals" do
       it "does not create a goal" do
         match = create(:match, started_at: Time.zone.parse("2026-06-19 19:15:00"))
         player = create(:player, name: "Scorer", nickname: "scorer", phone: "+48123456789")
-        create(:team_player, team: match.home_team, player: player)
+        scorer_team_player = create(:team_player, team: match.home_team, player: player)
 
         post "/matches/#{match.id}/goals", params: {
           match_goal: {
             scoring_team_id: match.home_team.id,
-            scorer_id: player.id
+            scorer_team_player_id: scorer_team_player.id
           }
         }
 
@@ -29,13 +29,13 @@ RSpec.describe "Match goals" do
           ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = "secret-password"
           match = create(:match, started_at: Time.zone.parse("2026-06-19 19:15:00"))
           player = create(:player, name: "Scorer", nickname: "scorer", phone: "+48123456789")
-          create(:team_player, team: match.home_team, player: player)
+          scorer_team_player = create(:team_player, team: match.home_team, player: player)
           post "/admin/session", params: { password: "secret-password" }
 
           post "/matches/#{match.id}/goals", params: {
             match_goal: {
               scoring_team_id: match.home_team.id,
-              scorer_id: player.id
+              scorer_team_player_id: scorer_team_player.id
             }
           }
 
@@ -44,9 +44,11 @@ RSpec.describe "Match goals" do
           expect(match.reload.home_score).to eq(1)
           expect(match.away_score).to eq(0)
 
-          goal = MatchGoal.find_by!(match:, scorer: player)
+          goal = MatchGoal.find_by!(match: match, scorer_team_player: scorer_team_player)
           expect(goal.scoring_team).to eq(match.home_team)
           expect(goal.scored_at).to be_present
+          expect(goal.home_score_after).to eq(1)
+          expect(goal.away_score_after).to eq(0)
         ensure
           if original_admin_password.nil?
             ENV.delete("FOOTBALL_APP_ADMIN_PASSWORD")
@@ -63,15 +65,15 @@ RSpec.describe "Match goals" do
           match = create(:match, started_at: Time.zone.parse("2026-06-19 19:15:00"), home_score: 4, away_score: 0)
           home_scorer = create(:player, name: "Home Scorer", nickname: "home-scorer", phone: "+48123456789")
           away_scorer = create(:player, name: "Away Scorer", nickname: "away-scorer", phone: "+48987654321")
-          create(:team_player, team: match.home_team, player: home_scorer)
-          create(:team_player, team: match.away_team, player: away_scorer)
-          create(:match_goal, match:, scorer: away_scorer, scoring_team: match.away_team, scored_at: Time.zone.parse("2026-06-19 19:20:00"))
+          home_scorer_team_player = create(:team_player, team: match.home_team, player: home_scorer)
+          away_scorer_team_player = create(:team_player, team: match.away_team, player: away_scorer)
+          create(:match_goal, match: match, scorer_team_player: away_scorer_team_player, scoring_team: match.away_team, scored_at: Time.zone.parse("2026-06-19 19:20:00"))
           post "/admin/session", params: { password: "secret-password" }
 
           post "/matches/#{match.id}/goals", params: {
             match_goal: {
               scoring_team_id: match.home_team.id,
-              scorer_id: home_scorer.id
+              scorer_team_player_id: home_scorer_team_player.id
             }
           }
 
@@ -95,15 +97,15 @@ RSpec.describe "Match goals" do
           match = create(:match, started_at: Time.zone.parse("2026-06-19 19:15:00"))
           scorer = create(:player, name: "Scorer", nickname: "scorer", phone: "+48123456789")
           assistant = create(:player, name: "Assistant", nickname: "assistant", phone: "+48987654321")
-          create(:team_player, team: match.home_team, player: scorer)
-          create(:team_player, team: match.home_team, player: assistant)
+          scorer_team_player = create(:team_player, team: match.home_team, player: scorer)
+          assistant_team_player = create(:team_player, team: match.home_team, player: assistant)
           post "/admin/session", params: { password: "secret-password" }
 
           post "/matches/#{match.id}/goals", params: {
             match_goal: {
               scoring_team_id: match.home_team.id,
-              scorer_id: scorer.id,
-              assistant_id: assistant.id
+              scorer_team_player_id: scorer_team_player.id,
+              assistant_team_player_id: assistant_team_player.id
             }
           }
 
@@ -111,8 +113,8 @@ RSpec.describe "Match goals" do
           expect(flash[:notice]).to eq("Goal added")
           expect(match.reload.home_score).to eq(1)
 
-          goal = MatchGoal.find_by!(match:, scorer:)
-          expect(goal.assistant).to eq(assistant)
+          goal = MatchGoal.find_by!(match: match, scorer_team_player: scorer_team_player)
+          expect(goal.assistant_team_player).to eq(assistant_team_player)
         ensure
           if original_admin_password.nil?
             ENV.delete("FOOTBALL_APP_ADMIN_PASSWORD")
@@ -122,20 +124,20 @@ RSpec.describe "Match goals" do
         end
       end
 
-      it "creates an unassisted goal when assistant_id is blank" do
+      it "creates an unassisted goal when assistant_team_player_id is blank" do
         begin
           original_admin_password = ENV["FOOTBALL_APP_ADMIN_PASSWORD"]
           ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = "secret-password"
           match = create(:match, started_at: Time.zone.parse("2026-06-19 19:15:00"))
           scorer = create(:player, name: "Scorer", nickname: "scorer", phone: "+48123456789")
-          create(:team_player, team: match.home_team, player: scorer)
+          scorer_team_player = create(:team_player, team: match.home_team, player: scorer)
           post "/admin/session", params: { password: "secret-password" }
 
           post "/matches/#{match.id}/goals", params: {
             match_goal: {
               scoring_team_id: match.home_team.id,
-              scorer_id: scorer.id,
-              assistant_id: ""
+              scorer_team_player_id: scorer_team_player.id,
+              assistant_team_player_id: ""
             }
           }
 
@@ -143,8 +145,8 @@ RSpec.describe "Match goals" do
           expect(flash[:notice]).to eq("Goal added")
           expect(match.reload.home_score).to eq(1)
 
-          goal = MatchGoal.find_by!(match:, scorer:)
-          expect(goal.assistant).to be_nil
+          goal = MatchGoal.find_by!(match: match, scorer_team_player: scorer_team_player)
+          expect(goal.assistant_team_player).to be_nil
         ensure
           if original_admin_password.nil?
             ENV.delete("FOOTBALL_APP_ADMIN_PASSWORD")
@@ -160,14 +162,14 @@ RSpec.describe "Match goals" do
           ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = "secret-password"
           match = create(:match, started_at: Time.zone.parse("2026-06-19 19:15:00"))
           scorer = create(:player, name: "Scorer", nickname: "scorer", phone: "+48123456789")
-          create(:team_player, team: match.home_team, player: scorer)
+          scorer_team_player = create(:team_player, team: match.home_team, player: scorer)
           post "/admin/session", params: { password: "secret-password" }
 
           post "/matches/#{match.id}/goals", params: {
             match_goal: {
               scoring_team_id: match.home_team.id,
-              scorer_id: scorer.id,
-              assistant_id: scorer.id
+              scorer_team_player_id: scorer_team_player.id,
+              assistant_team_player_id: scorer_team_player.id
             }
           }
 
@@ -189,13 +191,13 @@ RSpec.describe "Match goals" do
           ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = "secret-password"
           match = create(:match, started_at: nil)
           player = create(:player, name: "Scorer", nickname: "scorer", phone: "+48123456789")
-          create(:team_player, team: match.home_team, player: player)
+          scorer_team_player = create(:team_player, team: match.home_team, player: player)
           post "/admin/session", params: { password: "secret-password" }
 
           post "/matches/#{match.id}/goals", params: {
             match_goal: {
               scoring_team_id: match.home_team.id,
-              scorer_id: player.id
+              scorer_team_player_id: scorer_team_player.id
             }
           }
 
@@ -222,13 +224,13 @@ RSpec.describe "Match goals" do
             finished_at: Time.zone.parse("2026-06-19 20:02:10")
           )
           player = create(:player, name: "Scorer", nickname: "scorer", phone: "+48123456789")
-          create(:team_player, team: match.home_team, player: player)
+          scorer_team_player = create(:team_player, team: match.home_team, player: player)
           post "/admin/session", params: { password: "secret-password" }
 
           post "/matches/#{match.id}/goals", params: {
             match_goal: {
               scoring_team_id: match.home_team.id,
-              scorer_id: player.id
+              scorer_team_player_id: scorer_team_player.id
             }
           }
 
@@ -253,8 +255,8 @@ RSpec.describe "Match goals" do
       it "does not remove the goal" do
         match = create(:match, started_at: Time.zone.parse("2026-06-19 19:15:00"))
         player = create(:player, name: "Scorer", nickname: "scorer", phone: "+48123456789")
-        create(:team_player, team: match.home_team, player: player)
-        goal = create(:match_goal, match:, scorer: player, scoring_team: match.home_team, scored_at: Time.zone.now)
+        scorer_team_player = create(:team_player, team: match.home_team, player: player)
+        goal = create(:match_goal, match: match, scorer_team_player: scorer_team_player, scoring_team: match.home_team, scored_at: Time.zone.now)
         match.update!(home_score: 1)
 
         delete "/matches/#{match.id}/goals/#{goal.id}"
@@ -273,8 +275,8 @@ RSpec.describe "Match goals" do
           ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = "secret-password"
           match = create(:match, started_at: Time.zone.parse("2026-06-19 19:15:00"))
           player = create(:player, name: "Scorer", nickname: "scorer", phone: "+48123456789")
-          create(:team_player, team: match.home_team, player: player)
-          goal = create(:match_goal, match:, scorer: player, scoring_team: match.home_team, scored_at: Time.zone.now)
+          scorer_team_player = create(:team_player, team: match.home_team, player: player)
+          goal = create(:match_goal, match: match, scorer_team_player: scorer_team_player, scoring_team: match.home_team, scored_at: Time.zone.now)
           match.update!(home_score: 1)
           post "/admin/session", params: { password: "secret-password" }
 
@@ -301,10 +303,10 @@ RSpec.describe "Match goals" do
           match = create(:match, started_at: Time.zone.parse("2026-06-19 19:15:00"), home_score: 5, away_score: 5)
           home_scorer = create(:player, name: "Home Scorer", nickname: "home-scorer", phone: "+48123456789")
           away_scorer = create(:player, name: "Away Scorer", nickname: "away-scorer", phone: "+48987654321")
-          create(:team_player, team: match.home_team, player: home_scorer)
-          create(:team_player, team: match.away_team, player: away_scorer)
-          remaining_goal = create(:match_goal, match:, scorer: away_scorer, scoring_team: match.away_team, scored_at: Time.zone.parse("2026-06-19 19:20:00"))
-          removed_goal = create(:match_goal, match:, scorer: home_scorer, scoring_team: match.home_team, scored_at: Time.zone.parse("2026-06-19 19:25:00"))
+          home_scorer_team_player = create(:team_player, team: match.home_team, player: home_scorer)
+          away_scorer_team_player = create(:team_player, team: match.away_team, player: away_scorer)
+          remaining_goal = create(:match_goal, match: match, scorer_team_player: away_scorer_team_player, scoring_team: match.away_team, scored_at: Time.zone.parse("2026-06-19 19:20:00"))
+          removed_goal = create(:match_goal, match: match, scorer_team_player: home_scorer_team_player, scoring_team: match.home_team, scored_at: Time.zone.parse("2026-06-19 19:25:00"))
           post "/admin/session", params: { password: "secret-password" }
 
           delete "/matches/#{match.id}/goals/#{removed_goal.id}"
@@ -330,8 +332,8 @@ RSpec.describe "Match goals" do
           ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = "secret-password"
           match = create(:match, started_at: nil, finished_at: nil)
           player = create(:player, name: "Scorer", nickname: "scorer", phone: "+48123456789")
-          create(:team_player, team: match.home_team, player: player)
-          goal = create(:match_goal, match:, scorer: player, scoring_team: match.home_team, scored_at: Time.zone.now)
+          scorer_team_player = create(:team_player, team: match.home_team, player: player)
+          goal = create(:match_goal, match: match, scorer_team_player: scorer_team_player, scoring_team: match.home_team, scored_at: Time.zone.now)
           match.update!(home_score: 1)
           post "/admin/session", params: { password: "secret-password" }
 
@@ -360,8 +362,8 @@ RSpec.describe "Match goals" do
             finished_at: Time.zone.parse("2026-06-19 20:02:10")
           )
           player = create(:player, name: "Scorer", nickname: "scorer", phone: "+48123456789")
-          create(:team_player, team: match.home_team, player: player)
-          goal = create(:match_goal, match:, scorer: player, scoring_team: match.home_team, scored_at: Time.zone.now)
+          scorer_team_player = create(:team_player, team: match.home_team, player: player)
+          goal = create(:match_goal, match: match, scorer_team_player: scorer_team_player, scoring_team: match.home_team, scored_at: Time.zone.now)
           match.update!(home_score: 1)
           post "/admin/session", params: { password: "secret-password" }
 

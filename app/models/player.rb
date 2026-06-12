@@ -2,7 +2,6 @@ class Player < ApplicationRecord
   APPROVAL_STATUSES = %w[pending approved rejected].freeze
   ROLE_CODES = %w[ANY GK DEF MID ATT].freeze
 
-  has_many :match_goals, foreign_key: :scorer_id, dependent: :restrict_with_exception
   has_many :match_day_players, dependent: :destroy
   has_many :match_days, through: :match_day_players
   has_many :player_rating_changes, dependent: :destroy

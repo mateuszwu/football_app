@@ -8,9 +8,9 @@ class MatchGoalsController < ApplicationController
 
     result = Matches::AddGoal.call(
       match:,
-      scorer_id: goal_params[:scorer_id],
+      scorer_team_player_id: goal_params[:scorer_team_player_id],
       scoring_team_id: goal_params[:scoring_team_id],
-      assistant_id: goal_params[:assistant_id].presence
+      assistant_team_player_id: goal_params[:assistant_team_player_id].presence
     )
 
     if result
@@ -36,6 +36,6 @@ class MatchGoalsController < ApplicationController
   private
 
   def goal_params
-    params.expect(match_goal: [ :scorer_id, :scoring_team_id, :assistant_id ])
+    params.expect(match_goal: [ :scorer_team_player_id, :scoring_team_id, :assistant_team_player_id ])
   end
 end
