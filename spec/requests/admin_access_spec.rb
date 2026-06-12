@@ -44,7 +44,7 @@ RSpec.describe "Admin access" do
             "Admin::SignInTestController",
             Class.new(ApplicationController) do
               def create
-                session[:admin] = true
+                session[:admin_authenticated] = true
                 head :no_content
               end
             end
@@ -56,7 +56,7 @@ RSpec.describe "Admin access" do
               before_action :require_admin!
 
               def index
-                render plain: admin_signed_in?.to_s
+                render plain: "#{admin_authenticated?}-#{admin_signed_in?}"
               end
             end
           )
@@ -65,7 +65,7 @@ RSpec.describe "Admin access" do
           get "/admin/protected_test"
 
           expect(response).to have_http_status(:ok)
-          expect(response.body).to eq("true")
+          expect(response.body).to eq("true-true")
         ensure
           Rails.application.reload_routes!
         end
