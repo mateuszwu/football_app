@@ -33,6 +33,11 @@ module Admin
     def update
       season = Season.find(params[:id])
 
+      if season.elo_settings_locked?
+        redirect_to admin_seasons_path, alert: "Season settings are locked"
+        return
+      end
+
       if season.update(season_params)
         redirect_to admin_seasons_path, notice: "Season updated"
       else
