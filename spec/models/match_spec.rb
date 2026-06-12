@@ -113,6 +113,15 @@ RSpec.describe Match do
         expect(match.home_score).to eq(0)
         expect(match.away_score).to eq(0)
       end
+
+      it "stores lifecycle defaults" do
+        match = create(:match)
+
+        expect(match.status).to eq(Match::STATUS_PENDING)
+        expect(match.timer_interval_seconds).to eq(300)
+        expect(match.timer_beep_count).to eq(3)
+        expect(match.ranked).to be(true)
+      end
     end
   end
 
@@ -121,13 +130,18 @@ RSpec.describe Match do
       it "returns true" do
         match = build(:match, finished_at: Time.current)
 
+        match.valid?
+
         expect(match.finished?).to be(true)
+        expect(match.status).to eq(Match::STATUS_FINISHED)
       end
     end
 
     context "when finished_at is missing" do
       it "returns false" do
         match = build(:match, finished_at: nil)
+
+        match.valid?
 
         expect(match.finished?).to be(false)
       end
@@ -139,7 +153,10 @@ RSpec.describe Match do
       it "returns true" do
         match = build(:match, started_at: Time.current, finished_at: nil)
 
+        match.valid?
+
         expect(match.in_progress?).to be(true)
+        expect(match.status).to eq(Match::STATUS_IN_PROGRESS)
       end
     end
 
@@ -147,7 +164,22 @@ RSpec.describe Match do
       it "returns false" do
         match = build(:match, started_at: nil, finished_at: nil)
 
+        match.valid?
+
         expect(match.in_progress?).to be(false)
+      end
+    end
+  end
+
+  describe "#not_started?" do
+    context "when the match has not started" do
+      it "returns true" do
+        match = build(:match, started_at: nil, finished_at: nil)
+
+        match.valid?
+
+        expect(match.not_started?).to be(true)
+        expect(match.status).to eq(Match::STATUS_PENDING)
       end
     end
   end
@@ -163,6 +195,7 @@ RSpec.describe Match do
         create(:match_goal, match:, scoring_team: match.home_team, scorer: home_scorer, scored_at: Time.zone.now)
         create(:match_goal, match:, scoring_team: match.away_team, scorer: away_scorer, scored_at: Time.zone.now)
         create(:match_goal, match:, scoring_team: match.away_team, scorer: away_scorer, scored_at: 1.minute.from_now)
+        create(:match_goal, match:, scoring_team: match.home_team, scorer: home_scorer, scored_at: 2.minutes.from_now, undone_at: Time.zone.now)
 
         match.recalculate_score!
 

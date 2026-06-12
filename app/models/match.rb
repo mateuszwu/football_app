@@ -1,26 +1,40 @@
 class Match < ApplicationRecord
+  STATUS_PENDING = "pending"
+  STATUS_IN_PROGRESS = "in_progress"
+  STATUS_FINISHED = "finished"
+  STATUSES = [
+    STATUS_PENDING,
+    STATUS_IN_PROGRESS,
+    STATUS_FINISHED
+  ].freeze
+
   belongs_to :match_day
+  belongs_to :team_setup, optional: true
   belongs_to :home_team, class_name: "Team"
   belongs_to :away_team, class_name: "Team"
   has_many :match_goals, dependent: :destroy
+  has_many :active_match_goals, -> { active }, class_name: "MatchGoal", dependent: :destroy, inverse_of: :match
   has_many :player_rating_changes, dependent: :nullify
   has_many :teams, dependent: :nullify
 
   validates :home_team_id, uniqueness: { scope: [ :match_day_id, :away_team_id ] }
+  validates :status, inclusion: { in: STATUSES }
   validates :home_score, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
   validates :away_score, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
   validate :teams_are_distinct
 
+  before_validation :sync_status_from_timing
+
   def finished?
-    !!finished_at
+    status == STATUS_FINISHED
   end
 
   def in_progress?
-    started_at.present? && !finished_at
+    status == STATUS_IN_PROGRESS
   end
 
   def not_started?
-    started_at.blank?
+    status == STATUS_PENDING
   end
 
   def home_win?
@@ -59,12 +73,22 @@ class Match < ApplicationRecord
 
   def recalculate_score!
     update!(
-      home_score: match_goals.where(scoring_team_id: home_team_id).count,
-      away_score: match_goals.where(scoring_team_id: away_team_id).count
+      home_score: active_match_goals.where(scoring_team_id: home_team_id).count,
+      away_score: active_match_goals.where(scoring_team_id: away_team_id).count
     )
   end
 
   private
+
+  def sync_status_from_timing
+    self.status = if finished_at.present?
+      STATUS_FINISHED
+    elsif started_at.present?
+      STATUS_IN_PROGRESS
+    else
+      STATUS_PENDING
+    end
+  end
 
   def teams_are_distinct
     return if home_team_id.blank? || away_team_id.blank?

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_12_110000) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_12_111500) do
   create_table "match_day_players", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.integer "match_day_id", null: false
@@ -60,6 +60,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_12_110000) do
     t.datetime "scored_at", null: false
     t.integer "scorer_id", null: false
     t.integer "scoring_team_id", null: false
+    t.datetime "undone_at"
     t.datetime "updated_at", null: false
     t.index ["assistant_id"], name: "index_match_goals_on_assistant_id"
     t.index ["match_id"], name: "index_match_goals_on_match_id"
@@ -71,16 +72,27 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_12_110000) do
     t.integer "away_score", default: 0
     t.integer "away_team_id", null: false
     t.datetime "created_at", null: false
+    t.datetime "elo_processed_at"
     t.datetime "finished_at"
     t.integer "home_score", default: 0
     t.integer "home_team_id", null: false
+    t.integer "lineup_source_match_id"
+    t.string "lineup_source_type"
     t.integer "match_day_id", null: false
+    t.datetime "performance_processed_at"
+    t.boolean "ranked", default: true, null: false
     t.datetime "started_at"
+    t.string "status", default: "pending", null: false
+    t.integer "team_setup_id"
+    t.integer "timer_beep_count", default: 3, null: false
+    t.integer "timer_interval_seconds", default: 300, null: false
     t.datetime "updated_at", null: false
     t.index ["away_team_id"], name: "index_matches_on_away_team_id"
     t.index ["home_team_id"], name: "index_matches_on_home_team_id"
+    t.index ["lineup_source_match_id"], name: "index_matches_on_lineup_source_match_id"
     t.index ["match_day_id", "home_team_id", "away_team_id"], name: "idx_on_match_day_id_home_team_id_away_team_id_f7a6ad2a0b", unique: true
     t.index ["match_day_id"], name: "index_matches_on_match_day_id"
+    t.index ["team_setup_id"], name: "index_matches_on_team_setup_id"
   end
 
   create_table "player_rating_changes", force: :cascade do |t|
@@ -216,6 +228,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_12_110000) do
   add_foreign_key "match_goals", "players", column: "scorer_id"
   add_foreign_key "match_goals", "teams", column: "scoring_team_id"
   add_foreign_key "matches", "match_days"
+  add_foreign_key "matches", "matches", column: "lineup_source_match_id"
+  add_foreign_key "matches", "team_setups"
   add_foreign_key "matches", "teams", column: "away_team_id"
   add_foreign_key "matches", "teams", column: "home_team_id"
   add_foreign_key "player_rating_changes", "matches"

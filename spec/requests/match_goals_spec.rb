@@ -282,7 +282,8 @@ RSpec.describe "Match goals" do
 
           expect(response).to redirect_to(match_path(match))
           expect(flash[:notice]).to eq("Goal removed")
-          expect(MatchGoal.count).to eq(0)
+          expect(MatchGoal.count).to eq(1)
+          expect(goal.reload.undone_at).to be_present
           expect(match.reload.home_score).to eq(0)
         ensure
           if original_admin_password.nil?
@@ -311,7 +312,7 @@ RSpec.describe "Match goals" do
           expect(response).to redirect_to(match_path(match))
           expect(flash[:notice]).to eq("Goal removed")
           expect(MatchGoal.exists?(remaining_goal.id)).to be(true)
-          expect(MatchGoal.exists?(removed_goal.id)).to be(false)
+          expect(removed_goal.reload.undone_at).to be_present
           expect(match.reload.home_score).to eq(0)
           expect(match.away_score).to eq(1)
         ensure
@@ -368,7 +369,8 @@ RSpec.describe "Match goals" do
 
           expect(response).to redirect_to(match_path(match))
           expect(flash[:notice]).to eq("Goal removed")
-          expect(MatchGoal.count).to eq(0)
+          expect(MatchGoal.count).to eq(1)
+          expect(goal.reload.undone_at).to be_present
           expect(match.reload.home_score).to eq(0)
           expect(match.finished_at).to eq(Time.zone.parse("2026-06-19 20:02:10"))
         ensure
