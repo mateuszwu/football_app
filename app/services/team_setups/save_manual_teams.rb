@@ -1,17 +1,27 @@
 module TeamSetups
   class SaveManualTeams
-    def self.call(match_day:, selected_player_ids:, teams_data:)
+    def self.call(match_day:, selected_player_ids:, teams_data:, setup_method: TeamSetup::SETUP_METHOD_MANUAL,
+                  lineup_source: Team::LINEUP_SOURCE_MANUAL, algorithm_version: nil, reroll_count: 0)
       new(
         match_day:,
         selected_player_ids:,
-        teams_data:
+        teams_data:,
+        setup_method:,
+        lineup_source:,
+        algorithm_version:,
+        reroll_count:
       ).call
     end
 
-    def initialize(match_day:, selected_player_ids:, teams_data:)
+    def initialize(match_day:, selected_player_ids:, teams_data:, setup_method:, lineup_source:, algorithm_version:,
+                   reroll_count:)
       @match_day = match_day
       @selected_player_ids = normalize_ids(selected_player_ids)
       @teams_data = Array(teams_data).map { |d| d.is_a?(Hash) ? d.symbolize_keys : d }
+      @setup_method = setup_method
+      @lineup_source = lineup_source
+      @algorithm_version = algorithm_version
+      @reroll_count = reroll_count.to_i
     end
 
     def call
@@ -24,7 +34,9 @@ module TeamSetups
 
       team_setup = match_day.team_setups.first_or_create!
       team_setup.update!(
-        setup_method: TeamSetup::SETUP_METHOD_MANUAL,
+        setup_method: setup_method,
+        algorithm_version: algorithm_version,
+        reroll_count: reroll_count,
         accepted_at: Time.current
       )
       team_setup.teams.where(team_type: Team::TEAM_TYPE_BASELINE).destroy_all
@@ -44,7 +56,8 @@ module TeamSetups
 
     private
 
-    attr_reader :match_day, :selected_player_ids, :teams_data
+    attr_reader :algorithm_version, :lineup_source, :match_day, :reroll_count, :selected_player_ids,
+      :setup_method, :teams_data
 
     def valid_assignments?
       if overlapping_player_ids.any?
@@ -85,7 +98,7 @@ module TeamSetups
       team = team_setup.teams.create!(
         name: team_name,
         team_type: team_type,
-        lineup_source: Team::LINEUP_SOURCE_MANUAL,
+        lineup_source: lineup_source,
         playing:
       )
       player_ids.each do |player_id|

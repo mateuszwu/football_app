@@ -94,6 +94,37 @@ RSpec.describe UpdateMatchDay do
         expect(result).to be(true)
         expect(match_day.reload.status).to eq("setup")
       end
+
+      it "saves accepted auto-generated teams with reroll metadata" do
+        season = create(:season)
+        first_player = create(:player, approval_status: "approved", active: true)
+        second_player = create(:player, name: "Second", nickname: "second", phone: "+48999999998", approval_status: "approved", active: true)
+        match_day = create(:match_day, season:, played_on: Date.new(2026, 6, 5))
+        params = {
+          season_id: season.id,
+          played_on: Date.new(2026, 6, 12),
+          player_ids: [ first_player.id.to_s, second_player.id.to_s ],
+          setup_method: TeamSetup::SETUP_METHOD_AUTO,
+          algorithm_version: Teams::GenerateProposal::ALGORITHM_VERSION,
+          reroll_count: 3,
+          teams_data: [
+            { name: "Team A", player_ids: [ first_player.id.to_s ] },
+            { name: "Team B", player_ids: [ second_player.id.to_s ] }
+          ]
+        }
+
+        result = described_class.call(
+          match_day: match_day,
+          params: params,
+          available_players: Player.approved.active.order(:name)
+        )
+
+        expect(result).to be(true)
+        expect(match_day.reload.team_setups.first.setup_method).to eq(TeamSetup::SETUP_METHOD_AUTO)
+        expect(match_day.team_setups.first.algorithm_version).to eq(Teams::GenerateProposal::ALGORITHM_VERSION)
+        expect(match_day.team_setups.first.reroll_count).to eq(3)
+        expect(match_day.teams.find_by!(name: "Team A").lineup_source).to eq(Team::LINEUP_SOURCE_AUTO)
+      end
     end
 
     context "when params are invalid" do
