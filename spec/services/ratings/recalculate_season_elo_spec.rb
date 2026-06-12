@@ -118,7 +118,7 @@ RSpec.describe Ratings::RecalculateSeasonElo do
       expect(away_support.reload.elo).to eq(1000)
     end
 
-    it "initializes season Elo from existing global Elo and stores season stats" do
+    it "initializes season Elo from existing global Elo with the carryover factor and stores season stats" do
       season = create(:season, initial_elo: 1000, elo_k_factor: 32)
       match_day = create(:match_day, season: season, status: "finished", played_on: Date.new(2026, 6, 4))
       team_setup = create(:team_setup, match_day: match_day)
@@ -141,10 +141,10 @@ RSpec.describe Ratings::RecalculateSeasonElo do
 
       Ratings::RecalculateSeasonElo.call(season: season)
 
-      expect(player_a.reload.elo).to eq(1208)
-      expect(player_b.reload.elo).to eq(992)
-      expect(PlayerSeasonStat.find_by!(player: player_a, season: season).elo).to eq(1208)
-      expect(PlayerSeasonStat.find_by!(player: player_b, season: season).elo).to eq(992)
+      expect(player_a.reload.elo).to eq(1112)
+      expect(player_b.reload.elo).to eq(988)
+      expect(PlayerSeasonStat.find_by!(player: player_a, season: season).elo).to eq(1112)
+      expect(PlayerSeasonStat.find_by!(player: player_b, season: season).elo).to eq(988)
     end
 
     it "applies a 40 Elo advantage for each extra player" do
