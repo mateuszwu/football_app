@@ -6,6 +6,7 @@ class CreatePlayers < ActiveRecord::Migration[8.1]
       t.string :phone, null: false
       t.text :description, null: false, default: ""
       t.boolean :active, null: false, default: true
+      t.decimal :global_performance_score, precision: 8, scale: 2, null: false, default: 0.0
 
       t.timestamps
     end

@@ -4,6 +4,9 @@ class CreatePlayerSeasonStats < ActiveRecord::Migration[8.1]
       t.references :player, null: false, foreign_key: true
       t.references :season, null: false, foreign_key: true
       t.integer :elo
+      t.integer :goals, null: false, default: 0
+      t.integer :assists, null: false, default: 0
+      t.decimal :performance_score, precision: 8, scale: 2, null: false, default: 0.0
 
       t.timestamps
     end
