@@ -96,6 +96,9 @@ RSpec.describe Ratings::RecalculateSeasonElo do
       expect(mvp_winner.reload.elo).to eq(1012)
       expect(def_winner.reload.elo).to eq(1007)
       expect(away_support.reload.elo).to eq(1000)
+      expect(PlayerSeasonStat.find_by!(player: mvp_winner, season: season).elo).to eq(1012)
+      expect(PlayerSeasonStat.find_by!(player: def_winner, season: season).elo).to eq(1007)
+      expect(season.reload.elo_recalculated_at).to be_present
     end
 
     it "initializes season Elo from existing global Elo with the carryover factor and stores season stats" do
@@ -156,6 +159,36 @@ RSpec.describe Ratings::RecalculateSeasonElo do
       expect(home_player_one.reload.elo).to eq(999)
       expect(home_player_two.reload.elo).to eq(999)
       expect(away_player.reload.elo).to eq(1001)
+    end
+
+    it "rebuilds Elo even when a match was processed before and keeps match order stable by created_at fallback" do
+      season = create(:season, initial_elo: 1000, elo_k_value: 16.0)
+      match_day = create(:match_day, season: season, status: "finished", played_on: Date.new(2026, 6, 6))
+      team_setup = create(:team_setup, match_day: match_day)
+      team_a = create(:team, team_setup: team_setup, team_type: Team::TEAM_TYPE_MATCH)
+      team_b = create(:team, team_setup: team_setup, team_type: Team::TEAM_TYPE_MATCH)
+      team_c = create(:team, team_setup: team_setup, team_type: Team::TEAM_TYPE_MATCH)
+      team_d = create(:team, team_setup: team_setup, team_type: Team::TEAM_TYPE_MATCH)
+      player_a = create(:player, elo: 1300)
+      player_b = create(:player, elo: 1000)
+      create(:team_player, team: team_a, player: player_a)
+      create(:team_player, team: team_b, player: player_b)
+      create(:team_player, team: team_c, player: player_a)
+      create(:team_player, team: team_d, player: player_b)
+      first_match = create(:match, match_day: match_day, home_team: team_a, away_team: team_b, home_score: 1, away_score: 0, started_at: nil, finished_at: Time.zone.parse("2026-06-06 18:50:00"), created_at: Time.zone.parse("2026-06-06 18:00:00"))
+      second_match = create(:match, match_day: match_day, home_team: team_c, away_team: team_d, home_score: 0, away_score: 1, started_at: nil, finished_at: Time.zone.parse("2026-06-06 19:50:00"), created_at: Time.zone.parse("2026-06-06 19:00:00"))
+
+      Ratings::ProcessMatchElo.call(match: first_match, season: season)
+      player_a.update!(elo: 1500)
+      player_b.update!(elo: 900)
+
+      Ratings::RecalculateSeasonElo.call(season: season)
+
+      expect(player_a.reload.elo).to eq(1238)
+      expect(player_b.reload.elo).to eq(962)
+      expect(PlayerRatingChange.where(season: season, source_type: PlayerRatingChange::SOURCE_TYPE_MATCH).count).to eq(4)
+      expect(first_match.reload.elo_processed_at).to be_present
+      expect(second_match.reload.elo_processed_at).to be_present
     end
   end
 end

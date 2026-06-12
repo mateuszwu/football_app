@@ -1,12 +1,13 @@
 module Ratings
   class ProcessMatchElo
-    def self.call(match:, season: match.match_day.season)
-      new(match:, season:).call
+    def self.call(match:, season: match.match_day.season, force: false)
+      new(match:, season:, force:).call
     end
 
-    def initialize(match:, season:)
+    def initialize(match:, season:, force:)
       @match = match
       @season = season
+      @force = force
     end
 
     def call
@@ -27,10 +28,10 @@ module Ratings
 
     private
 
-    attr_reader :match, :season
+    attr_reader :match, :season, :force
 
     def processable_match?
-      return false if match.elo_processed_at.present?
+      return false if match.elo_processed_at.present? && !force
       return false unless match.finished?
       return false unless playing_teams.size == 2
       return false if home_players.empty? || away_players.empty?
