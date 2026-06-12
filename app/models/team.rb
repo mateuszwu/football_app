@@ -12,6 +12,7 @@ class Team < ApplicationRecord
     LINEUP_SOURCE_COPIED
   ].freeze
 
+  belongs_to :match, optional: true
   belongs_to :team_setup
   belongs_to :source_team, class_name: "Team", optional: true
   has_many :derived_teams, class_name: "Team", foreign_key: :source_team_id, dependent: :nullify

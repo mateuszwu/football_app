@@ -91,6 +91,13 @@ RSpec.describe Team do
         expect(team.team_setup).to eq(team_setup)
       end
 
+      it "can belong to a match" do
+        match = create(:match)
+        team = create(:team, match: match)
+
+        expect(team.match).to eq(match)
+      end
+
       it "has many team players" do
         team = create(:team)
         team_player = create(:team_player, team: team)
