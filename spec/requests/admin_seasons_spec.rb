@@ -24,10 +24,15 @@ RSpec.describe "Admin seasons" do
             starts_on: Date.new(2026, 3, 1),
             ends_on: Date.new(2026, 6, 30),
             active: true,
+            status: "active",
             initial_elo: 1100,
             elo_k_factor: 24,
+            elo_k_value: 16,
+            player_advantage_elo: 40,
             mvp_vote_bonus: 8,
-            def_vote_bonus: 6
+            def_vote_bonus: 6,
+            goal_points: 1.0,
+            assist_points: 0.8
           )
 
           post "/admin/session", params: { password: "secret-password" }
@@ -39,8 +44,12 @@ RSpec.describe "Admin seasons" do
           expect(response.body).to include("2026-06-30")
           expect(response.body).to include("1100")
           expect(response.body).to include("24")
+          expect(response.body).to include("16.0")
+          expect(response.body).to include("40.0")
           expect(response.body).to include("8")
           expect(response.body).to include("6")
+          expect(response.body).to include("1.0")
+          expect(response.body).to include("0.8")
         ensure
           if original_admin_password.nil?
             ENV.delete("FOOTBALL_APP_ADMIN_PASSWORD")
@@ -95,6 +104,8 @@ RSpec.describe "Admin seasons" do
           expect(response).to have_http_status(:ok)
           expect(response.body).to include("Nowy sezon")
           expect(response.body).to include("Initial Elo")
+          expect(response.body).to include("Elo K value")
+          expect(response.body).to include("Player advantage Elo")
           expect(response.body).to include("MVP bonus")
           expect(response.body).to include("DEF bonus")
         ensure
@@ -132,9 +143,19 @@ RSpec.describe "Admin seasons" do
                 name: "Spring 2026",
                 starts_on: "2026-03-01",
                 ends_on: "2026-06-30",
-                active: "1",
+                status: "active",
                 initial_elo: "1100",
                 elo_k_factor: "24",
+                elo_k_value: "16",
+                player_advantage_elo: "40",
+                season_elo_carryover_factor: "0.5",
+                goal_points: "1.0",
+                assist_points: "0.8",
+                mvp_max_points: "4.0",
+                def_max_points: "3.0",
+                voting_bonus_cap: "5.0",
+                expected_voters_count: "5",
+                elo_settings_locked: "0",
                 mvp_vote_bonus: "8",
                 def_vote_bonus: "6"
               }
@@ -146,8 +167,18 @@ RSpec.describe "Admin seasons" do
           expect(season.starts_on).to eq(Date.new(2026, 3, 1))
           expect(season.ends_on).to eq(Date.new(2026, 6, 30))
           expect(season).to be_active
+          expect(season.status).to eq("active")
           expect(season.initial_elo).to eq(1100)
           expect(season.elo_k_factor).to eq(24)
+          expect(season.elo_k_value).to eq(16)
+          expect(season.player_advantage_elo).to eq(40)
+          expect(season.season_elo_carryover_factor).to eq(0.5)
+          expect(season.goal_points).to eq(1.0)
+          expect(season.assist_points).to eq(0.8)
+          expect(season.mvp_max_points).to eq(4.0)
+          expect(season.def_max_points).to eq(3.0)
+          expect(season.voting_bonus_cap).to eq(5.0)
+          expect(season.expected_voters_count).to eq(5)
           expect(season.mvp_vote_bonus).to eq(8)
           expect(season.def_vote_bonus).to eq(6)
         ensure
@@ -201,7 +232,7 @@ RSpec.describe "Admin seasons" do
         begin
           original_admin_password = ENV["FOOTBALL_APP_ADMIN_PASSWORD"]
           ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = "secret-password"
-          season = create(:season, name: "Spring 2026", initial_elo: 1100)
+          season = create(:season, name: "Spring 2026", initial_elo: 1100, status: "active")
 
           post "/admin/session", params: { password: "secret-password" }
           get "/admin/seasons/#{season.id}/edit"
@@ -210,6 +241,7 @@ RSpec.describe "Admin seasons" do
           expect(response.body).to include("Edytuj sezon")
           expect(response.body).to include("Spring 2026")
           expect(response.body).to include("1100")
+          expect(response.body).to include("active")
         ensure
           if original_admin_password.nil?
             ENV.delete("FOOTBALL_APP_ADMIN_PASSWORD")
@@ -238,7 +270,7 @@ RSpec.describe "Admin seasons" do
         begin
           original_admin_password = ENV["FOOTBALL_APP_ADMIN_PASSWORD"]
           ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = "secret-password"
-          season = create(:season, active: true)
+          season = create(:season, active: true, status: "active")
 
           post "/admin/session", params: { password: "secret-password" }
           patch(
@@ -248,9 +280,19 @@ RSpec.describe "Admin seasons" do
                 name: "Updated Season",
                 starts_on: "2026-04-01",
                 ends_on: "",
-                active: "0",
+                status: "closed",
                 initial_elo: "1200",
                 elo_k_factor: "20",
+                elo_k_value: "18",
+                player_advantage_elo: "50",
+                season_elo_carryover_factor: "0.6",
+                goal_points: "1.5",
+                assist_points: "0.9",
+                mvp_max_points: "4.5",
+                def_max_points: "3.5",
+                voting_bonus_cap: "5.5",
+                expected_voters_count: "6",
+                elo_settings_locked: "1",
                 mvp_vote_bonus: "9",
                 def_vote_bonus: "7"
               }
@@ -263,8 +305,19 @@ RSpec.describe "Admin seasons" do
           expect(season.starts_on).to eq(Date.new(2026, 4, 1))
           expect(season.ends_on).to be_nil
           expect(season).not_to be_active
+          expect(season.status).to eq("closed")
           expect(season.initial_elo).to eq(1200)
           expect(season.elo_k_factor).to eq(20)
+          expect(season.elo_k_value).to eq(18)
+          expect(season.player_advantage_elo).to eq(50)
+          expect(season.season_elo_carryover_factor).to eq(0.6)
+          expect(season.goal_points).to eq(1.5)
+          expect(season.assist_points).to eq(0.9)
+          expect(season.mvp_max_points).to eq(4.5)
+          expect(season.def_max_points).to eq(3.5)
+          expect(season.voting_bonus_cap).to eq(5.5)
+          expect(season.expected_voters_count).to eq(6)
+          expect(season).to be_elo_settings_locked
           expect(season.mvp_vote_bonus).to eq(9)
           expect(season.def_vote_bonus).to eq(7)
         ensure

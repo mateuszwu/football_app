@@ -4,7 +4,7 @@
   <div class="section__header">
     <span class="section__eyebrow">Admin</span>
     <h1>Sezony</h1>
-    <p>Konfiguracja sezonow, Elo i bonusow za glosy MVP/DEF.</p>
+    <p>Konfiguracja sezonow, Elo, punktow i bonusow glosowania.</p>
   </div>
 
   <p><%= link_to "Nowy sezon", new_admin_season_path, class: "button button--secondary" %></p>
@@ -17,11 +17,15 @@
             <th scope="col">Nazwa</th>
             <th scope="col">Start</th>
             <th scope="col">Koniec</th>
-            <th scope="col">Aktywny</th>
+            <th scope="col">Status</th>
             <th scope="col">Initial Elo</th>
             <th scope="col">K-factor</th>
+            <th scope="col">Elo K value</th>
+            <th scope="col">Advantage Elo</th>
             <th scope="col">MVP bonus</th>
             <th scope="col">DEF bonus</th>
+            <th scope="col">Goal pts</th>
+            <th scope="col">Assist pts</th>
             <th scope="col">Akcje</th>
           </tr>
         </thead>
@@ -31,11 +35,15 @@
               <td><%= season.name %></td>
               <td><%= season.starts_on %></td>
               <td><%= season.ends_on || "Brak" %></td>
-              <td><%= season.active? ? "Tak" : "Nie" %></td>
+              <td><%= season.status %></td>
               <td><%= season.initial_elo %></td>
               <td><%= season.elo_k_factor %></td>
+              <td><%= season.elo_k_value %></td>
+              <td><%= season.player_advantage_elo %></td>
               <td><%= season.mvp_vote_bonus %></td>
               <td><%= season.def_vote_bonus %></td>
+              <td><%= season.goal_points %></td>
+              <td><%= season.assist_points %></td>
               <td class="admin-table__actions">
                 <%= link_to "Edytuj", edit_admin_season_path(season) %>
                 <%= button_to "Usun", admin_season_path(season), method: :delete, class: "link-button" %>

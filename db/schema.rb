@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_12_070000) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_12_073000) do
   create_table "match_day_players", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.integer "match_day_id", null: false
@@ -130,18 +130,31 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_12_070000) do
 
   create_table "seasons", force: :cascade do |t|
     t.boolean "active", default: false, null: false
+    t.decimal "assist_points", precision: 6, scale: 2, default: "0.8", null: false
     t.datetime "created_at", null: false
+    t.decimal "def_max_points", precision: 6, scale: 2, default: "3.0", null: false
     t.integer "def_vote_bonus", default: 10, null: false
     t.integer "elo_k_factor", default: 32, null: false
+    t.decimal "elo_k_value", precision: 6, scale: 2, default: "16.0", null: false
+    t.datetime "elo_recalculated_at"
+    t.boolean "elo_settings_locked", default: false, null: false
     t.date "ends_on"
+    t.integer "expected_voters_count", default: 5, null: false
+    t.decimal "goal_points", precision: 6, scale: 2, default: "1.0", null: false
     t.integer "initial_elo", default: 1000, null: false
+    t.decimal "mvp_max_points", precision: 6, scale: 2, default: "4.0", null: false
     t.integer "mvp_vote_bonus", default: 10, null: false
     t.string "name", null: false
+    t.decimal "player_advantage_elo", precision: 6, scale: 2, default: "40.0", null: false
+    t.decimal "season_elo_carryover_factor", precision: 4, scale: 2, default: "0.5", null: false
     t.date "starts_on", null: false
+    t.string "status", default: "active", null: false
     t.datetime "updated_at", null: false
+    t.decimal "voting_bonus_cap", precision: 6, scale: 2, default: "5.0", null: false
     t.index ["active"], name: "index_seasons_on_active"
     t.index ["name"], name: "index_seasons_on_name", unique: true
     t.index ["starts_on", "ends_on"], name: "index_seasons_on_starts_on_and_ends_on"
+    t.index ["status"], name: "index_seasons_on_status"
   end
 
   create_table "team_players", force: :cascade do |t|

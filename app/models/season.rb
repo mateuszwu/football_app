@@ -1,21 +1,37 @@
 class Season < ApplicationRecord
+  STATUSES = %w[active closed archived].freeze
+
   has_many :match_days, dependent: :destroy
   has_many :player_rating_changes, dependent: :destroy
   has_many :player_season_stats, dependent: :destroy
 
   validates :name, presence: true, uniqueness: true
   validates :starts_on, presence: true
+  validates :status, inclusion: { in: STATUSES }
   validates :initial_elo, numericality: { only_integer: true, greater_than: 0 }
   validates :elo_k_factor, numericality: { only_integer: true, greater_than: 0 }
   validates :mvp_vote_bonus, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
   validates :def_vote_bonus, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
+  validates :elo_k_value, numericality: { greater_than: 0 }
+  validates :player_advantage_elo, numericality: { greater_than_or_equal_to: 0 }
+  validates :season_elo_carryover_factor, numericality: { greater_than_or_equal_to: 0, less_than_or_equal_to: 1 }
+  validates :goal_points, numericality: { greater_than_or_equal_to: 0 }
+  validates :assist_points, numericality: { greater_than_or_equal_to: 0 }
+  validates :mvp_max_points, numericality: { greater_than_or_equal_to: 0 }
+  validates :def_max_points, numericality: { greater_than_or_equal_to: 0 }
+  validates :voting_bonus_cap, numericality: { greater_than_or_equal_to: 0 }
+  validates :expected_voters_count, numericality: { only_integer: true, greater_than: 0 }
 
   validate :ends_on_is_after_starts_on
 
+  before_validation :sync_active_and_status
+
   scope :active, -> { where(active: true) }
+  scope :closed, -> { where(status: "closed") }
+  scope :archived, -> { where(status: "archived") }
 
   def self.current_active
-    active.order(starts_on: :desc, created_at: :desc).first
+    where(status: "active").or(where(active: true)).order(starts_on: :desc, created_at: :desc).first
   end
 
   def match_days_count
@@ -44,6 +60,17 @@ class Season < ApplicationRecord
   end
 
   private
+
+  def sync_active_and_status
+    if will_save_change_to_status?
+      self.active = (status == "active") if has_attribute?(:active)
+    elsif will_save_change_to_active?
+      self.status = active? ? "active" : "archived"
+    else
+      self.status ||= (active? ? "active" : "archived")
+      self.active = (status == "active") if has_attribute?(:active)
+    end
+  end
 
   def ends_on_is_after_starts_on
     return if starts_on.blank? || ends_on.blank? || ends_on >= starts_on
