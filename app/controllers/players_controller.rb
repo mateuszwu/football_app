@@ -9,11 +9,12 @@ class PlayersController < ApplicationController
     player = Player.new(player_params)
 
     if player.save
-      cookies[:pending_player_edit_token] = {
+      cookies.encrypted[:pending_player_edit_token] = {
         value: Players::GenerateEditToken.call(player: player),
         expires: Players::GenerateEditToken::EXPIRATION.from_now,
         httponly: true,
-        same_site: :lax
+        same_site: :lax,
+        secure: Rails.env.production?
       }
 
       redirect_to edit_player_path(player), notice: "Zgloszenie zawodnika zostalo zapisane i czeka na akceptacje."
@@ -54,7 +55,7 @@ class PlayersController < ApplicationController
   end
 
   def pending_player_for_current_device!
-    payload = Players::DecodeEditToken.call(token: cookies[:pending_player_edit_token])
+    payload = Players::DecodeEditToken.call(token: cookies.encrypted[:pending_player_edit_token])
     player = Player.pending.find_by(id: params[:id])
 
     return redirect_to(new_player_path, alert: "Brak dostepu do edycji tego zgloszenia.") if payload.blank? || player.blank?

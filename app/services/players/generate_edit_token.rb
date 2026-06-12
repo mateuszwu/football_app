@@ -2,6 +2,7 @@ module Players
   class GenerateEditToken
     ALGORITHM = "HS256".freeze
     EXPIRATION = 6.hours.freeze
+    PURPOSE = "player_edit".freeze
 
     def self.call(player:)
       new(player:).call
@@ -22,6 +23,7 @@ module Players
     def payload
       {
         "player_id" => player.id,
+        "purpose" => PURPOSE,
         "exp" => EXPIRATION.from_now.to_i
       }
     end

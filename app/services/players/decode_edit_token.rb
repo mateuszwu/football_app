@@ -12,6 +12,8 @@ module Players
 
     def call
       payload, = JWT.decode(token, Rails.application.secret_key_base, true, algorithm: ALGORITHM)
+      return nil unless payload["purpose"] == GenerateEditToken::PURPOSE
+
       payload
     rescue JWT::DecodeError, JWT::ExpiredSignature
       nil
