@@ -26,14 +26,14 @@ module Admin
 
     def approve
       player = Player.find(params[:id])
-      player.update!(approval_status: "approved")
+      player.update!(approval_status: "approved", approved_at: Time.current, rejected_at: nil, active: true)
 
       redirect_to admin_players_path, notice: "Player approved"
     end
 
     def reject
       player = Player.find(params[:id])
-      player.update!(approval_status: "rejected")
+      player.update!(approval_status: "rejected", rejected_at: Time.current, approved_at: nil, active: false)
 
       redirect_to admin_players_path, notice: "Player rejected"
     end

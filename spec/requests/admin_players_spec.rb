@@ -211,13 +211,17 @@ RSpec.describe "Admin players" do
         begin
           original_admin_password = ENV["FOOTBALL_APP_ADMIN_PASSWORD"]
           ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = "secret-password"
-          player = create(:player, approval_status: "pending")
+          player = create(:player, approval_status: "pending", active: false, approved_at: nil, rejected_at: Time.current)
 
           post "/admin/session", params: { password: "secret-password" }
           patch "/admin/players/#{player.id}/approve"
 
           expect(response).to redirect_to(admin_players_path)
-          expect(player.reload.approval_status).to eq("approved")
+          player.reload
+          expect(player.approval_status).to eq("approved")
+          expect(player).to be_active
+          expect(player.approved_at).to be_present
+          expect(player.rejected_at).to be_nil
         ensure
           if original_admin_password.nil?
             ENV.delete("FOOTBALL_APP_ADMIN_PASSWORD")
@@ -246,13 +250,17 @@ RSpec.describe "Admin players" do
         begin
           original_admin_password = ENV["FOOTBALL_APP_ADMIN_PASSWORD"]
           ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = "secret-password"
-          player = create(:player, approval_status: "pending")
+          player = create(:player, approval_status: "pending", active: true, approved_at: Time.current, rejected_at: nil)
 
           post "/admin/session", params: { password: "secret-password" }
           patch "/admin/players/#{player.id}/reject"
 
           expect(response).to redirect_to(admin_players_path)
-          expect(player.reload.approval_status).to eq("rejected")
+          player.reload
+          expect(player.approval_status).to eq("rejected")
+          expect(player).not_to be_active
+          expect(player.rejected_at).to be_present
+          expect(player.approved_at).to be_nil
         ensure
           if original_admin_password.nil?
             ENV.delete("FOOTBALL_APP_ADMIN_PASSWORD")
