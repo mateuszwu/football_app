@@ -176,6 +176,44 @@ RSpec.describe "Matches" do
         expect(response.body).to include("00:00")
         expect(response.body).to include("No players assigned yet.")
       end
+
+      it "shows the pre-match lineup editor only for admins" do
+        begin
+          original_admin_password = ENV["FOOTBALL_APP_ADMIN_PASSWORD"]
+          ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = "secret-password"
+          match_day = create(:match_day)
+          team_setup = create(:team_setup, match_day:)
+          home_team = create(:team, team_setup:, match: nil, name: "Team A", team_type: Team::TEAM_TYPE_MATCH)
+          away_team = create(:team, team_setup:, match: nil, name: "Team B", team_type: Team::TEAM_TYPE_MATCH)
+          create(:team_player, team: home_team, player: create(:player, name: "Adam", nickname: "adam"))
+          create(:team_player, team: away_team, player: create(:player, name: "Marek", nickname: "marek", phone: "+48999999998"))
+          match = create(:match, match_day:, home_team:, away_team:, started_at: nil)
+          home_team.update!(match:)
+          away_team.update!(match:)
+
+          get "/matches/#{match.id}"
+
+          expect(response.body).not_to include("Pre-match lineup editor")
+          expect(response.body).not_to include("Start match")
+
+          post "/admin/session", params: { password: "secret-password" }
+          get "/matches/#{match.id}"
+
+          expect(response.body).to include("Pre-match lineup editor")
+          expect(response.body).to include("Reset to baseline")
+          expect(response.body).to include("Copy previous match")
+          expect(response.body).to include("Start match")
+          expect(response.body).to include("Save lineup")
+          expect(response.body).to include("Add team")
+          expect(response.body).to include("data-lineup-editor-input-name-prefix-value=\"match[teams_data]\"")
+        ensure
+          if original_admin_password.nil?
+            ENV.delete("FOOTBALL_APP_ADMIN_PASSWORD")
+          else
+            ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = original_admin_password
+          end
+        end
+      end
     end
 
     context "when the match is finished" do
@@ -304,6 +342,182 @@ RSpec.describe "Matches" do
           else
             ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = original_admin_password
           end
+        end
+      end
+    end
+  end
+
+  describe "PATCH /matches/:id/start" do
+    it "requires admin access" do
+      match = create(:match, started_at: nil)
+
+      patch "/matches/#{match.id}/start"
+
+      expect(response).to redirect_to(root_path)
+      expect(flash[:alert]).to eq("Admin access required")
+    end
+
+    it "starts a prepared match" do
+      begin
+        original_admin_password = ENV["FOOTBALL_APP_ADMIN_PASSWORD"]
+        ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = "secret-password"
+        match_day = create(:match_day, status: "ready")
+        team_setup = create(:team_setup, match_day:)
+        home_team = create(:team, team_setup:, team_type: Team::TEAM_TYPE_MATCH)
+        away_team = create(:team, team_setup:, team_type: Team::TEAM_TYPE_MATCH)
+        create(:team_player, team: home_team, player: create(:player))
+        create(:team_player, team: away_team, player: create(:player, nickname: "away", phone: "+48999999998"))
+        match = create(:match, match_day:, home_team:, away_team:, started_at: nil)
+        home_team.update!(match:)
+        away_team.update!(match:)
+        post "/admin/session", params: { password: "secret-password" }
+
+        travel_to Time.zone.parse("2026-06-19 19:15:00") do
+          patch "/matches/#{match.id}/start"
+        end
+
+        expect(response).to redirect_to(match_path(match))
+        expect(flash[:notice]).to eq("Match started")
+        expect(match.reload.started_at).to eq(Time.zone.parse("2026-06-19 19:15:00"))
+        expect(match_day.reload.status).to eq("in_progress")
+      ensure
+        if original_admin_password.nil?
+          ENV.delete("FOOTBALL_APP_ADMIN_PASSWORD")
+        else
+          ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = original_admin_password
+        end
+      end
+    end
+  end
+
+  describe "PATCH /matches/:id/update_lineup" do
+    it "saves an edited pre-match lineup for admins" do
+      begin
+        original_admin_password = ENV["FOOTBALL_APP_ADMIN_PASSWORD"]
+        ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = "secret-password"
+        match_day = create(:match_day)
+        team_setup = create(:team_setup, match_day:)
+        first_player = create(:player)
+        second_player = create(:player, name: "Second", nickname: "second", phone: "+48999999998")
+        third_player = create(:player, name: "Third", nickname: "third", phone: "+48999999997")
+        create(:match_day_player, match_day:, player: first_player)
+        create(:match_day_player, match_day:, player: second_player)
+        create(:match_day_player, match_day:, player: third_player)
+        home_team = create(:team, team_setup:, name: "Team A", team_type: Team::TEAM_TYPE_MATCH)
+        away_team = create(:team, team_setup:, name: "Team B", team_type: Team::TEAM_TYPE_MATCH)
+        create(:team_player, team: home_team, player: first_player)
+        create(:team_player, team: away_team, player: second_player)
+        match = create(:match, match_day:, home_team:, away_team:, started_at: nil)
+        home_team.update!(match:)
+        away_team.update!(match:)
+        post "/admin/session", params: { password: "secret-password" }
+
+        patch "/matches/#{match.id}/update_lineup", params: {
+          match: {
+            teams_data: [
+              { id: home_team.id, name: "Team A", player_ids: [ second_player.id.to_s ] },
+              { id: away_team.id, name: "Team B", player_ids: [ first_player.id.to_s ] },
+              { name: "Waiting", player_ids: [ third_player.id.to_s ] }
+            ]
+          }
+        }
+
+        expect(response).to redirect_to(match_path(match))
+        expect(flash[:notice]).to eq("Lineup updated")
+        expect(match.reload.home_team.players).to contain_exactly(second_player)
+        expect(match.away_team.players).to contain_exactly(first_player)
+        expect(match.teams.find_by!(name: "Waiting").players).to contain_exactly(third_player)
+      ensure
+        if original_admin_password.nil?
+          ENV.delete("FOOTBALL_APP_ADMIN_PASSWORD")
+        else
+          ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = original_admin_password
+        end
+      end
+    end
+  end
+
+  describe "PATCH /matches/:id/reset_to_baseline" do
+    it "restores the baseline lineup for admins" do
+      begin
+        original_admin_password = ENV["FOOTBALL_APP_ADMIN_PASSWORD"]
+        ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = "secret-password"
+        match_day = create(:match_day)
+        team_setup = create(:team_setup, match_day:)
+        baseline_team_a = create(:team, team_setup:, name: "Team A", team_type: Team::TEAM_TYPE_BASELINE)
+        baseline_team_b = create(:team, team_setup:, name: "Team B", team_type: Team::TEAM_TYPE_BASELINE)
+        waiting_team = create(:team, team_setup:, name: "Waiting", team_type: Team::TEAM_TYPE_BASELINE, playing: false)
+        first_player = create(:player)
+        second_player = create(:player, name: "Second", nickname: "second", phone: "+48999999998")
+        third_player = create(:player, name: "Third", nickname: "third", phone: "+48999999997")
+        create(:team_player, team: baseline_team_a, player: first_player)
+        create(:team_player, team: baseline_team_b, player: second_player)
+        create(:team_player, team: waiting_team, player: third_player)
+        home_team = create(:team, team_setup:, match: nil, name: "Old Team A", team_type: Team::TEAM_TYPE_MATCH)
+        away_team = create(:team, team_setup:, match: nil, name: "Old Team B", team_type: Team::TEAM_TYPE_MATCH)
+        create(:team_player, team: home_team, player: second_player)
+        create(:team_player, team: away_team, player: first_player)
+        match = create(:match, match_day:, home_team:, away_team:, started_at: nil)
+        home_team.update!(match:)
+        away_team.update!(match:)
+        post "/admin/session", params: { password: "secret-password" }
+
+        patch "/matches/#{match.id}/reset_to_baseline"
+
+        expect(response).to redirect_to(match_path(match))
+        expect(flash[:notice]).to eq("Lineup reset to baseline")
+        expect(match.reload.home_team.players).to contain_exactly(first_player)
+        expect(match.away_team.players).to contain_exactly(second_player)
+        expect(match.teams.find_by!(name: "Waiting").players).to contain_exactly(third_player)
+      ensure
+        if original_admin_password.nil?
+          ENV.delete("FOOTBALL_APP_ADMIN_PASSWORD")
+        else
+          ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = original_admin_password
+        end
+      end
+    end
+  end
+
+  describe "PATCH /matches/:id/copy_previous_lineup" do
+    it "restores the previous match lineup for admins" do
+      begin
+        original_admin_password = ENV["FOOTBALL_APP_ADMIN_PASSWORD"]
+        ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = "secret-password"
+        match_day = create(:match_day)
+        team_setup = create(:team_setup, match_day:)
+        baseline_team_a = create(:team, team_setup:, name: "Team A", team_type: Team::TEAM_TYPE_BASELINE)
+        baseline_team_b = create(:team, team_setup:, name: "Team B", team_type: Team::TEAM_TYPE_BASELINE)
+        previous_match = create(:match, match_day:, home_team: baseline_team_a, away_team: baseline_team_b)
+        first_player = create(:player)
+        second_player = create(:player, name: "Second", nickname: "second", phone: "+48999999998")
+        third_player = create(:player, name: "Third", nickname: "third", phone: "+48999999997")
+        previous_home_team = create(:team, team_setup:, match: previous_match, name: "Team A", team_type: Team::TEAM_TYPE_MATCH, source_team: baseline_team_a)
+        previous_away_team = create(:team, team_setup:, match: previous_match, name: "Team B", team_type: Team::TEAM_TYPE_MATCH, source_team: baseline_team_b)
+        previous_waiting_team = create(:team, team_setup:, match: previous_match, name: "Waiting", team_type: Team::TEAM_TYPE_MATCH, playing: false)
+        previous_match.update!(home_team: previous_home_team, away_team: previous_away_team)
+        create(:team_player, team: previous_home_team, player: first_player)
+        create(:team_player, team: previous_away_team, player: second_player)
+        create(:team_player, team: previous_waiting_team, player: third_player)
+        current_home_team = create(:team, team_setup:, match: nil, name: "Current A", team_type: Team::TEAM_TYPE_MATCH)
+        current_away_team = create(:team, team_setup:, match: nil, name: "Current B", team_type: Team::TEAM_TYPE_MATCH)
+        match = create(:match, match_day:, home_team: current_home_team, away_team: current_away_team, started_at: nil)
+        current_home_team.update!(match:)
+        current_away_team.update!(match:)
+        post "/admin/session", params: { password: "secret-password" }
+
+        patch "/matches/#{match.id}/copy_previous_lineup"
+
+        expect(response).to redirect_to(match_path(match))
+        expect(flash[:notice]).to eq("Previous match lineup copied")
+        expect(match.reload.home_team.players).to contain_exactly(first_player)
+        expect(match.away_team.players).to contain_exactly(second_player)
+        expect(match.teams.find_by!(name: "Waiting").players).to contain_exactly(third_player)
+      ensure
+        if original_admin_password.nil?
+          ENV.delete("FOOTBALL_APP_ADMIN_PASSWORD")
+        else
+          ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = original_admin_password
         end
       end
     end

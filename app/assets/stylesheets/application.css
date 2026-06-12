@@ -374,6 +374,11 @@
   cursor: grabbing;
 }
 
+.lineup-card--selected {
+  outline: 2px solid #1338be;
+  box-shadow: 0 0 0 4px rgba(19, 56, 190, 0.15);
+}
+
 .relationship-list {
   display: grid;
   gap: 0.75rem;
@@ -532,4 +537,3 @@
   color: #6b7280;
   font-weight: 500;
 }
-

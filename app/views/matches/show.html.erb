@@ -142,7 +142,7 @@
     </article>
   </div>
 
-  <% recent_goals = match.match_goals.includes(:scorer, :assistant, :scoring_team).order(scored_at: :desc) %>
+<% recent_goals = match.match_goals.includes(:scorer, :assistant, :scoring_team).order(scored_at: :desc) %>
   <% if recent_goals.any? %>
     <section class="live-match__events">
       <h2>Recent events</h2>
@@ -172,6 +172,45 @@
 
   <% if admin_signed_in? %>
     <section class="live-match__admin-panel">
+      <% if match.not_started? %>
+        <h2>Pre-match lineup editor</h2>
+        <div class="form-actions">
+          <%= button_to "Reset to baseline", reset_to_baseline_match_path(match), method: :patch, class: "button button--secondary" %>
+          <%= button_to "Copy previous match", copy_previous_lineup_match_path(match), method: :patch, class: "button button--secondary" %>
+          <%= button_to "Start match", start_match_path(match), method: :patch, class: "button button--primary", data: { turbo_confirm: "Start this match with the current lineup?" } %>
+        </div>
+
+        <%= form_with url: update_lineup_match_path(match), scope: :match, method: :patch, local: true, class: "admin-form" do %>
+          <div
+            class="lineup-editor"
+            data-controller="lineup-editor"
+            data-lineup-editor-input-name-prefix-value="match[teams_data]"
+            data-lineup-editor-players-value="<%= lineup_editor_state[:players].to_json %>"
+            data-lineup-editor-teams-value="<%= lineup_editor_state[:teams].map { |team| { id: team.id, name: team.name, player_ids: team.player_ids.map(&:to_s) } }.to_json %>"
+          >
+            <div class="form-actions">
+              <button type="button" class="button button--secondary" data-action="lineup-editor#addTeam">Add team</button>
+            </div>
+
+            <div class="lineup-editor__columns">
+              <section class="lineup-column" data-lineup-column="pool">
+                <header class="lineup-column__header">
+                  <h3>Bench</h3>
+                  <p>Drag players between teams or click two players to swap them.</p>
+                </header>
+                <div class="lineup-column__list" data-lineup-list="pool" data-lineup-editor-target="pool"></div>
+              </section>
+
+              <div class="lineup-editor__dynamic-columns" data-lineup-editor-target="columnsContainer"></div>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <%= submit_tag "Save lineup", class: "button button--primary" %>
+          </div>
+        <% end %>
+      <% end %>
+
       <% if match.in_progress? %>
         <div class="form-actions">
           <%= button_to "Finish match", finish_match_path(match), method: :patch, class: "button button--danger", data: { turbo_confirm: "Finish this match?" } %>

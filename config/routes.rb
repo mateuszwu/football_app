@@ -22,7 +22,11 @@ Rails.application.routes.draw do
 
   resources :matches, only: :show do
     member do
+      patch :copy_previous_lineup
       patch :finish
+      patch :reset_to_baseline
+      patch :start
+      patch :update_lineup
     end
 
     resources :goals, only: %i[create destroy], controller: "match_goals"

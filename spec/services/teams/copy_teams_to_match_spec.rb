@@ -2,7 +2,7 @@ require "rails_helper"
 
 RSpec.describe Teams::CopyTeamsToMatch do
   describe ".call" do
-    it "copies playing baseline teams into the first match" do
+    it "copies baseline teams into the first match" do
       match_day = create(:match_day)
       team_setup = create(:team_setup, match_day: match_day)
       baseline_team_a = create(:team, team_setup:, name: "Team A", team_type: Team::TEAM_TYPE_BASELINE, lineup_source: Team::LINEUP_SOURCE_MANUAL)
@@ -29,7 +29,8 @@ RSpec.describe Teams::CopyTeamsToMatch do
       expect(match.away_team.lineup_source).to eq(Team::LINEUP_SOURCE_MANUAL)
       expect(match.home_team.players).to contain_exactly(first_player)
       expect(match.away_team.players).to contain_exactly(second_player)
-      expect(match.teams.map(&:name)).not_to include("Waiting")
+      expect(match.teams.find_by!(name: "Waiting").players).to contain_exactly(waiting_player)
+      expect(match.teams.find_by!(name: "Waiting")).not_to be_playing
     end
 
     it "copies the previous match teams for subsequent matches" do
@@ -40,12 +41,15 @@ RSpec.describe Teams::CopyTeamsToMatch do
       previous_match = create(:match, match_day:, home_team: baseline_team_a, away_team: baseline_team_b)
       home_player = create(:player)
       away_player = create(:player, name: "Away", nickname: "away", phone: "+48999999998")
+      waiting_player = create(:player, name: "Waiting Player", nickname: "waiting", phone: "+48999999997")
 
       first_match_home = create(:team, team_setup:, match: previous_match, name: "Team A", team_type: Team::TEAM_TYPE_MATCH, lineup_source: Team::LINEUP_SOURCE_AUTO, source_team: baseline_team_a)
       first_match_away = create(:team, team_setup:, match: previous_match, name: "Team B", team_type: Team::TEAM_TYPE_MATCH, lineup_source: Team::LINEUP_SOURCE_AUTO, source_team: baseline_team_b)
+      waiting_team = create(:team, team_setup:, match: previous_match, name: "Waiting", team_type: Team::TEAM_TYPE_MATCH, lineup_source: Team::LINEUP_SOURCE_MANUAL, playing: false)
       previous_match.update!(home_team: first_match_home, away_team: first_match_away)
       create(:team_player, team: first_match_home, player: home_player)
       create(:team_player, team: first_match_away, player: away_player)
+      create(:team_player, team: waiting_team, player: waiting_player)
 
       current_match = create(:match, match_day:, home_team: baseline_team_a, away_team: baseline_team_b)
 
@@ -58,6 +62,8 @@ RSpec.describe Teams::CopyTeamsToMatch do
       expect(current_match.away_team.players).to contain_exactly(away_player)
       expect(current_match.home_team.match).to eq(current_match)
       expect(current_match.away_team.match).to eq(current_match)
+      expect(current_match.teams.find_by!(name: "Waiting").players).to contain_exactly(waiting_player)
+      expect(current_match.teams.find_by!(name: "Waiting")).not_to be_playing
     end
 
     it "does not mutate the previous match lineup when the new match changes" do
