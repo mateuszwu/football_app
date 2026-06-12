@@ -83,7 +83,20 @@ module Ratings
         team_player.update!(elo_before:, elo_after:, elo_delta: delta)
         player_season_stat.update!(elo: elo_after)
         player.update!(elo: elo_after)
-        PlayerRatingChange.create!(player:, season:, match:, elo_before:, elo_after:, delta:)
+        Ratings::RecordPlayerRatingChange.call(
+          player:,
+          season:,
+          match_day: match.match_day,
+          match:,
+          rating_scope: PlayerRatingChange::RATING_SCOPE_SEASON,
+          source_type: PlayerRatingChange::SOURCE_TYPE_MATCH,
+          reason: "match_elo",
+          old_elo_score: elo_before,
+          elo_delta: delta,
+          new_elo_score: elo_after,
+          elo_k_value: season.elo_k_value,
+          player_advantage_elo: season.player_advantage_elo
+        )
       end
     end
   end

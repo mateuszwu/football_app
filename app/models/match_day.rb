@@ -10,6 +10,7 @@ class MatchDay < ApplicationRecord
   belongs_to :season
   has_many :match_day_players, dependent: :destroy
   has_many :players, through: :match_day_players
+  has_many :player_rating_changes, dependent: :destroy
   has_many :team_setups, dependent: :destroy
   has_many :teams, through: :team_setups
   has_many :matches, dependent: :destroy

@@ -99,14 +99,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_12_114500) do
 
   create_table "player_rating_changes", force: :cascade do |t|
     t.datetime "created_at", null: false
-    t.integer "delta", null: false
-    t.integer "elo_after", null: false
-    t.integer "elo_before", null: false
+    t.integer "elo_delta"
+    t.decimal "elo_k_value", precision: 6, scale: 2
     t.integer "match_id"
+    t.integer "match_day_id", null: false
+    t.integer "new_elo_score"
+    t.integer "old_elo_score"
     t.integer "player_id", null: false
+    t.decimal "performance_delta", precision: 8, scale: 2
+    t.decimal "player_advantage_elo", precision: 6, scale: 2
+    t.string "rating_scope", null: false
+    t.string "reason", null: false
     t.integer "season_id", null: false
+    t.string "source_type", null: false
     t.datetime "updated_at", null: false
     t.index ["match_id"], name: "index_player_rating_changes_on_match_id"
+    t.index ["match_day_id"], name: "index_player_rating_changes_on_match_day_id"
     t.index ["player_id"], name: "index_player_rating_changes_on_player_id"
     t.index ["season_id"], name: "index_player_rating_changes_on_season_id"
   end
@@ -239,6 +247,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_12_114500) do
   add_foreign_key "matches", "teams", column: "away_team_id"
   add_foreign_key "matches", "teams", column: "home_team_id"
   add_foreign_key "player_rating_changes", "matches"
+  add_foreign_key "player_rating_changes", "match_days"
   add_foreign_key "player_rating_changes", "players"
   add_foreign_key "player_rating_changes", "seasons"
   add_foreign_key "player_season_stats", "players"

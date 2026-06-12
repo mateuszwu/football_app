@@ -40,10 +40,30 @@ module Ratings
 
     def apply_goal(goal)
       apply_player_points(player: goal.scorer, goal_delta: 1, assist_delta: 0, performance_delta: season.goal_points)
+      Ratings::RecordPlayerRatingChange.call(
+        player: goal.scorer,
+        season:,
+        match_day: match.match_day,
+        match:,
+        rating_scope: PlayerRatingChange::RATING_SCOPE_SEASON,
+        source_type: PlayerRatingChange::SOURCE_TYPE_GOAL,
+        reason: "goal_performance",
+        performance_delta: season.goal_points
+      )
 
       return unless goal.assistant.present?
 
       apply_player_points(player: goal.assistant, goal_delta: 0, assist_delta: 1, performance_delta: season.assist_points)
+      Ratings::RecordPlayerRatingChange.call(
+        player: goal.assistant,
+        season:,
+        match_day: match.match_day,
+        match:,
+        rating_scope: PlayerRatingChange::RATING_SCOPE_SEASON,
+        source_type: PlayerRatingChange::SOURCE_TYPE_ASSIST,
+        reason: "assist_performance",
+        performance_delta: season.assist_points
+      )
     end
 
     def apply_player_points(player:, goal_delta:, assist_delta:, performance_delta:)

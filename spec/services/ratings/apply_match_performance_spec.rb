@@ -33,6 +33,14 @@ RSpec.describe Ratings::ApplyMatchPerformance do
       expect(scorer.reload.global_performance_score).to eq(BigDecimal("1.5"))
       expect(assistant.reload.global_performance_score).to eq(BigDecimal("0.9"))
       expect(opponent.reload.global_performance_score).to eq(BigDecimal("0.0"))
+      expect(PlayerRatingChange.where(match:).count).to eq(2)
+      expect(PlayerRatingChange.find_by!(player: scorer, match:, source_type: PlayerRatingChange::SOURCE_TYPE_GOAL).attributes.slice("match_day_id", "rating_scope", "reason", "performance_delta")).to eq(
+        "match_day_id" => match_day.id,
+        "rating_scope" => PlayerRatingChange::RATING_SCOPE_SEASON,
+        "reason" => "goal_performance",
+        "performance_delta" => BigDecimal("1.5")
+      )
+      expect(PlayerRatingChange.find_by!(player: assistant, match:, source_type: PlayerRatingChange::SOURCE_TYPE_ASSIST).performance_delta).to eq(BigDecimal("0.9"))
       expect(match.reload.performance_processed_at).to be_present
     end
 
@@ -56,6 +64,7 @@ RSpec.describe Ratings::ApplyMatchPerformance do
       expect(PlayerSeasonStat.find_by!(player: scorer, season: season).goals).to eq(1)
       expect(PlayerSeasonStat.find_by!(player: scorer, season: season).performance_score).to eq(BigDecimal("1.0"))
       expect(PlayerSeasonStat.find_by(player: assistant, season: season)).to be_nil
+      expect(PlayerRatingChange.where(match:).count).to eq(1)
     end
 
     it "does not create assist points for unassisted goals" do
@@ -76,6 +85,7 @@ RSpec.describe Ratings::ApplyMatchPerformance do
         "goals" => 1,
         "assists" => 0
       )
+      expect(PlayerRatingChange.where(match:, source_type: PlayerRatingChange::SOURCE_TYPE_ASSIST)).to be_empty
     end
 
     it "does not process the same match twice" do
@@ -96,6 +106,7 @@ RSpec.describe Ratings::ApplyMatchPerformance do
       expect(first_result).to be(true)
       expect(second_result).to be(false)
       expect(PlayerSeasonStat.find_by!(player: scorer, season: season).performance_score).to eq(BigDecimal("1.0"))
+      expect(PlayerRatingChange.where(match:).count).to eq(1)
     end
   end
 end
