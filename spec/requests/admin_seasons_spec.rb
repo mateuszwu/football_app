@@ -211,6 +211,30 @@ RSpec.describe "Admin seasons" do
         end
       end
     end
+
+    context "when the visitor is signed in as admin and the season is locked" do
+      it "does not update the season" do
+        begin
+          original_admin_password = ENV["FOOTBALL_APP_ADMIN_PASSWORD"]
+          ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = "secret-password"
+          season = create(:season, name: "Spring 2026", elo_settings_locked: true, status: Season::STATUS_ACTIVE)
+
+          post "/admin/session", params: { password: "secret-password" }
+          patch "/admin/seasons/#{season.id}", params: { season: { name: "Changed Season", status: Season::STATUS_CLOSED } }
+
+          expect(response).to redirect_to(admin_seasons_path)
+          expect(flash[:alert]).to eq("Season settings are locked")
+          expect(season.reload.name).to eq("Spring 2026")
+          expect(season.status).to eq(Season::STATUS_ACTIVE)
+        ensure
+          if original_admin_password.nil?
+            ENV.delete("FOOTBALL_APP_ADMIN_PASSWORD")
+          else
+            ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = original_admin_password
+          end
+        end
+      end
+    end
   end
 
   describe "GET /admin/seasons/:id/edit" do
