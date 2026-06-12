@@ -28,8 +28,9 @@ module Ratings
 
     def initial_elo_map
       Hash.new(season.initial_elo).tap do |map|
-        Player.where.not(elo: nil).find_each do |player|
-          map[player.id] = player.elo
+        season_players.find_each do |player|
+          player_season_stat = InitializePlayerSeasonStat.call(player:, season:)
+          map[player.id] = player_season_stat.elo
         end
       end
     end
@@ -100,9 +101,16 @@ module Ratings
       Player.transaction do
         elo_map.each do |player_id, elo|
           Player.where(id: player_id).update_all(elo: elo)
-          PlayerSeasonStat.find_or_initialize_by(player_id: player_id, season: season).update!(elo: elo)
+          player = Player.find(player_id)
+          InitializePlayerSeasonStat.call(player:, season:).update!(elo: elo)
         end
       end
+    end
+
+    def season_players
+      Player.joins(team_players: { team: { team_setup: :match_day } })
+            .where(match_days: { season_id: season.id })
+            .distinct
     end
   end
 end
