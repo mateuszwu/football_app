@@ -22,6 +22,15 @@ RSpec.describe Ratings::ProcessMatchElo do
       expect(home_team.team_players.find_by!(player: home_player).elo_delta).to eq(8)
       expect(away_team.team_players.find_by!(player: away_player).elo_delta).to eq(-8)
       expect(PlayerRatingChange.where(match:).count).to eq(2)
+      expect(PlayerRatingChange.find_by!(player: home_player, match:).attributes.slice("match_day_id", "rating_scope", "source_type", "reason", "old_elo_score", "elo_delta", "new_elo_score")).to eq(
+        "match_day_id" => match_day.id,
+        "rating_scope" => PlayerRatingChange::RATING_SCOPE_SEASON,
+        "source_type" => PlayerRatingChange::SOURCE_TYPE_MATCH,
+        "reason" => "match_elo",
+        "old_elo_score" => 1000,
+        "elo_delta" => 8,
+        "new_elo_score" => 1008
+      )
       expect(match.reload.elo_processed_at).to be_present
     end
 
@@ -97,6 +106,7 @@ RSpec.describe Ratings::ProcessMatchElo do
       expect(first_result).to be(true)
       expect(second_result).to be(false)
       expect(PlayerRatingChange.where(match:).count).to eq(2)
+      expect(PlayerRatingChange.where(match:, source_type: PlayerRatingChange::SOURCE_TYPE_MATCH).count).to eq(2)
     end
   end
 end
