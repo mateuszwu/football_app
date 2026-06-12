@@ -25,7 +25,7 @@
       <h2><%= match.home_team.name %></h2>
       <strong class="live-match__score"><%= match.home_score %></strong>
 
-      <% home_goals = match.match_goals.includes(:scorer, :assistant).where(scoring_team: match.home_team).order(:scored_at) %>
+      <% home_goals = match.match_goals.active.includes(:scorer, :assistant).where(scoring_team: match.home_team).order(:scored_at) %>
       <% if home_goals.any? %>
         <ul class="live-match__team-goals">
           <% home_goals.each do |goal| %>
@@ -83,7 +83,7 @@
       <h2><%= match.away_team.name %></h2>
       <strong class="live-match__score"><%= match.away_score %></strong>
 
-      <% away_goals = match.match_goals.includes(:scorer, :assistant).where(scoring_team: match.away_team).order(:scored_at) %>
+      <% away_goals = match.match_goals.active.includes(:scorer, :assistant).where(scoring_team: match.away_team).order(:scored_at) %>
       <% if away_goals.any? %>
         <ul class="live-match__team-goals">
           <% away_goals.each do |goal| %>
@@ -142,7 +142,7 @@
     </article>
   </div>
 
-<% recent_goals = match.match_goals.includes(:scorer, :assistant, :scoring_team).order(scored_at: :desc) %>
+<% recent_goals = match.match_goals.active.includes(:scorer, :assistant, :scoring_team).order(scored_at: :desc) %>
   <% if recent_goals.any? %>
     <section class="live-match__events">
       <h2>Recent events</h2>

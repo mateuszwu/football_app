@@ -12,14 +12,15 @@ module Matches
     def call
       return false unless match.started_at.present?
       return false unless goal.match_id == match.id
+      return false if goal.undone?
 
       Match.transaction do
-        goal.destroy!
+        goal.update!(undone_at: Time.current)
         match.recalculate_score!
       end
 
       true
-    rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotDestroyed
+    rescue ActiveRecord::RecordInvalid
       false
     end
 

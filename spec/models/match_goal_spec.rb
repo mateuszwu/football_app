@@ -56,4 +56,18 @@ RSpec.describe MatchGoal do
       end
     end
   end
+
+  describe ".active" do
+    it "returns only goals that were not undone" do
+      match = create(:match)
+      scorer = create(:player)
+      create(:team_player, team: match.home_team, player: scorer)
+      active_goal = create(:match_goal, match:, scoring_team: match.home_team, scorer:, scored_at: Time.zone.now)
+      create(:match_goal, match:, scoring_team: match.home_team, scorer:, scored_at: 1.minute.from_now, undone_at: Time.zone.now)
+
+      result = described_class.active
+
+      expect(result).to contain_exactly(active_goal)
+    end
+  end
 end
