@@ -181,6 +181,9 @@ RSpec.describe "Admin match days" do
           expect(match_day.teams.find_by!(name: "Team A").players).to contain_exactly(first_player)
           expect(match_day.teams.find_by!(name: "Team B").players).to contain_exactly(second_player)
           expect(match_day.teams.find_by!(name: "Team 3").players).to contain_exactly(third_player)
+          expect(match_day.teams.find_by!(name: "Team A")).to be_playing
+          expect(match_day.teams.find_by!(name: "Team B")).to be_playing
+          expect(match_day.teams.find_by!(name: "Team 3")).not_to be_playing
         ensure
           if original_admin_password.nil?
             ENV.delete("FOOTBALL_APP_ADMIN_PASSWORD")

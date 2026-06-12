@@ -26,6 +26,30 @@ RSpec.describe TeamSetups::SaveManualTeams do
         expect(match_day.teams.find_by!(name: "Team A").lineup_source).to eq(Team::LINEUP_SOURCE_MANUAL)
         expect(match_day.teams.find_by!(name: "Team A").team_players.first.player_name).to eq("Player One")
         expect(match_day.teams.find_by!(name: "Team B").team_players.first.role_code).to eq("MID")
+        expect(match_day.teams.find_by!(name: "Team A")).to be_playing
+        expect(match_day.teams.find_by!(name: "Team B")).to be_playing
+      end
+
+      it "marks extra baseline teams as non-playing waiting teams" do
+        match_day = create(:match_day)
+        first_player = create(:player, approval_status: "approved", active: true)
+        second_player = create(:player, name: "Second", nickname: "second", phone: "+48999999998", approval_status: "approved", active: true)
+        third_player = create(:player, name: "Third", nickname: "third", phone: "+48999999997", approval_status: "approved", active: true)
+
+        result = described_class.call(
+          match_day: match_day,
+          selected_player_ids: [ first_player.id, second_player.id, third_player.id ],
+          teams_data: [
+            { name: "Team A", player_ids: [ first_player.id.to_s ] },
+            { name: "Team B", player_ids: [ second_player.id.to_s ] },
+            { name: "Waiting", player_ids: [ third_player.id.to_s ] }
+          ]
+        )
+
+        expect(result).to be(true)
+        expect(match_day.teams.find_by!(name: "Team A")).to be_playing
+        expect(match_day.teams.find_by!(name: "Team B")).to be_playing
+        expect(match_day.teams.find_by!(name: "Waiting")).not_to be_playing
       end
     end
 

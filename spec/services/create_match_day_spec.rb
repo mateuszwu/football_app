@@ -54,6 +54,37 @@ RSpec.describe CreateMatchDay do
         expect(match_day.teams.find_by!(name: "Team A").players).to contain_exactly(first_player)
         expect(match_day.teams.find_by!(name: "Team B").players).to contain_exactly(second_player)
         expect(match_day.match_day_players.map(&:match_day_vote_token)).to all(be_present)
+        expect(match_day.teams.find_by!(name: "Team A")).to be_playing
+        expect(match_day.teams.find_by!(name: "Team B")).to be_playing
+      end
+
+      it "creates an optional waiting baseline team as non-playing" do
+        season = create(:season)
+        first_player = create(:player, approval_status: "approved", active: true)
+        second_player = create(:player, name: "Second", nickname: "second", phone: "+48999999998", approval_status: "approved", active: true)
+        third_player = create(:player, name: "Third", nickname: "third", phone: "+48999999997", approval_status: "approved", active: true)
+        match_day = MatchDay.new
+        params = {
+          season_id: season.id,
+          played_on: Date.new(2026, 6, 5),
+          player_ids: [ first_player.id.to_s, second_player.id.to_s, third_player.id.to_s ],
+          teams_data: [
+            { name: "Team A", player_ids: [ first_player.id.to_s ] },
+            { name: "Team B", player_ids: [ second_player.id.to_s ] },
+            { name: "Waiting", player_ids: [ third_player.id.to_s ] }
+          ]
+        }
+
+        result = described_class.call(
+          match_day: match_day,
+          params: params,
+          available_players: Player.approved.active.order(:name)
+        )
+
+        expect(result).to be(true)
+        expect(match_day.teams.find_by!(name: "Team A")).to be_playing
+        expect(match_day.teams.find_by!(name: "Team B")).to be_playing
+        expect(match_day.teams.find_by!(name: "Waiting")).not_to be_playing
       end
 
       it "keeps the match day in setup when selected players are not fully assigned" do
