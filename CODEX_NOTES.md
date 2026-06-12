@@ -1,79 +1,108 @@
 # Codex Context Notes
 
-## Main Rule
+## Source of Tickets
 
-The workflow is manual.
+Use `.ai/gh_issues/README.md` as the only ticket source.
 
-Do not depend on repository scripts for issue picking, CI orchestration, PR creation, or merge flow.
+Do not create GitHub issues.
+
+Do not use GitHub issue state or milestones to decide what to work on.
+
+`CODEX_NOTES.md` is the exception to the normal ticket workflow. It does not need a branch or PR. A direct commit on `main` is enough.
+
+## Ticket Order
+
+Pick tickets from the lowest number to the highest number.
+
+Only skip a ticket when:
+
+- it is already fully done, then mark it `done`, notify the user, and move to the next ticket
+- it is partially done, then finish the remaining scope and continue the normal PR flow
+
+## Ticket Status
+
+The backlog status lives in `.ai/gh_issues/README.md`.
+
+Use these transitions:
+
+- `todo` -> `in_progress` when work starts
+- `in_progress` -> `done` when the work is merged or the ticket is confirmed already fully done
+
+Do not leave a picked ticket in `todo`.
 
 ## Workflow
 
 Use this order:
 
-1. Determine the active issue from the current branch, open PRs, or GitHub issue state.
-2. If implementation is incomplete, continue coding on the current branch.
-3. When implementation is finished, run local validation manually.
-4. If CI fails, fix the smallest remaining issue and rerun the relevant checks.
-5. When CI is green, stage, commit, push, and create or update the PR manually.
-6. If a PR already exists, show the PR URL to the user and stop.
+1. Read `.ai/gh_issues/README.md`.
+2. Pick the lowest-numbered ticket that is not `done`.
+3. Check whether that ticket is already fully implemented in the codebase.
+4. If it is fully implemented, mark it `done`, notify the user, and move to the next ticket.
+5. If it is partially implemented, mark it `in_progress`, finish the remaining work, and continue.
+6. If it is not implemented, mark it `in_progress` and implement it.
+7. Run local validation manually.
+8. Stage, commit, push, and create a draft PR.
+9. Put the ticket description from `.ai/gh_issues/<ticket-file>.json` into the PR description.
+10. Share the PR link with the user for review and stop.
 
-If the user says `continue` while the current issue already has a draft PR:
+Do not merge without explicit user permission.
 
-1. Check whether the draft PR is green and ready.
-2. If it is green, tell the user review is needed.
-3. Do not merge until the user explicitly asks to merge or says the PR was reviewed.
-4. After merge, pick the next issue.
-5. Create or switch to the next issue branch.
-6. Start implementing the next issue immediately.
+## Continue / Forward Flow
 
-## Ticket Selection
+If the user says `continue`, `move forward`, or accepts the completed work:
 
-Choose work in this order:
+1. Merge the current approved PR.
+2. Change the ticket status in `.ai/gh_issues/README.md` to `done`.
+3. Pick the next lowest-numbered ticket that is not `done`.
+4. Repeat the workflow.
 
-1. If the current branch already maps to an issue, continue that issue.
-2. Otherwise inspect open GitHub issues and pick the lowest-numbered issue in the lowest open MVP milestone.
-3. Do not skip ahead to a higher MVP unless the lower milestone has no actionable open issue.
-
-Before coding, confirm the selected issue matches the branch name, working tree, and any existing PR.
+Do not merge unless the user has clearly approved it.
 
 ## Branches
 
-Prefer issue-scoped branches.
+Create a dedicated branch for each ticket before opening the PR.
 
 Preferred format:
 
 ```text
-ai/<issue-number>-short-description
-human/<issue-number>-short-description
-mixed/<issue-number>-short-description
+x(y): z
 ```
 
 Fallback when slash-prefixed refs are blocked locally:
 
 ```text
-ai-<issue-number>-short-description
-human-<issue-number>-short-description
-mixed-<issue-number>-short-description
+x(y): z
 ```
 
-Create a new branch only when the current branch is not already the correct issue branch.
+Where:
+
+- `x` = `fix`, `feat`, `chore`, `test`, `docs`, `ci`, etc.
+- `y` = `ai`, `human`, or `mixed`
+- `z` = short description
+
+Branch names should use the same pattern in a git-safe form, for example:
+
+```text
+feat/ai/add-live-match-screen
+fix/mixed/lock-finished-match
+```
 
 ## Commits
 
-Stage only files that belong to the current issue.
+Stage only files that belong to the current ticket.
 
 Use this commit format:
 
 ```text
-<type>(<origin>-<issue-number>): <message>
+x(y): z
 ```
 
 Examples:
 
 ```text
-feat(ai-43): add live match screen
-fix(human-172): hide phone from public player views
-chore(mixed-173): update CI defaults
+feat(ai): build live match screen
+fix(ai): lock finished match changes
+docs(ai): update Codex workflow notes
 ```
 
 Use:
@@ -85,85 +114,45 @@ Use:
 - `docs` for documentation-only changes
 - `ci` for automation-only changes
 
-Do not append `(#issue)` to the commit subject.
-
 ## Pull Requests
 
-Open a draft PR first when implementation is ready for CI.
+Open a draft PR first when implementation is ready for review.
 
 Use the same format as commits for the PR title:
 
 ```text
-<type>(<origin>-<issue-number>): <message>
+x(y): z
 ```
 
-Example:
+The PR description must include:
 
-```text
-feat(ai-42): Create match_events table
-```
-
-Keep the PR description short and factual:
-
-- which issue it closes, using `Closes #<issue-number>`
+- the ticket number and title
+- the ticket description copied from `.ai/gh_issues/<ticket-file>.json`
 - what changed
 - how it was validated
-- any remaining risk or follow-up
 
-After opening the PR:
+Use this repository for PR links:
 
-1. Check CI status.
-2. Fix the smallest failing issue.
-3. Push the fix.
-4. Repeat until CI is green.
-5. Share the PR URL with the user when review is needed.
+`https://github.com/mateuszwu/football_app/`
+
+When the PR is ready, share the PR URL with the user and stop.
 
 ## Communication
 
-Keep user-facing updates minimal and outcome-oriented.
+Notify the user only when:
 
-Do not narrate your thinking process, internal reasoning, or step-by-step execution by default.
+- you have a question
+- you encounter an error or blocker
+- a PR is ready for review
+- a ticket was already fully done and was marked `done`
 
-Only interrupt the user when one of these is true:
-
-- a task is finished and ready for review
-- you need approval or a decision
-- you are blocked and need input
-- there is a concrete next action or artifact such as a PR URL
-
-Prefer short status messages like:
-
-- implementation finished
-- CI passed
-- draft PR created
-- review needed
-
-Do not publish developer-only guidance or internal instruction content to the user.
-
-Do not send routine progress messages.
-
-Only message the user when one of these is true:
-
-- something is wrong
-- you need a question answered
-- you are publishing a PR link
-
-Interpretation rule:
-
-- when the user says `continue` for a draft PR, treat that as permission to check CI and prepare the next step, but not as permission to merge before human review
+Do not send routine progress updates.
 
 ## Implementation
 
-Implement the issue with the smallest correct change.
+Implement the smallest correct change for the active ticket.
 
 Do not create extra progress report files.
-
-Keep the branch self-explanatory through:
-
-- code changes
-- tests
-- commit messages
-- PR description when a PR is created
 
 Run validation manually as needed:
 
@@ -172,22 +161,6 @@ bundle exec rspec
 bin/rubocop
 bin/brakeman --no-pager
 ```
-
-If CI fails, inspect the failing command output or GitHub check logs directly and fix the smallest remaining issue first.
-
-## Issue Priority
-
-The project prioritizes the lowest open MVP milestone number first:
-
-```text
-MVP 1 - ...
-MVP 2 - ...
-MVP 3 - ...
-```
-
-Do not manually skip to a higher MVP.
-
-This is a full-AI project. Do not reject issues because they involve auth, security, billing, deployment, migrations, architecture, or complex areas.
 
 ## Style Rules
 
@@ -213,4 +186,4 @@ Do not use `before`, `after`, `around`, or `let` hooks in specs.
 
 Keep all arrange, act, and assert steps inline inside each `it` block.
 
-Use `begin`/`ensure` inside the `it` block when teardown is needed (e.g. ENV cleanup).
+Use `begin`/`ensure` inside the `it` block when teardown is needed.
