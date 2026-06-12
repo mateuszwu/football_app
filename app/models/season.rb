@@ -66,12 +66,12 @@ class Season < ApplicationRecord
 
   def sync_active_and_status
     if will_save_change_to_status?
-      self.active = (status == STATUS_ACTIVE) if has_attribute?(:active)
+      self.active = (status == STATUS_ACTIVE)
     elsif will_save_change_to_active?
       self.status = active? ? STATUS_ACTIVE : STATUS_ARCHIVED
     else
       self.status ||= (active? ? STATUS_ACTIVE : STATUS_ARCHIVED)
-      self.active = (status == STATUS_ACTIVE) if has_attribute?(:active)
+      self.active = (status == STATUS_ACTIVE)
     end
   end
 
