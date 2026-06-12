@@ -15,6 +15,7 @@ module Matches
       Match.transaction do
         update_team_results!
         match.update!(finished_at: finished_at)
+        Ratings::ApplyMatchPerformance.call(match:)
         match.match_day.update!(status: "finished") if all_match_day_matches_finished?
       end
 
