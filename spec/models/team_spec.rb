@@ -80,6 +80,23 @@ RSpec.describe Team do
         expect(team.errors[:score]).to include("must be greater than or equal to 0")
       end
     end
+
+    context "when result is supported" do
+      it "is valid" do
+        teams = Team::RESULTS.map { |result| build(:team, result: result) }
+
+        expect(teams).to all(be_valid)
+      end
+    end
+
+    context "when result is unsupported" do
+      it "is invalid" do
+        team = build(:team, result: "cancelled")
+
+        expect(team).not_to be_valid
+        expect(team.errors[:result]).to include("is not included in the list")
+      end
+    end
   end
 
   describe "associations" do

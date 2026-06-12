@@ -291,6 +291,8 @@ RSpec.describe "Matches" do
           expect(flash[:notice]).to eq("Match finished")
           expect(match.reload.finished_at).to eq(Time.zone.parse("2026-06-19 20:02:10"))
           expect(match_day.reload.status).to eq("finished")
+          expect(match.home_team.reload.result).to eq(Team::RESULT_DRAW)
+          expect(match.away_team.reload.result).to eq(Team::RESULT_DRAW)
         ensure
           if original_admin_password.nil?
             ENV.delete("FOOTBALL_APP_ADMIN_PASSWORD")
@@ -336,6 +338,34 @@ RSpec.describe "Matches" do
           expect(response).to redirect_to(match_path(match))
           expect(flash[:alert]).to eq("Could not finish match")
           expect(match.reload.finished_at).to be_nil
+        ensure
+          if original_admin_password.nil?
+            ENV.delete("FOOTBALL_APP_ADMIN_PASSWORD")
+          else
+            ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = original_admin_password
+          end
+        end
+      end
+
+      it "stores win and loss results for the playing teams" do
+        begin
+          original_admin_password = ENV["FOOTBALL_APP_ADMIN_PASSWORD"]
+          ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = "secret-password"
+          match_day = create(:match_day, status: "in_progress")
+          match = create(
+            :match,
+            match_day: match_day,
+            home_score: 3,
+            away_score: 1,
+            started_at: Time.zone.parse("2026-06-19 19:15:00")
+          )
+          post "/admin/session", params: { password: "secret-password" }
+
+          patch "/matches/#{match.id}/finish"
+
+          expect(response).to redirect_to(match_path(match))
+          expect(match.home_team.reload.result).to eq(Team::RESULT_WIN)
+          expect(match.away_team.reload.result).to eq(Team::RESULT_LOSS)
         ensure
           if original_admin_password.nil?
             ENV.delete("FOOTBALL_APP_ADMIN_PASSWORD")
