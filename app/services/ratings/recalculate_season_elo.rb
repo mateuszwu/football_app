@@ -49,22 +49,14 @@ module Ratings
     end
 
     def process_match(match, elo_map)
-      home_players = match.home_team.players.to_a
-      away_players = match.away_team.players.to_a
+      Ratings::ProcessMatchElo.call(match:, season:)
 
-      return if home_players.empty? || away_players.empty?
-
-      home_avg = EffectiveTeamElo.call(players: home_players, opponent_players: away_players, elo_map: elo_map, season: season)
-      away_avg = EffectiveTeamElo.call(players: away_players, opponent_players: home_players, elo_map: elo_map, season: season)
-
-      home_score, away_score = match_scores(match)
-
-      home_players.each do |player|
-        elo_map[player.id] += elo_delta(elo_map[player.id], away_avg, home_score, season.elo_k_factor)
+      match.home_team.players.each do |player|
+        elo_map[player.id] = player.reload.elo
       end
 
-      away_players.each do |player|
-        elo_map[player.id] += elo_delta(elo_map[player.id], home_avg, away_score, season.elo_k_factor)
+      match.away_team.players.each do |player|
+        elo_map[player.id] = player.reload.elo
       end
     end
 
@@ -82,27 +74,10 @@ module Ratings
         .includes(:mvp_player, :def_player, match_day_vote_token: { match_day_player: :match_day })
     end
 
-    def match_scores(match)
-      if match.home_win?
-        [ 1.0, 0.0 ]
-      elsif match.away_win?
-        [ 0.0, 1.0 ]
-      else
-        [ 0.5, 0.5 ]
-      end
-    end
-
-    def elo_delta(player_elo, opponent_avg_elo, actual_score, k_factor)
-      expected = 1.0 / (1.0 + 10.0**((opponent_avg_elo - player_elo) / 400.0))
-      (k_factor * (actual_score - expected)).round
-    end
-
     def persist(elo_map)
       Player.transaction do
         elo_map.each do |player_id, elo|
           Player.where(id: player_id).update_all(elo: elo)
-          player = Player.find(player_id)
-          InitializePlayerSeasonStat.call(player:, season:).update!(elo: elo)
         end
       end
     end

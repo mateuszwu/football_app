@@ -47,35 +47,15 @@ RSpec.describe Ratings::RecalculateSeasonElo do
 
       # Let's calculate expected ratings:
       # Match 1: player_a (1000) vs player_b (1000) -> player_a wins.
-      # expected_a = 0.5, actual_a = 1.0 -> delta_a = 32 * (1.0 - 0.5) = 16. player_a becomes 1016.
-      # expected_b = 0.5, actual_b = 0.0 -> delta_b = 32 * (0.0 - 0.5) = -16. player_b becomes 984.
+      # expected_a = 0.5, actual_a = 1.0 -> delta_a = 16 * (1.0 - 0.5) = 8. player_a becomes 1008.
+      # expected_b = 0.5, actual_b = 0.0 -> delta_b = 16 * (0.0 - 0.5) = -8. player_b becomes 992.
       #
-      # Match 2: Team C (player_a: 1016, player_b: 984 -> avg: 1000) vs Team D (player_c: 1000 -> avg: 1000).
+      # Match 2: Team C (player_a: 1008, player_b: 992 -> avg: 1000) vs Team D (player_c: 1000, player_d: 1000 -> avg: 1000).
       # Result is 1-1 draw.
-      # For player_a:
-      # player_elo = 1016, opponent_avg_elo = 1000.
-      # expected_a = 1.0 / (1.0 + 10.0**((1000 - 1016) / 400.0)) = 1.0 / (1.0 + 10.0**(-0.04))
-      # 10**(-0.04) ≈ 0.91201
-      # expected_a = 1.0 / 1.91201 ≈ 0.523
-      # delta_a = (32 * (0.5 - 0.523)).round = (32 * -0.023).round = (-0.736).round = -1.
-      # new player_a elo = 1016 - 1 = 1015.
-      #
-      # For player_b:
-      # player_elo = 984, opponent_avg_elo = 1000.
-      # expected_b = 1.0 / (1.0 + 10.0**((1000 - 984) / 400.0)) = 1.0 / (1.0 + 10.0**0.04)
-      # 10**0.04 ≈ 1.096478
-      # expected_b = 1.0 / 2.096478 ≈ 0.477
-      # delta_b = (32 * (0.5 - 0.477)).round = (32 * 0.023).round = (0.736).round = 1.
-      # new player_b elo = 984 + 1 = 985.
-      #
-      # For player_c:
-      # player_elo = 1000, opponent_avg_elo = 1000.
-      # expected_c = 0.5
-      # delta_c = 32 * (0.5 - 0.5) = 0.
-      # new player_c elo = 1000.
+      # Both teams have the same effective Elo, so the draw produces no change.
 
-      expect(player_a.reload.elo).to eq(1015)
-      expect(player_b.reload.elo).to eq(985)
+      expect(player_a.reload.elo).to eq(1008)
+      expect(player_b.reload.elo).to eq(992)
       expect(player_c.reload.elo).to eq(1000)
       expect(player_d.reload.elo).to eq(1000)
     end
@@ -141,10 +121,10 @@ RSpec.describe Ratings::RecalculateSeasonElo do
 
       Ratings::RecalculateSeasonElo.call(season: season)
 
-      expect(player_a.reload.elo).to eq(1112)
-      expect(player_b.reload.elo).to eq(988)
-      expect(PlayerSeasonStat.find_by!(player: player_a, season: season).elo).to eq(1112)
-      expect(PlayerSeasonStat.find_by!(player: player_b, season: season).elo).to eq(988)
+      expect(player_a.reload.elo).to eq(1106)
+      expect(player_b.reload.elo).to eq(994)
+      expect(PlayerSeasonStat.find_by!(player: player_a, season: season).elo).to eq(1106)
+      expect(PlayerSeasonStat.find_by!(player: player_b, season: season).elo).to eq(994)
     end
 
     it "applies a 40 Elo advantage for each extra player" do
@@ -173,9 +153,9 @@ RSpec.describe Ratings::RecalculateSeasonElo do
 
       Ratings::RecalculateSeasonElo.call(season: season)
 
-      expect(home_player_one.reload.elo).to eq(1000)
-      expect(home_player_two.reload.elo).to eq(1000)
-      expect(away_player.reload.elo).to eq(1002)
+      expect(home_player_one.reload.elo).to eq(999)
+      expect(home_player_two.reload.elo).to eq(999)
+      expect(away_player.reload.elo).to eq(1001)
     end
   end
 end
