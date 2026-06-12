@@ -53,6 +53,33 @@ RSpec.describe Team do
         expect(team.errors[:team_type]).to include("is not included in the list")
       end
     end
+
+    context "when lineup source is missing" do
+      it "is invalid" do
+        team = build(:team, lineup_source: nil)
+
+        expect(team).not_to be_valid
+        expect(team.errors[:lineup_source]).to include("can't be blank")
+      end
+    end
+
+    context "when lineup source is unsupported" do
+      it "is invalid" do
+        team = build(:team, lineup_source: "legacy")
+
+        expect(team).not_to be_valid
+        expect(team.errors[:lineup_source]).to include("is not included in the list")
+      end
+    end
+
+    context "when score is negative" do
+      it "is invalid" do
+        team = build(:team, score: -1)
+
+        expect(team).not_to be_valid
+        expect(team.errors[:score]).to include("must be greater than or equal to 0")
+      end
+    end
   end
 
   describe "associations" do
@@ -77,6 +104,14 @@ RSpec.describe Team do
         create(:team_player, team: team, player: player)
 
         expect(team.players).to contain_exactly(player)
+      end
+
+      it "can reference a source team" do
+        source_team = create(:team)
+        team = create(:team, source_team: source_team)
+
+        expect(team.source_team).to eq(source_team)
+        expect(source_team.derived_teams).to include(team)
       end
     end
   end

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_12_081500) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_12_103000) do
   create_table "match_day_players", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.integer "match_day_id", null: false
@@ -157,7 +157,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_12_081500) do
 
   create_table "team_players", force: :cascade do |t|
     t.datetime "created_at", null: false
+    t.integer "elo_after"
+    t.integer "elo_before"
+    t.integer "elo_delta"
     t.integer "player_id", null: false
+    t.string "player_name", null: false
+    t.integer "position"
+    t.string "role_code", default: "ANY", null: false
     t.integer "team_id", null: false
     t.datetime "updated_at", null: false
     t.index ["player_id"], name: "index_team_players_on_player_id"
@@ -166,19 +172,32 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_12_081500) do
   end
 
   create_table "team_setups", force: :cascade do |t|
+    t.datetime "accepted_at"
+    t.string "algorithm_version"
     t.datetime "created_at", null: false
     t.integer "match_day_id", null: false
     t.integer "reroll_count", default: 0, null: false
+    t.string "setup_method"
     t.datetime "updated_at", null: false
     t.index ["match_day_id"], name: "index_team_setups_on_match_day_id"
   end
 
   create_table "teams", force: :cascade do |t|
     t.datetime "created_at", null: false
+    t.integer "elo_after"
+    t.integer "elo_before"
+    t.integer "elo_delta"
+    t.string "lineup_source", default: "manual", null: false
     t.string "name", null: false
+    t.boolean "playing", default: true, null: false
+    t.integer "position"
+    t.string "result"
+    t.integer "score", default: 0, null: false
+    t.integer "source_team_id"
     t.integer "team_setup_id", null: false
     t.string "team_type", null: false
     t.datetime "updated_at", null: false
+    t.index ["source_team_id"], name: "index_teams_on_source_team_id"
     t.index ["team_setup_id"], name: "index_teams_on_team_setup_id"
     t.index ["team_type"], name: "index_teams_on_team_type"
   end
@@ -206,4 +225,5 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_12_081500) do
   add_foreign_key "team_players", "teams"
   add_foreign_key "team_setups", "match_days"
   add_foreign_key "teams", "team_setups"
+  add_foreign_key "teams", "teams", column: "source_team_id"
 end
