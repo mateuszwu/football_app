@@ -87,7 +87,7 @@ RSpec.describe Season do
       it "is valid" do
         season = build(
           :season,
-          status: "active",
+          status: Season::STATUS_ACTIVE,
           elo_k_value: 16.5,
           player_advantage_elo: 40,
           season_elo_carryover_factor: 0.5,
@@ -138,9 +138,9 @@ RSpec.describe Season do
   describe ".closed" do
     context "when seasons have mixed statuses" do
       it "returns closed seasons only" do
-        closed_season = create(:season, active: false, status: "closed")
-        create(:season, active: true, status: "active")
-        create(:season, active: false, status: "archived")
+        closed_season = create(:season, active: false, status: Season::STATUS_CLOSED)
+        create(:season, active: true, status: Season::STATUS_ACTIVE)
+        create(:season, active: false, status: Season::STATUS_ARCHIVED)
 
         result = described_class.closed
 
@@ -152,9 +152,9 @@ RSpec.describe Season do
   describe ".archived" do
     context "when seasons have mixed statuses" do
       it "returns archived seasons only" do
-        archived_season = create(:season, active: false, status: "archived")
-        create(:season, active: true, status: "active")
-        create(:season, active: false, status: "closed")
+        archived_season = create(:season, active: false, status: Season::STATUS_ARCHIVED)
+        create(:season, active: true, status: Season::STATUS_ACTIVE)
+        create(:season, active: false, status: Season::STATUS_CLOSED)
 
         result = described_class.archived
 

@@ -1,5 +1,8 @@
 class Season < ApplicationRecord
-  STATUSES = %w[active closed archived].freeze
+  STATUS_ACTIVE = "active".freeze
+  STATUS_CLOSED = "closed".freeze
+  STATUS_ARCHIVED = "archived".freeze
+  STATUSES = [ STATUS_ACTIVE, STATUS_CLOSED, STATUS_ARCHIVED ].freeze
 
   has_many :match_days, dependent: :destroy
   has_many :player_rating_changes, dependent: :destroy
@@ -27,11 +30,11 @@ class Season < ApplicationRecord
   before_validation :sync_active_and_status
 
   scope :active, -> { where(active: true) }
-  scope :closed, -> { where(status: "closed") }
-  scope :archived, -> { where(status: "archived") }
+  scope :closed, -> { where(status: STATUS_CLOSED) }
+  scope :archived, -> { where(status: STATUS_ARCHIVED) }
 
   def self.current_active
-    where(status: "active").or(where(active: true)).order(starts_on: :desc, created_at: :desc).first
+    where(status: STATUS_ACTIVE).or(where(active: true)).order(starts_on: :desc, created_at: :desc).first
   end
 
   def match_days_count
@@ -63,12 +66,12 @@ class Season < ApplicationRecord
 
   def sync_active_and_status
     if will_save_change_to_status?
-      self.active = (status == "active") if has_attribute?(:active)
+      self.active = (status == STATUS_ACTIVE) if has_attribute?(:active)
     elsif will_save_change_to_active?
-      self.status = active? ? "active" : "archived"
+      self.status = active? ? STATUS_ACTIVE : STATUS_ARCHIVED
     else
-      self.status ||= (active? ? "active" : "archived")
-      self.active = (status == "active") if has_attribute?(:active)
+      self.status ||= (active? ? STATUS_ACTIVE : STATUS_ARCHIVED)
+      self.active = (status == STATUS_ACTIVE) if has_attribute?(:active)
     end
   end
 

@@ -24,7 +24,7 @@ RSpec.describe "Admin seasons" do
             starts_on: Date.new(2026, 3, 1),
             ends_on: Date.new(2026, 6, 30),
             active: true,
-            status: "active",
+            status: Season::STATUS_ACTIVE,
             initial_elo: 1100,
             elo_k_factor: 24,
             elo_k_value: 16,
@@ -143,7 +143,7 @@ RSpec.describe "Admin seasons" do
                 name: "Spring 2026",
                 starts_on: "2026-03-01",
                 ends_on: "2026-06-30",
-                status: "active",
+                status: Season::STATUS_ACTIVE,
                 initial_elo: "1100",
                 elo_k_factor: "24",
                 elo_k_value: "16",
@@ -167,7 +167,7 @@ RSpec.describe "Admin seasons" do
           expect(season.starts_on).to eq(Date.new(2026, 3, 1))
           expect(season.ends_on).to eq(Date.new(2026, 6, 30))
           expect(season).to be_active
-          expect(season.status).to eq("active")
+          expect(season.status).to eq(Season::STATUS_ACTIVE)
           expect(season.initial_elo).to eq(1100)
           expect(season.elo_k_factor).to eq(24)
           expect(season.elo_k_value).to eq(16)
@@ -232,7 +232,7 @@ RSpec.describe "Admin seasons" do
         begin
           original_admin_password = ENV["FOOTBALL_APP_ADMIN_PASSWORD"]
           ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = "secret-password"
-          season = create(:season, name: "Spring 2026", initial_elo: 1100, status: "active")
+          season = create(:season, name: "Spring 2026", initial_elo: 1100, status: Season::STATUS_ACTIVE)
 
           post "/admin/session", params: { password: "secret-password" }
           get "/admin/seasons/#{season.id}/edit"
@@ -270,7 +270,7 @@ RSpec.describe "Admin seasons" do
         begin
           original_admin_password = ENV["FOOTBALL_APP_ADMIN_PASSWORD"]
           ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = "secret-password"
-          season = create(:season, active: true, status: "active")
+          season = create(:season, active: true, status: Season::STATUS_ACTIVE)
 
           post "/admin/session", params: { password: "secret-password" }
           patch(
@@ -280,7 +280,7 @@ RSpec.describe "Admin seasons" do
                 name: "Updated Season",
                 starts_on: "2026-04-01",
                 ends_on: "",
-                status: "closed",
+                status: Season::STATUS_CLOSED,
                 initial_elo: "1200",
                 elo_k_factor: "20",
                 elo_k_value: "18",
@@ -305,7 +305,7 @@ RSpec.describe "Admin seasons" do
           expect(season.starts_on).to eq(Date.new(2026, 4, 1))
           expect(season.ends_on).to be_nil
           expect(season).not_to be_active
-          expect(season.status).to eq("closed")
+          expect(season.status).to eq(Season::STATUS_CLOSED)
           expect(season.initial_elo).to eq(1200)
           expect(season.elo_k_factor).to eq(20)
           expect(season.elo_k_value).to eq(18)
