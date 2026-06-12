@@ -16,7 +16,7 @@ class PlayersController < ApplicationController
         same_site: :lax
       }
 
-      redirect_to new_player_path, notice: "Zgloszenie zawodnika zostalo zapisane i czeka na akceptacje."
+      redirect_to edit_player_path(player), notice: "Zgloszenie zawodnika zostalo zapisane i czeka na akceptacje."
     else
       render :new, locals: { player: player }, status: :unprocessable_content
     end
