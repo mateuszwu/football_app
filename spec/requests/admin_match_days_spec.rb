@@ -73,8 +73,8 @@ RSpec.describe "Admin match days" do
         begin
           original_admin_password = ENV["FOOTBALL_APP_ADMIN_PASSWORD"]
           ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = "secret-password"
-          create(:season, name: "Old Season", active: true, starts_on: Date.new(2026, 1, 1))
-          create(:season, name: "Current Season", active: true, starts_on: Date.new(2026, 6, 1))
+          create(:season, name: "Old Season", status: Season::STATUS_ACTIVE, starts_on: Date.new(2026, 1, 1))
+          create(:season, name: "Current Season", status: Season::STATUS_ACTIVE, starts_on: Date.new(2026, 6, 1))
           create(:player, name: "Adam", nickname: "adam", approval_status: "approved", active: true)
           create(:player, name: "Bartek", nickname: "bartek", approval_status: "pending", active: true)
 

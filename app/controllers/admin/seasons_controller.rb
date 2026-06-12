@@ -57,7 +57,6 @@ module Admin
           :starts_on,
           :ends_on,
           :status,
-          :active,
           :initial_elo,
           :elo_k_factor,
           :mvp_vote_bonus,

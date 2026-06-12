@@ -123,10 +123,10 @@ RSpec.describe Season do
   end
 
   describe ".active" do
-    context "when seasons have mixed active states" do
+    context "when seasons have mixed statuses" do
       it "returns active seasons only" do
-        active_season = create(:season, active: true)
-        create(:season, active: false)
+        active_season = create(:season, status: Season::STATUS_ACTIVE)
+        create(:season, status: Season::STATUS_ARCHIVED)
 
         result = described_class.active
 
@@ -138,9 +138,9 @@ RSpec.describe Season do
   describe ".closed" do
     context "when seasons have mixed statuses" do
       it "returns closed seasons only" do
-        closed_season = create(:season, active: false, status: Season::STATUS_CLOSED)
-        create(:season, active: true, status: Season::STATUS_ACTIVE)
-        create(:season, active: false, status: Season::STATUS_ARCHIVED)
+        closed_season = create(:season, status: Season::STATUS_CLOSED)
+        create(:season, status: Season::STATUS_ACTIVE)
+        create(:season, status: Season::STATUS_ARCHIVED)
 
         result = described_class.closed
 
@@ -152,9 +152,9 @@ RSpec.describe Season do
   describe ".archived" do
     context "when seasons have mixed statuses" do
       it "returns archived seasons only" do
-        archived_season = create(:season, active: false, status: Season::STATUS_ARCHIVED)
-        create(:season, active: true, status: Season::STATUS_ACTIVE)
-        create(:season, active: false, status: Season::STATUS_CLOSED)
+        archived_season = create(:season, status: Season::STATUS_ARCHIVED)
+        create(:season, status: Season::STATUS_ACTIVE)
+        create(:season, status: Season::STATUS_CLOSED)
 
         result = described_class.archived
 
@@ -166,8 +166,8 @@ RSpec.describe Season do
   describe ".current_active" do
     context "when there is one active season" do
       it "returns the active season" do
-        active_season = create(:season, active: true)
-        create(:season, active: false)
+        active_season = create(:season, status: Season::STATUS_ACTIVE)
+        create(:season, status: Season::STATUS_ARCHIVED)
 
         result = described_class.current_active
 
@@ -177,8 +177,8 @@ RSpec.describe Season do
 
     context "when there are multiple active seasons" do
       it "returns the latest one by start date" do
-        create(:season, name: "Spring 2026", active: true, starts_on: Date.new(2026, 3, 1))
-        latest_season = create(:season, name: "Summer 2026", active: true, starts_on: Date.new(2026, 6, 1))
+        create(:season, name: "Spring 2026", status: Season::STATUS_ACTIVE, starts_on: Date.new(2026, 3, 1))
+        latest_season = create(:season, name: "Summer 2026", status: Season::STATUS_ACTIVE, starts_on: Date.new(2026, 6, 1))
 
         result = described_class.current_active
 
@@ -188,7 +188,7 @@ RSpec.describe Season do
 
     context "when there is no active season" do
       it "returns nil" do
-        create(:season, active: false)
+        create(:season, status: Season::STATUS_ARCHIVED)
 
         result = described_class.current_active
 

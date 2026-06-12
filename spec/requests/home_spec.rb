@@ -62,7 +62,7 @@ RSpec.describe "Home page" do
 
     context "when an active season exists" do
       it "renders a link to the season stats page" do
-        season = create(:season, name: "Summer 2026", active: true)
+        season = create(:season, name: "Summer 2026", status: Season::STATUS_ACTIVE)
 
         get root_path
 

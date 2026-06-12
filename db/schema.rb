@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_12_073000) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_12_081500) do
   create_table "match_day_players", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.integer "match_day_id", null: false
@@ -129,7 +129,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_12_073000) do
   end
 
   create_table "seasons", force: :cascade do |t|
-    t.boolean "active", default: false, null: false
     t.decimal "assist_points", precision: 6, scale: 2, default: "0.8", null: false
     t.datetime "created_at", null: false
     t.decimal "def_max_points", precision: 6, scale: 2, default: "3.0", null: false
@@ -151,7 +150,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_12_073000) do
     t.string "status", default: "active", null: false
     t.datetime "updated_at", null: false
     t.decimal "voting_bonus_cap", precision: 6, scale: 2, default: "5.0", null: false
-    t.index ["active"], name: "index_seasons_on_active"
     t.index ["name"], name: "index_seasons_on_name", unique: true
     t.index ["starts_on", "ends_on"], name: "index_seasons_on_starts_on_and_ends_on"
     t.index ["status"], name: "index_seasons_on_status"

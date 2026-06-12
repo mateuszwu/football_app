@@ -27,14 +27,12 @@ class Season < ApplicationRecord
 
   validate :ends_on_is_after_starts_on
 
-  before_validation :sync_active_and_status
-
-  scope :active, -> { where(active: true) }
+  scope :active, -> { where(status: STATUS_ACTIVE) }
   scope :closed, -> { where(status: STATUS_CLOSED) }
   scope :archived, -> { where(status: STATUS_ARCHIVED) }
 
   def self.current_active
-    where(status: STATUS_ACTIVE).or(where(active: true)).order(starts_on: :desc, created_at: :desc).first
+    active.order(starts_on: :desc, created_at: :desc).first
   end
 
   def match_days_count
@@ -63,17 +61,6 @@ class Season < ApplicationRecord
   end
 
   private
-
-  def sync_active_and_status
-    if will_save_change_to_status?
-      self.active = (status == STATUS_ACTIVE)
-    elsif will_save_change_to_active?
-      self.status = active? ? STATUS_ACTIVE : STATUS_ARCHIVED
-    else
-      self.status ||= (active? ? STATUS_ACTIVE : STATUS_ARCHIVED)
-      self.active = (status == STATUS_ACTIVE)
-    end
-  end
 
   def ends_on_is_after_starts_on
     return if starts_on.blank? || ends_on.blank? || ends_on >= starts_on
