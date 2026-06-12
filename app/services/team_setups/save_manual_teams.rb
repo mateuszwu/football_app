@@ -29,12 +29,13 @@ module TeamSetups
       )
       team_setup.teams.where(team_type: Team::TEAM_TYPE_BASELINE).destroy_all
 
-      generated_teams.each do |team_definition|
+      generated_teams.each_with_index do |team_definition, index|
         create_team(
           team_setup:,
           team_name: team_definition.fetch(:name),
           team_type: team_definition.fetch(:team_type),
-          player_ids: team_definition.fetch(:player_ids)
+          player_ids: team_definition.fetch(:player_ids),
+          playing: baseline_team_playing?(team_definition:, index:)
         )
       end
 
@@ -78,17 +79,24 @@ module TeamSetups
       generated_teams.flat_map { |team_definition| team_definition.fetch(:player_ids) }.uniq
     end
 
-    def create_team(team_setup:, team_name:, team_type:, player_ids:)
+    def create_team(team_setup:, team_name:, team_type:, player_ids:, playing:)
       return if player_ids.empty?
 
       team = team_setup.teams.create!(
         name: team_name,
         team_type: team_type,
-        lineup_source: Team::LINEUP_SOURCE_MANUAL
+        lineup_source: Team::LINEUP_SOURCE_MANUAL,
+        playing:
       )
       player_ids.each do |player_id|
         team.team_players.create!(player_id:)
       end
+    end
+
+    def baseline_team_playing?(team_definition:, index:)
+      return true unless team_definition.fetch(:team_type) == Team::TEAM_TYPE_BASELINE
+
+      index < 2
     end
 
     def generated_teams
