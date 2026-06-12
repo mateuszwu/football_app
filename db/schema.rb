@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_12_103000) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_12_110000) do
   create_table "match_day_players", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.integer "match_day_id", null: false
@@ -188,6 +188,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_12_103000) do
     t.integer "elo_before"
     t.integer "elo_delta"
     t.string "lineup_source", default: "manual", null: false
+    t.integer "match_id"
     t.string "name", null: false
     t.boolean "playing", default: true, null: false
     t.integer "position"
@@ -197,6 +198,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_12_103000) do
     t.integer "team_setup_id", null: false
     t.string "team_type", null: false
     t.datetime "updated_at", null: false
+    t.index ["match_id"], name: "index_teams_on_match_id"
     t.index ["source_team_id"], name: "index_teams_on_source_team_id"
     t.index ["team_setup_id"], name: "index_teams_on_team_setup_id"
     t.index ["team_type"], name: "index_teams_on_team_type"
@@ -224,6 +226,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_12_103000) do
   add_foreign_key "team_players", "players"
   add_foreign_key "team_players", "teams"
   add_foreign_key "team_setups", "match_days"
+  add_foreign_key "teams", "matches"
   add_foreign_key "teams", "team_setups"
   add_foreign_key "teams", "teams", column: "source_team_id"
 end

@@ -1,0 +1,76 @@
+module Teams
+  class CopyTeamsToMatch
+    def self.call(match:)
+      new(match:).call
+    end
+
+    def initialize(match:)
+      @match = match
+    end
+
+    def call
+      return false unless source_teams.size >= 2
+
+      Team.transaction do
+        match.teams.destroy_all
+
+        copied_teams = source_teams.map { |source_team| copy_team(source_team) }
+        match.update!(home_team: copied_teams.first, away_team: copied_teams.second)
+      end
+
+      true
+    end
+
+    private
+
+    attr_reader :match
+
+    def source_teams
+      @source_teams ||= previous_match_teams.presence || baseline_teams
+    end
+
+    def previous_match_teams
+      return [] unless previous_match
+
+      [ previous_match.home_team, previous_match.away_team ].compact
+    end
+
+    def baseline_teams
+      match.match_day
+        .teams
+        .where(team_type: Team::TEAM_TYPE_BASELINE, playing: true)
+        .order(:position, :created_at, :id)
+        .limit(2)
+    end
+
+    def previous_match
+      @previous_match ||= match.match_day.matches.where("id < ?", match.id).order(id: :desc).first
+    end
+
+    def copy_team(source_team)
+      copied_team = source_team.team_setup.teams.create!(
+        match: match,
+        name: source_team.name,
+        team_type: Team::TEAM_TYPE_MATCH,
+        lineup_source: source_team.lineup_source,
+        source_team: source_team,
+        position: source_team.position,
+        playing: source_team.playing
+      )
+
+      source_team.team_players.order(:id).find_each do |team_player|
+        copied_team.team_players.create!(
+          player: team_player.player,
+          player_name: team_player.player_name,
+          role_code: team_player.role_code,
+          position: team_player.position,
+          elo_before: team_player.elo_before,
+          elo_after: team_player.elo_after,
+          elo_delta: team_player.elo_delta
+        )
+      end
+
+      copied_team
+    end
+  end
+end

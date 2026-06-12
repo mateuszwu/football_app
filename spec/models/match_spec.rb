@@ -95,6 +95,13 @@ RSpec.describe Match do
 
         expect(match.away_team).to be_present
       end
+
+      it "has many copied teams" do
+        match = create(:match)
+        copied_team = create(:team, match: match)
+
+        expect(match.teams).to include(copied_team)
+      end
     end
   end
 
