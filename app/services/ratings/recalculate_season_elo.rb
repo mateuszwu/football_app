@@ -53,8 +53,8 @@ module Ratings
 
       return if home_players.empty? || away_players.empty?
 
-      home_avg = EffectiveTeamElo.call(players: home_players, elo_map: elo_map)
-      away_avg = EffectiveTeamElo.call(players: away_players, elo_map: elo_map)
+      home_avg = EffectiveTeamElo.call(players: home_players, opponent_players: away_players, elo_map: elo_map)
+      away_avg = EffectiveTeamElo.call(players: away_players, opponent_players: home_players, elo_map: elo_map)
 
       home_score, away_score = match_scores(match)
 
