@@ -18,7 +18,7 @@ RSpec.describe "Players" do
 
   describe "POST /players" do
     context "when the submission is valid" do
-      it "creates a pending player, writes the edit cookie, and redirects back to the form" do
+      it "creates a pending player, writes the edit cookie, and redirects to the edit form" do
         post "/players", params: {
           player: {
             name: "Adam Nowak",
@@ -31,7 +31,7 @@ RSpec.describe "Players" do
 
         player = Player.order(:created_at).last
 
-        expect(response).to redirect_to("/players/new")
+        expect(response).to redirect_to("/players/#{player.id}/edit")
         expect(flash[:notice]).to eq("Zgloszenie zawodnika zostalo zapisane i czeka na akceptacje.")
         expect(player.name).to eq("Adam Nowak")
         expect(player.nickname).to eq("adam")
@@ -51,6 +51,7 @@ RSpec.describe "Players" do
 
         expect(payload["player_id"]).to eq(player.id)
         expect(payload["exp"]).to be_within(5).of(Players::GenerateEditToken::EXPIRATION.from_now.to_i)
+        expect(response.location).not_to include("token")
       end
     end
 
