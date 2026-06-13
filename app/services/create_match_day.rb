@@ -15,7 +15,7 @@ class CreateMatchDay
       sync_match_day_players!
       save_manual_teams!
       match_day.sync_setup_status!
-      GenerateMatchDayVoteTokens.call(match_day:)
+      Voting::GenerateMatchDayVoteTokens.call(match_day:)
     end
 
     true

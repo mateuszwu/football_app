@@ -1,6 +1,6 @@
 require "rails_helper"
 
-RSpec.describe GenerateMatchDayVoteTokens do
+RSpec.describe Voting::GenerateMatchDayVoteTokens do
   describe ".call" do
     context "when match day players do not have vote tokens" do
       it "creates one vote token per match day player" do
