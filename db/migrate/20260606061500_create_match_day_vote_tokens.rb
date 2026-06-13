@@ -4,6 +4,7 @@ class CreateMatchDayVoteTokens < ActiveRecord::Migration[8.1]
       t.references :match_day_player, null: false, foreign_key: true, index: { unique: true }
       t.string :token, null: false
       t.datetime :used_at
+      t.datetime :expires_at, null: false
 
       t.timestamps
     end

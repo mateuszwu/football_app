@@ -1,6 +1,6 @@
 require "rails_helper"
 
-RSpec.describe GenerateMatchDayVoteTokens do
+RSpec.describe Voting::GenerateMatchDayVoteTokens do
   describe ".call" do
     context "when match day players do not have vote tokens" do
       it "creates one vote token per match day player" do
@@ -16,6 +16,7 @@ RSpec.describe GenerateMatchDayVoteTokens do
         expect(first_match_day_player.reload.match_day_vote_token).to be_present
         expect(second_match_day_player.reload.match_day_vote_token).to be_present
         expect(first_match_day_player.match_day_vote_token.token).not_to eq(second_match_day_player.match_day_vote_token.token)
+        expect(first_match_day_player.match_day_vote_token.expires_at).to be_present
       end
     end
 
@@ -26,7 +27,7 @@ RSpec.describe GenerateMatchDayVoteTokens do
         second_player = create(:player, name: "Second", nickname: "second", phone: "+48999999998", approval_status: "approved", active: true)
         first_match_day_player = create(:match_day_player, match_day: match_day, player: first_player)
         second_match_day_player = create(:match_day_player, match_day: match_day, player: second_player)
-        existing_token = first_match_day_player.create_match_day_vote_token!(token: "existing-token")
+        existing_token = first_match_day_player.create_match_day_vote_token!(token: "existing-token", expires_at: 48.hours.from_now)
 
         result = described_class.call(match_day: match_day)
 
@@ -34,6 +35,33 @@ RSpec.describe GenerateMatchDayVoteTokens do
         expect(first_match_day_player.reload.match_day_vote_token).to eq(existing_token)
         expect(second_match_day_player.reload.match_day_vote_token).to be_present
         expect(second_match_day_player.match_day_vote_token.token).not_to eq("existing-token")
+      end
+    end
+
+    context "when a custom expiry is provided" do
+      it "stores that expiry on generated tokens" do
+        match_day = create(:match_day)
+        match_day_player = create(:match_day_player, match_day:, player: create(:player, approval_status: "approved", active: true))
+        expires_at = Time.zone.parse("2026-06-15 20:00:00")
+
+        described_class.call(match_day:, expires_at:)
+
+        expect(match_day_player.reload.match_day_vote_token.expires_at).to eq(expires_at)
+      end
+    end
+
+    context "when there are players outside the match day" do
+      it "creates tokens only for present players" do
+        match_day = create(:match_day)
+        present_player = create(:player, approval_status: "approved", active: true)
+        absent_player = create(:player, name: "Absent", nickname: "absent", phone: "+48999999997", approval_status: "approved", active: true)
+        present_match_day_player = create(:match_day_player, match_day:, player: present_player)
+        create(:match_day_player, match_day: create(:match_day), player: absent_player)
+
+        described_class.call(match_day:)
+
+        expect(present_match_day_player.reload.match_day_vote_token).to be_present
+        expect(MatchDayVoteToken.joins(:match_day_player).where(match_day_players: { player_id: absent_player.id, match_day_id: match_day.id })).to be_empty
       end
     end
   end
