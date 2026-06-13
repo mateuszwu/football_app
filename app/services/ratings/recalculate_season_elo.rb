@@ -9,6 +9,8 @@ module Ratings
     end
 
     def call
+      reset_recalculation_state!
+
       elo_map = initial_elo_map
 
       finished_match_days.each do |match_day|
@@ -20,11 +22,17 @@ module Ratings
       end
 
       persist(elo_map)
+      season.update!(elo_recalculated_at: Time.current)
     end
 
     private
 
     attr_reader :season
+
+    def reset_recalculation_state!
+      season.player_season_stats.delete_all
+      season.player_rating_changes.where(source_type: PlayerRatingChange::SOURCE_TYPE_MATCH).delete_all
+    end
 
     def initial_elo_map
       Hash.new(season.initial_elo).tap do |map|
@@ -38,18 +46,18 @@ module Ratings
     def finished_match_days
       season.match_days
             .finished
-            .order(:played_on, :id)
+            .order(:played_on, :created_at, :id)
     end
 
     def finished_matches(match_day)
       match_day.matches
                .includes(home_team: :players, away_team: :players)
                .where.not(finished_at: nil)
-               .order(:started_at, :id)
+               .order(Arel.sql("COALESCE(started_at, created_at) ASC"), :id)
     end
 
     def process_match(match, elo_map)
-      Ratings::ProcessMatchElo.call(match:, season:)
+      Ratings::ProcessMatchElo.call(match:, season:, force: true)
 
       match.home_team.players.each do |player|
         elo_map[player.id] = player.reload.elo
@@ -78,6 +86,7 @@ module Ratings
       Player.transaction do
         elo_map.each do |player_id, elo|
           Player.where(id: player_id).update_all(elo: elo)
+          PlayerSeasonStat.where(player_id:, season:).update_all(elo: elo)
         end
       end
     end
