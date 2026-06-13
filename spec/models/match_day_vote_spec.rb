@@ -7,7 +7,7 @@ RSpec.describe MatchDayVote do
     player = create(:player, name: name)
     match_day_player = MatchDayPlayer.create!(match_day: match_day, player: player)
 
-    MatchDayVoteToken.create!(match_day_player: match_day_player, token: "#{name.parameterize}-token")
+    MatchDayVoteToken.create!(match_day_player: match_day_player, token: "#{name.parameterize}-token", expires_at: 48.hours.from_now)
   end
 
   describe "validations" do
