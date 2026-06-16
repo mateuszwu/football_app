@@ -40,5 +40,25 @@ RSpec.describe Players::SharedMatchDaysQuery do
         expect(result).to be_empty
       end
     end
+
+    context "when a season filter is provided" do
+      it "limits shared match days to that season" do
+        season = create(:season, name: "Summer 2026")
+        other_season = create(:season, name: "Spring 2026", starts_on: Date.new(2026, 3, 1))
+        player = create(:player, name: "Main Player")
+        summer_teammate = create(:player, name: "Adam")
+        spring_teammate = create(:player, name: "Marek")
+        summer_match_day = create(:match_day, season:, played_on: Date.new(2026, 6, 5))
+        spring_match_day = create(:match_day, season: other_season, played_on: Date.new(2026, 4, 5))
+        create(:match_day_player, player:, match_day: summer_match_day)
+        create(:match_day_player, player:, match_day: spring_match_day)
+        create(:match_day_player, player: summer_teammate, match_day: summer_match_day)
+        create(:match_day_player, player: spring_teammate, match_day: spring_match_day)
+
+        result = described_class.call(player:, season:)
+
+        expect(result.map(&:name)).to eq([ "Adam" ])
+      end
+    end
   end
 end

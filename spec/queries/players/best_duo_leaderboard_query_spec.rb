@@ -51,5 +51,27 @@ RSpec.describe Players::BestDuoLeaderboardQuery do
         expect(result).to eq([])
       end
     end
+
+    context "when a season filter is provided" do
+      it "returns duos only from that season" do
+        season = create(:season, name: "Summer 2026")
+        other_season = create(:season, name: "Spring 2026", starts_on: Date.new(2026, 3, 1))
+        adam = create(:player, name: "Adam")
+        zed = create(:player, name: "Zed")
+        marek = create(:player, name: "Marek")
+        summer_match_day = create(:match_day, season:, played_on: Date.new(2026, 6, 5))
+        spring_match_day = create(:match_day, season: other_season, played_on: Date.new(2026, 4, 5))
+        create(:match_day_player, player: adam, match_day: summer_match_day)
+        create(:match_day_player, player: zed, match_day: summer_match_day)
+        create(:match_day_player, player: adam, match_day: spring_match_day)
+        create(:match_day_player, player: marek, match_day: spring_match_day)
+
+        result = described_class.call(season:)
+
+        expect(result.map { |duo| [ duo.player_one.name, duo.player_two.name, duo.shared_match_days_count ] }).to eq(
+          [ [ "Adam", "Zed", 1 ] ]
+        )
+      end
+    end
   end
 end

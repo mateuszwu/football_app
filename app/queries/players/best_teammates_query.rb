@@ -1,15 +1,16 @@
 module Players
   class BestTeammatesQuery
-    def self.call(player:)
-      new(player:).call
+    def self.call(player:, season: nil)
+      new(player:, season:).call
     end
 
-    def initialize(player:)
+    def initialize(player:, season:)
       @player = player
+      @season = season
     end
 
     def call
-      teammates = Players::SharedMatchDaysQuery.call(player: player).to_a
+      teammates = Players::SharedMatchDaysQuery.call(player:, season:).to_a
       return [] if teammates.empty?
 
       best_shared_match_days_count = teammates.first.shared_match_days_count.to_i
@@ -19,6 +20,6 @@ module Players
 
     private
 
-    attr_reader :player
+    attr_reader :player, :season
   end
 end

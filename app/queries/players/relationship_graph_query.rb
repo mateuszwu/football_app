@@ -3,12 +3,13 @@ module Players
     Node = Struct.new(:player, :top_teammates, keyword_init: true)
     Result = Struct.new(:players, :edges, :nodes, keyword_init: true)
 
-    def self.call(players: Player.approved.active.order(:name))
-      new(players:).call
+    def self.call(players: Player.approved.active.order(:name), season: nil)
+      new(players:, season:).call
     end
 
-    def initialize(players:)
+    def initialize(players:, season:)
       @players = players.to_a
+      @season = season
     end
 
     def call
@@ -23,12 +24,12 @@ module Players
 
     private
 
-    attr_reader :players
+    attr_reader :players, :season
 
     def visible_edges
       visible_player_ids = players.map(&:id)
 
-      Players::BestDuoLeaderboardQuery.call.select do |edge|
+      Players::BestDuoLeaderboardQuery.call(season:).select do |edge|
         visible_player_ids.include?(edge.player_one.id) && visible_player_ids.include?(edge.player_two.id)
       end
     end
