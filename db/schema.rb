@@ -37,6 +37,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_12_114500) do
     t.integer "def_player_id", null: false
     t.integer "match_day_vote_token_id", null: false
     t.integer "mvp_player_id", null: false
+    t.datetime "submitted_at", null: false
     t.datetime "updated_at", null: false
     t.index ["def_player_id"], name: "index_match_day_votes_on_def_player_id"
     t.index ["match_day_vote_token_id"], name: "index_match_day_votes_on_match_day_vote_token_id", unique: true

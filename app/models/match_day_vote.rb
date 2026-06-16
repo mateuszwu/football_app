@@ -3,7 +3,10 @@ class MatchDayVote < ApplicationRecord
   belongs_to :mvp_player, class_name: "Player"
   belongs_to :def_player, class_name: "Player"
 
+  before_validation :set_submitted_at, on: :create
+
   validates :match_day_vote_token_id, uniqueness: true
+  validates :submitted_at, presence: true
   validate :selected_players_are_not_the_voter
 
   def mvp_bonus
@@ -28,5 +31,9 @@ class MatchDayVote < ApplicationRecord
     if def_player_id.present? && def_player_id == voter_id
       errors.add(:def_player_id, "cannot be the voter")
     end
+  end
+
+  def set_submitted_at
+    self.submitted_at ||= Time.current
   end
 end
