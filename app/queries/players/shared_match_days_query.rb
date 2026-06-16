@@ -1,17 +1,18 @@
 module Players
   class SharedMatchDaysQuery
-    def self.call(player:)
-      new(player:).call
+    def self.call(player:, season: nil)
+      new(player:, season:).call
     end
 
-    def initialize(player:)
+    def initialize(player:, season:)
       @player = player
+      @season = season
     end
 
     def call
       Player
-        .joins(:match_day_players)
-        .where(match_day_players: { match_day_id: player.match_days.select(:id) })
+        .joins(match_day_players: :match_day)
+        .where(match_day_players: { match_day_id: scoped_match_day_ids })
         .where.not(id: player.id)
         .select("players.*, COUNT(DISTINCT match_day_players.match_day_id) AS shared_match_days_count")
         .group("players.id")
@@ -20,6 +21,12 @@ module Players
 
     private
 
-    attr_reader :player
+    attr_reader :player, :season
+
+    def scoped_match_day_ids
+      scope = player.match_days
+      scope = scope.where(season:) if season.present?
+      scope.select(:id)
+    end
   end
 end

@@ -53,5 +53,27 @@ RSpec.describe Players::RelationshipGraphQuery do
         expect(result.nodes.map { |node| [ node.player.name, node.top_teammates ] }).to eq([ [ "Solo", [] ] ])
       end
     end
+
+    context "when a season filter is provided" do
+      it "returns graph edges only from that season" do
+        season = create(:season, name: "Summer 2026")
+        other_season = create(:season, name: "Spring 2026", starts_on: Date.new(2026, 3, 1))
+        adam = create(:player, name: "Adam", nickname: "adam", approval_status: "approved", active: true)
+        marek = create(:player, name: "Marek", nickname: "marek", approval_status: "approved", active: true)
+        zed = create(:player, name: "Zed", nickname: "zed", approval_status: "approved", active: true)
+        summer_match_day = create(:match_day, season:, played_on: Date.new(2026, 6, 5))
+        spring_match_day = create(:match_day, season: other_season, played_on: Date.new(2026, 4, 5))
+        create(:match_day_player, player: adam, match_day: summer_match_day)
+        create(:match_day_player, player: marek, match_day: summer_match_day)
+        create(:match_day_player, player: adam, match_day: spring_match_day)
+        create(:match_day_player, player: zed, match_day: spring_match_day)
+
+        result = described_class.call(season:)
+
+        expect(result.edges.map { |edge| [ edge.player_one.name, edge.player_two.name, edge.shared_match_days_count ] }).to eq(
+          [ [ "Adam", "Marek", 1 ] ]
+        )
+      end
+    end
   end
 end

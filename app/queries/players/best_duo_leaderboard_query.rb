@@ -2,8 +2,12 @@ module Players
   class BestDuoLeaderboardQuery
     Duo = Struct.new(:player_one, :player_two, :shared_match_days_count, keyword_init: true)
 
-    def self.call
-      new.call
+    def self.call(season: nil)
+      new(season:).call
+    end
+
+    def initialize(season:)
+      @season = season
     end
 
     def call
@@ -16,6 +20,8 @@ module Players
     end
 
     private
+
+    attr_reader :season
 
     def build_duo(row:, players_by_id:)
       player_one, player_two = [
@@ -31,12 +37,13 @@ module Players
     end
 
     def duo_rows
-      MatchDayPlayer
+      scope = MatchDayPlayer
         .joins(<<~SQL.squish)
           INNER JOIN match_day_players teammate_match_day_players
             ON teammate_match_day_players.match_day_id = match_day_players.match_day_id
            AND teammate_match_day_players.player_id > match_day_players.player_id
         SQL
+        .joins(:match_day)
         .joins("INNER JOIN players first_players ON first_players.id = match_day_players.player_id")
         .joins("INNER JOIN players second_players ON second_players.id = teammate_match_day_players.player_id")
         .select(
@@ -53,6 +60,10 @@ module Players
           "second_players.name"
         )
         .order(Arel.sql("shared_match_days_count DESC"), Arel.sql("player_one_name ASC"), Arel.sql("player_two_name ASC"))
+
+      return scope unless season.present?
+
+      scope.where(match_days: { season_id: season.id })
     end
 
     def player_ids(rows)
