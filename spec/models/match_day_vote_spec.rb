@@ -23,6 +23,7 @@ RSpec.describe MatchDayVote do
         )
 
         expect(match_day_vote).to be_valid
+        expect(match_day_vote.submitted_at).to be_present
       end
     end
 

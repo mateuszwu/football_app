@@ -30,6 +30,21 @@ RSpec.describe "Votes" do
         expect(response.body).not_to include("phone")
       end
 
+      it "does not include the voter in selectable players" do
+        voter = create(:player, name: "Voter Full Name", nickname: "voter", phone: "+48111111111", approval_status: "approved", active: true)
+        candidate = create(:player, name: "Adam Nowak", nickname: "adam", phone: "+48222222222", approval_status: "approved", active: true)
+        match_day = create(:match_day, played_on: Date.new(2026, 6, 5))
+        voter_match_day_player = create(:match_day_player, match_day: match_day, player: voter)
+        create(:match_day_player, match_day: match_day, player: candidate)
+        vote_token = create(:match_day_vote_token, match_day_player: voter_match_day_player, token: "vote-token")
+
+        get "/votes/#{vote_token.token}"
+
+        expect(response).to have_http_status(:ok)
+        expect(response.body).to include("Adam Nowak")
+        expect(response.body).not_to include("Voter Full Name")
+      end
+
       it "redirects used tokens to the thank you page" do
         voter = create(:player, name: "Voter", nickname: "voter", phone: "+48111111111", approval_status: "approved", active: true)
         match_day = create(:match_day, played_on: Date.new(2026, 6, 5))
@@ -45,6 +60,19 @@ RSpec.describe "Votes" do
     context "when the vote token does not exist" do
       it "returns not found" do
         get "/votes/missing-token"
+
+        expect(response).to have_http_status(:not_found)
+      end
+    end
+
+    context "when the vote token is expired" do
+      it "returns not found" do
+        voter = create(:player, name: "Voter", nickname: "voter", phone: "+48111111111", approval_status: "approved", active: true)
+        match_day = create(:match_day, played_on: Date.new(2026, 6, 5))
+        voter_match_day_player = create(:match_day_player, match_day: match_day, player: voter)
+        vote_token = create(:match_day_vote_token, match_day_player: voter_match_day_player, token: "vote-token", expires_at: 1.minute.ago)
+
+        get "/votes/#{vote_token.token}"
 
         expect(response).to have_http_status(:not_found)
       end
@@ -107,6 +135,7 @@ RSpec.describe "Votes" do
           def_player: def_candidate
         )
         expect(vote_token.used_at).to be_present
+        expect(vote_token.match_day_vote.submitted_at).to be_present
       end
 
       it "allows the same non-voter to be selected for MVP and DEF" do
@@ -158,6 +187,26 @@ RSpec.describe "Votes" do
           def_player: original_def
         )
         expect(vote_token.used_at).to eq(Time.zone.parse("2026-06-05 21:30:00"))
+      end
+
+      it "returns not found for expired tokens" do
+        voter = create(:player, approval_status: "approved", active: true)
+        candidate = create(:player, name: "Adam Nowak", nickname: "adam", phone: "+48222222222", approval_status: "approved", active: true)
+        match_day = create(:match_day)
+        voter_match_day_player = create(:match_day_player, match_day: match_day, player: voter)
+        create(:match_day_player, match_day: match_day, player: candidate)
+        vote_token = create(:match_day_vote_token, match_day_player: voter_match_day_player, token: "vote-token", expires_at: 1.minute.ago)
+
+        post "/votes/#{vote_token.token}", params: {
+          match_day_vote: {
+            mvp_player_id: candidate.id,
+            def_player_id: candidate.id
+          }
+        }
+
+        expect(response).to have_http_status(:not_found)
+        expect(vote_token.reload.match_day_vote).to be_nil
+        expect(vote_token.used_at).to be_nil
       end
     end
 
