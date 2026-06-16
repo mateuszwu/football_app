@@ -124,8 +124,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_12_114500) do
   create_table "player_season_stats", force: :cascade do |t|
     t.integer "assists", default: 0, null: false
     t.datetime "created_at", null: false
+    t.integer "def_votes_count", default: 0, null: false
     t.integer "elo"
     t.integer "goals", default: 0, null: false
+    t.integer "mvp_votes_count", default: 0, null: false
     t.integer "player_id", null: false
     t.decimal "performance_score", precision: 8, scale: 2, default: "0.0", null: false
     t.integer "season_id", null: false

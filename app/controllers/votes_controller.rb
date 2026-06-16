@@ -21,9 +21,10 @@ class VotesController < ApplicationController
 
     vote = match_day_vote_token.match_day_vote || MatchDayVote.new(match_day_vote_token: match_day_vote_token)
     selectable_players = Votes::SelectablePlayersQuery.call(match_day_vote_token: match_day_vote_token)
+    vote.assign_attributes(vote_params.merge(match_day_vote_token: match_day_vote_token))
 
-    if vote.update(vote_params.merge(match_day_vote_token: match_day_vote_token))
-      match_day_vote_token.mark_used!
+    if vote.valid?
+      save_vote!(vote, match_day_vote_token)
       redirect_to vote_thank_you_path(match_day_vote_token.token), notice: "Glos zapisany"
     else
       render :show, locals: { match_day_vote_token: match_day_vote_token, selectable_players: selectable_players, vote: vote }, status: :unprocessable_content
@@ -44,5 +45,13 @@ class VotesController < ApplicationController
 
   def vote_params
     params.require(:match_day_vote).permit(:mvp_player_id, :def_player_id)
+  end
+
+  def save_vote!(vote, match_day_vote_token)
+    MatchDayVote.transaction do
+      vote.save!
+      match_day_vote_token.mark_used!
+      Voting::CalculateVoteBonuses.call(match_day: match_day_vote_token.match_day_player.match_day)
+    end
   end
 end

@@ -6,6 +6,8 @@ class CreatePlayerSeasonStats < ActiveRecord::Migration[8.1]
       t.integer :elo
       t.integer :goals, null: false, default: 0
       t.integer :assists, null: false, default: 0
+      t.integer :mvp_votes_count, null: false, default: 0
+      t.integer :def_votes_count, null: false, default: 0
       t.decimal :performance_score, precision: 8, scale: 2, null: false, default: 0.0
 
       t.timestamps

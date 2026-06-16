@@ -60,8 +60,8 @@ RSpec.describe Ratings::RecalculateSeasonElo do
       expect(player_d.reload.elo).to eq(1000)
     end
 
-    it "applies MVP and DEF vote bonuses from the season settings" do
-      season = create(:season, initial_elo: 1000, elo_k_factor: 32, mvp_vote_bonus: 12, def_vote_bonus: 7)
+    it "does not change Elo from MVP and DEF votes" do
+      season = create(:season, initial_elo: 1000, elo_k_factor: 32, mvp_max_points: 4.0, def_max_points: 3.0, voting_bonus_cap: 5.0, expected_voters_count: 5)
       match_day = create(:match_day, season: season, status: "finished", played_on: Date.new(2026, 6, 3))
       team_setup = create(:team_setup, match_day: match_day)
       team_a = create(:team, team_setup: team_setup, team_type: "match")
@@ -93,11 +93,11 @@ RSpec.describe Ratings::RecalculateSeasonElo do
       Ratings::RecalculateSeasonElo.call(season: season)
 
       expect(voter.reload.elo).to eq(1000)
-      expect(mvp_winner.reload.elo).to eq(1012)
-      expect(def_winner.reload.elo).to eq(1007)
+      expect(mvp_winner.reload.elo).to eq(1000)
+      expect(def_winner.reload.elo).to eq(1000)
       expect(away_support.reload.elo).to eq(1000)
-      expect(PlayerSeasonStat.find_by!(player: mvp_winner, season: season).elo).to eq(1012)
-      expect(PlayerSeasonStat.find_by!(player: def_winner, season: season).elo).to eq(1007)
+      expect(PlayerSeasonStat.find_by!(player: mvp_winner, season: season).elo).to eq(1000)
+      expect(PlayerSeasonStat.find_by!(player: def_winner, season: season).elo).to eq(1000)
       expect(season.reload.elo_recalculated_at).to be_present
     end
 
