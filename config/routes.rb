@@ -13,7 +13,11 @@ Rails.application.routes.draw do
   end
 
   namespace :api do
-    resources :vote_invites, only: :index
+    resources :match_days, only: [] do
+      member do
+        get :vote_invites, to: "match_day_vote_invites#show"
+      end
+    end
   end
 
   get "votes/:token", to: "votes#show", as: :vote
