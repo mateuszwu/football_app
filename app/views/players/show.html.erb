@@ -5,6 +5,13 @@
     <p class="eyebrow">Profil zawodnika</p>
     <h1><%= player.name %></h1>
     <p><%= player.nickname %> &middot; <%= player.role_code %></p>
+    <p>
+      Elo globalne: <strong><%= player.elo %></strong>
+      <% if profile.selected_season.present? %>
+        &middot;
+        Elo sezonu <%= profile.selected_season.name %>: <strong><%= profile.season_stat&.elo || "-" %></strong>
+      <% end %>
+    </p>
   </div>
 
   <div class="player-profile__body">
@@ -13,15 +20,53 @@
   </div>
 
   <div class="player-profile__body">
+    <% if profile.available_seasons.any? %>
+      <%= form_with url: player_path(player), method: :get, local: true, class: "admin-form" do |form| %>
+        <div class="form-field">
+          <%= form.label :season_id, "Sezon" %>
+          <%= form.select :season_id, options_from_collection_for_select(profile.available_seasons, :id, :name, profile.selected_season&.id) %>
+        </div>
+        <div class="form-actions">
+          <%= form.submit "Filtruj", class: "button button--secondary" %>
+        </div>
+      <% end %>
+    <% end %>
+  </div>
+
+  <div class="summary-grid">
+    <article class="summary-card">
+      <span class="summary-card__label">Mecze</span>
+      <strong><%= profile.matches_count %></strong>
+    </article>
+    <article class="summary-card">
+      <span class="summary-card__label">Bilans</span>
+      <strong><%= [ profile.wins, profile.draws, profile.losses ].join("-") %></strong>
+    </article>
+    <article class="summary-card">
+      <span class="summary-card__label">Win rate</span>
+      <strong><%= profile.win_rate %>%</strong>
+    </article>
+    <article class="summary-card">
+      <span class="summary-card__label">Gole / asysty</span>
+      <strong><%= "#{profile.season_stat&.goals || 0} / #{profile.season_stat&.assists || 0}" %></strong>
+    </article>
+    <article class="summary-card">
+      <span class="summary-card__label">MVP / DEF</span>
+      <strong><%= "#{profile.season_stat&.mvp_votes_count || 0} / #{profile.season_stat&.def_votes_count || 0}" %></strong>
+    </article>
+  </div>
+
+  <div class="player-profile__body">
     <h2>Historia meczow</h2>
 
-    <% if match_history.any? %>
+    <% if profile.match_entries.any? %>
       <ul>
-        <% match_history.each do |match_day| %>
+        <% profile.match_entries.each do |entry| %>
           <li>
-            <strong><%= match_day.played_on %></strong>
-            <span><%= match_day.season.name %></span>
-            <span><%= match_day.status %></span>
+            <strong><%= entry.match.match_day.played_on %></strong>
+            <span><%= entry.match.match_day.season.name %></span>
+            <span><%= entry.match.home_score %>:<%= entry.match.away_score %></span>
+            <span><%= entry.team.result %></span>
           </li>
         <% end %>
       </ul>

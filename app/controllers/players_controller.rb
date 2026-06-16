@@ -43,9 +43,9 @@ class PlayersController < ApplicationController
 
   def show
     player = Player.approved.active.find(params[:id])
-    match_history = player.match_history
+    profile = Players::PublicProfileQuery.call(player:, season_id: params[:season_id])
 
-    render :show, locals: { player: player, match_history: match_history }
+    render :show, locals: { player:, profile: }
   end
 
   private

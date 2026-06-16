@@ -242,7 +242,7 @@ RSpec.describe "Players" do
 
   describe "GET /players/:id" do
     context "when the player is approved and active" do
-      it "renders the public profile with match history and without private phone data" do
+      it "renders the public profile with season-filtered stats and without private phone data" do
         player = create(
           :player,
           name: "Adam Nowak",
@@ -253,25 +253,49 @@ RSpec.describe "Players" do
           approval_status: "approved",
           active: true
         )
-        older_match_day = create(:match_day, played_on: Date.new(2026, 5, 22), status: "finished", season: create(:season, name: "Spring 2026"))
-        latest_match_day = create(:match_day, played_on: Date.new(2026, 5, 29), status: "ready", season: create(:season, name: "Summer 2026"))
-        create(:match_day_player, player: player, match_day: older_match_day)
-        create(:match_day_player, player: player, match_day: latest_match_day)
+        spring = create(:season, name: "Spring 2026", starts_on: Date.new(2026, 3, 1))
+        summer = create(:season, name: "Summer 2026", starts_on: Date.new(2026, 6, 1))
+        spring_match_day = create(:match_day, played_on: Date.new(2026, 5, 22), status: "finished", season: spring)
+        summer_match_day = create(:match_day, played_on: Date.new(2026, 5, 29), status: "finished", season: summer)
+        spring_setup = create(:team_setup, match_day: spring_match_day)
+        summer_setup = create(:team_setup, match_day: summer_match_day)
+        spring_team = create(:team, team_setup: spring_setup, team_type: Team::TEAM_TYPE_MATCH, result: Team::RESULT_LOSS)
+        spring_opponent = create(:team, team_setup: spring_setup, team_type: Team::TEAM_TYPE_MATCH, result: Team::RESULT_WIN)
+        summer_team = create(:team, team_setup: summer_setup, team_type: Team::TEAM_TYPE_MATCH, result: Team::RESULT_WIN)
+        summer_opponent = create(:team, team_setup: summer_setup, team_type: Team::TEAM_TYPE_MATCH, result: Team::RESULT_LOSS)
+        create(:team_player, player: player, team: spring_team)
+        create(:team_player, player: player, team: summer_team)
+        create(:match, match_day: spring_match_day, home_team: spring_team, away_team: spring_opponent, home_score: 0, away_score: 1, finished_at: Time.zone.parse("2026-05-22 20:00:00"))
+        create(:match, match_day: summer_match_day, home_team: summer_team, away_team: summer_opponent, home_score: 2, away_score: 1, finished_at: Time.zone.parse("2026-05-29 20:00:00"))
+        create(:player_season_stat, player: player, season: spring, elo: 1004, goals: 1, assists: 0, mvp_votes_count: 0, def_votes_count: 2)
+        create(:player_season_stat, player: player, season: summer, elo: 1020, goals: 3, assists: 2, mvp_votes_count: 4, def_votes_count: 1)
 
-        get "/players/#{player.id}"
+        get "/players/#{player.id}", params: { season_id: summer.id }
 
         expect(response).to have_http_status(:ok)
         expect(response.body).to include("Adam Nowak")
         expect(response.body).to include("adam")
         expect(response.body).to include("DEF")
         expect(response.body).to include("Solid defender")
+        expect(response.body).to include("Elo globalne:")
+        expect(response.body).to include("Elo sezonu Summer 2026:")
+        expect(response.body).to include("1020")
+        expect(response.body).to include("Mecze")
+        expect(response.body).to include("Bilans")
+        expect(response.body).to include("Win rate")
+        expect(response.body).to include("1-0-0")
+        expect(response.body).to include("100%")
+        expect(response.body).to include("3 / 2")
+        expect(response.body).to include("4 / 1")
         expect(response.body).to include("Historia meczow")
         expect(response.body).to include("2026-05-29")
         expect(response.body).to include("Summer 2026")
-        expect(response.body).to include("ready")
-        expect(response.body).to include("2026-05-22")
-        expect(response.body).to include("Spring 2026")
-        expect(response.body.index("2026-05-29")).to be < response.body.index("2026-05-22")
+        expect(response.body).to include("2:1")
+        expect(response.body).to include("win")
+        expect(response.body).to include("Sezon")
+        expect(response.body).to include("Filtruj")
+        expect(response.body).not_to include("2026-05-22")
+        expect(response.body).not_to include("0:1")
         expect(response.body).not_to include("+48111111111")
         expect(response.body).not_to include("phone")
       end
