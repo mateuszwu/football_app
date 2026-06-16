@@ -4,7 +4,7 @@ class VotesController < ApplicationController
     return redirect_to vote_thank_you_path(match_day_vote_token.token) if match_day_vote_token.used?
 
     vote = match_day_vote_token.match_day_vote || MatchDayVote.new
-    selectable_players = selectable_players_for(match_day_vote_token)
+    selectable_players = Votes::SelectablePlayersQuery.call(match_day_vote_token: match_day_vote_token)
 
     render :show, locals: { match_day_vote_token: match_day_vote_token, selectable_players: selectable_players, vote: vote }
   end
@@ -20,7 +20,7 @@ class VotesController < ApplicationController
     return redirect_to vote_thank_you_path(match_day_vote_token.token) if match_day_vote_token.used?
 
     vote = match_day_vote_token.match_day_vote || MatchDayVote.new(match_day_vote_token: match_day_vote_token)
-    selectable_players = selectable_players_for(match_day_vote_token)
+    selectable_players = Votes::SelectablePlayersQuery.call(match_day_vote_token: match_day_vote_token)
 
     if vote.update(vote_params.merge(match_day_vote_token: match_day_vote_token))
       match_day_vote_token.mark_used!
@@ -40,12 +40,6 @@ class VotesController < ApplicationController
     raise ActiveRecord::RecordNotFound if match_day_vote_token.expired?
 
     match_day_vote_token
-  end
-
-  def selectable_players_for(match_day_vote_token)
-    voter_id = match_day_vote_token.match_day_player.player_id
-
-    match_day_vote_token.match_day_player.match_day.players.where.not(id: voter_id).order(:name)
   end
 
   def vote_params
