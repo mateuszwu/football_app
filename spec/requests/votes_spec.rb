@@ -112,10 +112,11 @@ RSpec.describe "Votes" do
   describe "POST /votes/:token" do
     context "when the vote token and params are valid" do
       it "creates the vote and redirects to the thank you page" do
-        voter = create(:player, approval_status: "approved", active: true)
-        mvp_candidate = create(:player, name: "Adam Nowak", nickname: "adam", phone: "+48222222222", approval_status: "approved", active: true)
-        def_candidate = create(:player, name: "Marek Kowalski", nickname: "marek", phone: "+48333333333", approval_status: "approved", active: true)
-        match_day = create(:match_day)
+        season = create(:season, mvp_max_points: 4.0, def_max_points: 3.0, voting_bonus_cap: 5.0, expected_voters_count: 5)
+        voter = create(:player, approval_status: "approved", active: true, global_performance_score: 0.0)
+        mvp_candidate = create(:player, name: "Adam Nowak", nickname: "adam", phone: "+48222222222", approval_status: "approved", active: true, global_performance_score: 0.0)
+        def_candidate = create(:player, name: "Marek Kowalski", nickname: "marek", phone: "+48333333333", approval_status: "approved", active: true, global_performance_score: 0.0)
+        match_day = create(:match_day, season: season)
         voter_match_day_player = create(:match_day_player, match_day: match_day, player: voter)
         create(:match_day_player, match_day: match_day, player: mvp_candidate)
         create(:match_day_player, match_day: match_day, player: def_candidate)
@@ -136,6 +137,18 @@ RSpec.describe "Votes" do
         )
         expect(vote_token.used_at).to be_present
         expect(vote_token.match_day_vote.submitted_at).to be_present
+        expect(PlayerSeasonStat.find_by!(player: mvp_candidate, season: season).attributes.slice("mvp_votes_count", "def_votes_count", "performance_score")).to eq(
+          "mvp_votes_count" => 1,
+          "def_votes_count" => 0,
+          "performance_score" => BigDecimal("0.8")
+        )
+        expect(PlayerSeasonStat.find_by!(player: def_candidate, season: season).attributes.slice("mvp_votes_count", "def_votes_count", "performance_score")).to eq(
+          "mvp_votes_count" => 0,
+          "def_votes_count" => 1,
+          "performance_score" => BigDecimal("0.6")
+        )
+        expect(PlayerRatingChange.find_by!(player: mvp_candidate, season: season, match_day: match_day, source_type: PlayerRatingChange::SOURCE_TYPE_VOTE).performance_delta).to eq(BigDecimal("0.8"))
+        expect(PlayerRatingChange.find_by!(player: def_candidate, season: season, match_day: match_day, source_type: PlayerRatingChange::SOURCE_TYPE_VOTE).performance_delta).to eq(BigDecimal("0.6"))
       end
 
       it "allows the same non-voter to be selected for MVP and DEF" do

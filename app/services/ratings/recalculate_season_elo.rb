@@ -17,8 +17,6 @@ module Ratings
         finished_matches(match_day).each do |match|
           process_match(match, elo_map)
         end
-
-        apply_vote_bonuses(match_day, elo_map)
       end
 
       persist(elo_map)
@@ -66,20 +64,6 @@ module Ratings
       match.away_team.players.each do |player|
         elo_map[player.id] = player.reload.elo
       end
-    end
-
-    def apply_vote_bonuses(match_day, elo_map)
-      match_day_votes(match_day).each do |vote|
-        elo_map[vote.mvp_player_id] += vote.mvp_bonus
-        elo_map[vote.def_player_id] += vote.def_bonus
-      end
-    end
-
-    def match_day_votes(match_day)
-      MatchDayVote
-        .joins(match_day_vote_token: { match_day_player: :match_day })
-        .where(match_days: { id: match_day.id })
-        .includes(:mvp_player, :def_player, match_day_vote_token: { match_day_player: :match_day })
     end
 
     def persist(elo_map)

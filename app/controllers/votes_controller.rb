@@ -19,11 +19,14 @@ class VotesController < ApplicationController
     match_day_vote_token = find_vote_token
     return redirect_to vote_thank_you_path(match_day_vote_token.token) if match_day_vote_token.used?
 
-    vote = match_day_vote_token.match_day_vote || MatchDayVote.new(match_day_vote_token: match_day_vote_token)
+    vote = Voting::SubmitVote.call(
+      match_day_vote_token:,
+      mvp_player_id: vote_params[:mvp_player_id],
+      def_player_id: vote_params[:def_player_id]
+    )
     selectable_players = Votes::SelectablePlayersQuery.call(match_day_vote_token: match_day_vote_token)
 
-    if vote.update(vote_params.merge(match_day_vote_token: match_day_vote_token))
-      match_day_vote_token.mark_used!
+    if vote.persisted?
       redirect_to vote_thank_you_path(match_day_vote_token.token), notice: "Glos zapisany"
     else
       render :show, locals: { match_day_vote_token: match_day_vote_token, selectable_players: selectable_players, vote: vote }, status: :unprocessable_content
