@@ -1,9 +1,10 @@
 class SeasonsController < ApplicationController
   def show
-    season = Season.find(params[:id])
-    appearances_leaderboard = season.appearances_leaderboard
+    season = Season.find(params[:season_id].presence || params[:id])
+    available_seasons = Season.order(starts_on: :desc, created_at: :desc)
+    leaderboards = Seasons::PublicLeaderboardQuery.call(season:)
     recent_match_days = season.recent_match_days.includes(:players)
 
-    render :show, locals: { appearances_leaderboard: appearances_leaderboard, recent_match_days: recent_match_days, season: season }
+    render :show, locals: { available_seasons:, leaderboards:, recent_match_days:, season: }
   end
 end
