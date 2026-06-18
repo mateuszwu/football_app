@@ -13,6 +13,8 @@ Rails.application.routes.draw do
   end
 
   namespace :api do
+    resources :match_imports, only: :create
+
     resources :match_days, only: [] do
       member do
         get :vote_invites, to: "match_day_vote_invites#show"
