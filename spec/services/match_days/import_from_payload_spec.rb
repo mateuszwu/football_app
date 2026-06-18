@@ -106,6 +106,86 @@ RSpec.describe MatchDays::ImportFromPayload do
     end
 
     context "when the payload is invalid" do
+      it "returns structural validation errors" do
+        player = create(:player, nickname: "adam", approval_status: "approved", active: true)
+        payload = {
+          played_on: "not-a-date",
+          original_teams: [
+            { name: "", players: [] }
+          ],
+          matches: [
+            {
+              teams: [
+                { name: "", players: [] }
+              ],
+              goals: []
+            }
+          ]
+        }
+
+        result = described_class.call(
+          payload:,
+          season: nil,
+          available_players: Player.approved.active.order(:name)
+        )
+
+        expect(result).not_to be_success
+        expect(result.errors).to include("Season is required")
+        expect(result.errors).to include("played_on is required and must use YYYY-MM-DD")
+        expect(result.errors).to include("original_teams must contain at least two teams")
+        expect(result.errors).to include("Original team 1 name is required")
+        expect(result.errors).to include("Original team 1 needs at least one player")
+        expect(result.errors).to include("Match 1 must contain exactly two teams")
+        expect(result.errors).to include("Match 1 goals must contain at least one goal")
+        expect(result.errors).to include("Match 1 team 1 name is required")
+        expect(result.errors).to include("Match 1 team 1 needs at least one player")
+        expect(MatchDay.count).to eq(0)
+        expect(player.reload).to be_present
+      end
+
+      it "returns goal validation errors" do
+        season = create(:season)
+        create(:player, nickname: "adam", approval_status: "approved", active: true)
+        create(:player, name: "Jan", nickname: "jan", phone: "+48999999998", approval_status: "approved", active: true)
+        create(:player, name: "Ghost", nickname: "ghost", phone: "+48999999997", approval_status: "approved", active: true)
+        payload = {
+          played_on: "2026-06-19",
+          original_teams: [
+            { name: "Original A", players: [ "adam", "ghost" ] },
+            { name: "Original B", players: [ "jan" ] }
+          ],
+          matches: [
+            {
+              teams: [
+                { name: "Team A", players: [ "adam" ] },
+                { name: "Team B", players: [ "jan" ] }
+              ],
+              goals: [
+                { team: "", scorer: "" },
+                { team: "Missing", scorer: "adam" },
+                { team: "Team B", scorer: "adam", assistant: "ghost" },
+                { team: "Team B", scorer: "jan", assistant: "jan" }
+              ]
+            }
+          ]
+        }
+
+        result = described_class.call(
+          payload:,
+          season:,
+          available_players: Player.approved.active.order(:name)
+        )
+
+        expect(result).not_to be_success
+        expect(result.errors).to include("Match 1 goal 1 needs a team")
+        expect(result.errors).to include("Match 1 goal 1 needs a scorer")
+        expect(result.errors).to include("Match 1 goal 2 references unknown team: Missing")
+        expect(result.errors).to include("adam is not listed in Team B for match 1")
+        expect(result.errors).to include("ghost is not listed in Team B for match 1")
+        expect(result.errors).to include("Assistant cannot be the scorer for jan")
+        expect(MatchDay.count).to eq(0)
+      end
+
       it "returns errors and does not persist partial records" do
         season = create(:season)
         player = create(:player, nickname: "adam", approval_status: "approved", active: true)
