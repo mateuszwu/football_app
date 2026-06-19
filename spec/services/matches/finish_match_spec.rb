@@ -23,5 +23,37 @@ RSpec.describe Matches::FinishMatch do
       expect(PlayerSeasonStat.find_by!(player: scorer, season: season).performance_score).to eq(BigDecimal("1.2"))
       expect(PlayerSeasonStat.find_by!(player: assistant, season: season).performance_score).to eq(BigDecimal("0.7"))
     end
+
+    it "stores loss and win results when the away team wins" do
+      match_day = create(:match_day, status: "in_progress")
+      match = create(
+        :match,
+        match_day:,
+        home_score: 0,
+        away_score: 2,
+        started_at: Time.zone.parse("2026-06-12 19:00:00")
+      )
+
+      result = described_class.call(match:, finished_at: Time.zone.parse("2026-06-12 19:50:00"))
+
+      expect(result).to be(true)
+      expect(match.home_team.reload.result).to eq(Team::RESULT_LOSS)
+      expect(match.away_team.reload.result).to eq(Team::RESULT_WIN)
+    end
+
+    it "returns false when finishing would violate match day status transitions" do
+      match_day = create(:match_day, status: "setup")
+      match = create(
+        :match,
+        match_day:,
+        started_at: Time.zone.parse("2026-06-12 19:00:00")
+      )
+
+      result = described_class.call(match:, finished_at: Time.zone.parse("2026-06-12 19:50:00"))
+
+      expect(result).to be(false)
+      expect(match.reload.finished_at).to be_nil
+      expect(match_day.reload.status).to eq("setup")
+    end
   end
 end

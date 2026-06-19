@@ -43,5 +43,41 @@ RSpec.describe Players::OpponentRecordsQuery do
         ]
       )
     end
+
+    it "returns records when the player is on the away team without a season filter" do
+      season = create(:season, name: "Summer 2026")
+      tracked_player = create(:player, name: "Tracked")
+      opponent = create(:player, name: "Adam")
+      match_day = create(:match_day, season:, played_on: Date.new(2026, 6, 5), status: "finished")
+      team_setup = create(:team_setup, match_day:)
+      home_team = create(:team, team_setup:, team_type: Team::TEAM_TYPE_MATCH, result: Team::RESULT_WIN)
+      away_team = create(:team, team_setup:, team_type: Team::TEAM_TYPE_MATCH, result: Team::RESULT_LOSS)
+      create(:team_player, team: home_team, player: opponent)
+      create(:team_player, team: away_team, player: tracked_player)
+      create(:match, match_day:, home_team:, away_team:, home_score: 2, away_score: 0, finished_at: Time.zone.parse("2026-06-05 20:00:00"))
+
+      result = described_class.call(player: tracked_player)
+
+      expect(result.map { |record| [ record.opponent.name, record.matches_count, record.wins, record.draws, record.losses ] }).to eq(
+        [
+          [ "Adam", 1, 0, 0, 1 ]
+        ]
+      )
+    end
+
+    it "returns nil for defensive team lookups when the player is absent" do
+      player = build_stubbed(:player)
+      other_player = build_stubbed(:player)
+      home_team = instance_double(Team, players: [ other_player ])
+      away_team = instance_double(Team, players: [])
+      match = instance_double(Match, home_team:, away_team:)
+      query = described_class.new(player:, season: nil)
+
+      player_team = query.send(:team_for, match:, player:)
+      opponent_team = query.send(:opponent_team_for, match:, player_team: nil)
+
+      expect(player_team).to be_nil
+      expect(opponent_team).to be_nil
+    end
   end
 end

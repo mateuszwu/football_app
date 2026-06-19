@@ -53,5 +53,28 @@ RSpec.describe Matches::UpdateLineupParams do
         expect(result).to eq([])
       end
     end
+
+    context "when a team object only responds to to_h" do
+      it "returns normalized teams from plain object hashes" do
+        team = Struct.new(:data) do
+          def to_h
+            data
+          end
+        end.new({ "id" => "10", "name" => "Team A", "player_ids" => [ "1" ] })
+        params = {
+          match: {
+            teams_data: [ team ]
+          }
+        }
+
+        result = described_class.call(params:)
+
+        expect(result).to eq(
+          [
+            { id: "10", name: "Team A", player_ids: [ "1" ] }
+          ]
+        )
+      end
+    end
   end
 end
