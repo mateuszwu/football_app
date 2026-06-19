@@ -106,6 +106,86 @@ RSpec.describe MatchDays::ImportFromPayload do
     end
 
     context "when the payload is invalid" do
+      it "returns structural validation errors" do
+        player = create(:player, nickname: "adam", approval_status: "approved", active: true)
+        payload = {
+          played_on: "not-a-date",
+          original_teams: [
+            { name: "", players: [] }
+          ],
+          matches: [
+            {
+              teams: [
+                { name: "", players: [] }
+              ],
+              goals: []
+            }
+          ]
+        }
+
+        result = described_class.call(
+          payload:,
+          season: nil,
+          available_players: Player.approved.active.order(:name)
+        )
+
+        expect(result).not_to be_success
+        expect(result.errors).to include("Season is required")
+        expect(result.errors).to include("played_on is required and must use YYYY-MM-DD")
+        expect(result.errors).to include("original_teams must contain at least two teams")
+        expect(result.errors).to include("Original team 1 name is required")
+        expect(result.errors).to include("Original team 1 needs at least one player")
+        expect(result.errors).to include("Match 1 must contain exactly two teams")
+        expect(result.errors).to include("Match 1 goals must contain at least one goal")
+        expect(result.errors).to include("Match 1 team 1 name is required")
+        expect(result.errors).to include("Match 1 team 1 needs at least one player")
+        expect(MatchDay.count).to eq(0)
+        expect(player.reload).to be_present
+      end
+
+      it "returns goal validation errors" do
+        season = create(:season)
+        create(:player, nickname: "adam", approval_status: "approved", active: true)
+        create(:player, name: "Jan", nickname: "jan", phone: "+48999999998", approval_status: "approved", active: true)
+        create(:player, name: "Ghost", nickname: "ghost", phone: "+48999999997", approval_status: "approved", active: true)
+        payload = {
+          played_on: "2026-06-19",
+          original_teams: [
+            { name: "Original A", players: [ "adam", "ghost" ] },
+            { name: "Original B", players: [ "jan" ] }
+          ],
+          matches: [
+            {
+              teams: [
+                { name: "Team A", players: [ "adam" ] },
+                { name: "Team B", players: [ "jan" ] }
+              ],
+              goals: [
+                { team: "", scorer: "" },
+                { team: "Missing", scorer: "adam" },
+                { team: "Team B", scorer: "adam", assistant: "ghost" },
+                { team: "Team B", scorer: "jan", assistant: "jan" }
+              ]
+            }
+          ]
+        }
+
+        result = described_class.call(
+          payload:,
+          season:,
+          available_players: Player.approved.active.order(:name)
+        )
+
+        expect(result).not_to be_success
+        expect(result.errors).to include("Match 1 goal 1 needs a team")
+        expect(result.errors).to include("Match 1 goal 1 needs a scorer")
+        expect(result.errors).to include("Match 1 goal 2 references unknown team: Missing")
+        expect(result.errors).to include("adam is not listed in Team B for match 1")
+        expect(result.errors).to include("ghost is not listed in Team B for match 1")
+        expect(result.errors).to include("Assistant cannot be the scorer for jan")
+        expect(MatchDay.count).to eq(0)
+      end
+
       it "returns errors and does not persist partial records" do
         season = create(:season)
         player = create(:player, nickname: "adam", approval_status: "approved", active: true)
@@ -175,6 +255,172 @@ RSpec.describe MatchDays::ImportFromPayload do
         expect(result).not_to be_success
         expect(result.errors).to include("ghost in match 1 is not listed in original_teams")
         expect(MatchDay.count).to eq(0)
+      end
+
+      it "returns false when match day creation fails" do
+        season = create(:season)
+        player = create(:player, nickname: "adam", approval_status: "approved", active: true)
+        payload = {
+          played_on: "2026-06-19",
+          teams: [
+            { name: "Team A", players: [ "adam" ] },
+            { name: "Team B", players: [ "adam" ] }
+          ],
+          goals: [
+            { team: "Team A", scorer: "adam" }
+          ]
+        }
+        allow(CreateMatchDay).to receive(:call).and_return(false)
+
+        result = described_class.call(
+          payload:,
+          season:,
+          available_players: Player.approved.active.order(:name)
+        )
+
+        expect(result).not_to be_success
+        expect(result.errors).to be_empty
+        expect(MatchDay.count).to eq(0)
+        expect(player.reload).to be_present
+      end
+
+      it "returns an error when starting an imported match fails" do
+        season = create(:season)
+        create(:player, nickname: "adam", approval_status: "approved", active: true)
+        create(:player, name: "Jan", nickname: "jan", phone: "+48999999998", approval_status: "approved", active: true)
+        payload = {
+          played_on: "2026-06-19",
+          teams: [
+            { name: "Team A", players: [ "adam" ] },
+            { name: "Team B", players: [ "jan" ] }
+          ],
+          goals: [
+            { team: "Team A", scorer: "adam" }
+          ]
+        }
+        allow(Matches::StartMatch).to receive(:call).and_return(false)
+
+        result = described_class.call(
+          payload:,
+          season:,
+          available_players: Player.approved.active.order(:name)
+        )
+
+        expect(result).not_to be_success
+        expect(result.errors).to include("Could not start imported match 1")
+        expect(MatchDay.count).to eq(0)
+      end
+
+      it "returns an error when adding an imported goal fails" do
+        season = create(:season)
+        create(:player, nickname: "adam", approval_status: "approved", active: true)
+        create(:player, name: "Jan", nickname: "jan", phone: "+48999999998", approval_status: "approved", active: true)
+        payload = {
+          played_on: "2026-06-19",
+          teams: [
+            { name: "Team A", players: [ "adam" ] },
+            { name: "Team B", players: [ "jan" ] }
+          ],
+          goals: [
+            { team: "Team A", scorer: "adam" }
+          ]
+        }
+        allow(Matches::StartMatch).to receive(:call).and_return(true)
+        allow(Matches::AddGoal).to receive(:call).and_return(false)
+
+        result = described_class.call(
+          payload:,
+          season:,
+          available_players: Player.approved.active.order(:name)
+        )
+
+        expect(result).not_to be_success
+        expect(result.errors).to include("Could not add goal 1 for match 1")
+        expect(MatchDay.count).to eq(0)
+      end
+
+      it "returns an error when finishing an imported match fails" do
+        season = create(:season)
+        create(:player, nickname: "adam", approval_status: "approved", active: true)
+        create(:player, name: "Jan", nickname: "jan", phone: "+48999999998", approval_status: "approved", active: true)
+        payload = {
+          played_on: "2026-06-19",
+          finished_at: "2026-06-19 19:40",
+          teams: [
+            { name: "Team A", players: [ "adam" ] },
+            { name: "Team B", players: [ "jan" ] }
+          ],
+          goals: [
+            { team: "Team A", scorer: "adam" }
+          ]
+        }
+        allow(Matches::StartMatch).to receive(:call).and_return(true)
+        allow(Matches::AddGoal).to receive(:call).and_return(true)
+        allow(Matches::FinishMatch).to receive(:call).and_return(false)
+
+        result = described_class.call(
+          payload:,
+          season:,
+          available_players: Player.approved.active.order(:name)
+        )
+
+        expect(result).not_to be_success
+        expect(result.errors).to include("Could not finish imported match 1")
+        expect(MatchDay.count).to eq(0)
+      end
+
+      it "returns record validation errors from unexpected persistence failures" do
+        season = create(:season)
+        create(:player, nickname: "adam", approval_status: "approved", active: true)
+        create(:player, name: "Jan", nickname: "jan", phone: "+48999999998", approval_status: "approved", active: true)
+        payload = {
+          played_on: "2026-06-19",
+          teams: [
+            { name: "Team A", players: [ "adam" ] },
+            { name: "Team B", players: [ "jan" ] }
+          ],
+          goals: [
+            { team: "Team A", scorer: "adam" }
+          ]
+        }
+        invalid_match_day = MatchDay.new
+        invalid_match_day.errors.add(:base, "unexpected validation failure")
+        allow(MatchDay).to receive(:transaction).and_raise(ActiveRecord::RecordInvalid.new(invalid_match_day))
+
+        result = described_class.call(
+          payload:,
+          season:,
+          available_players: Player.approved.active.order(:name)
+        )
+
+        expect(result).not_to be_success
+        expect(result.errors).to include("unexpected validation failure")
+      end
+
+      it "returns argument errors from unexpected import failures" do
+        season = create(:season)
+        create(:player, nickname: "adam", approval_status: "approved", active: true)
+        create(:player, name: "Jan", nickname: "jan", phone: "+48999999998", approval_status: "approved", active: true)
+        payload = {
+          played_on: "2026-06-19",
+          teams: [
+            { name: "Team A", players: [ "adam" ] },
+            { name: "Team B", players: [ "jan" ] }
+          ],
+          goals: [
+            { team: "Team A", scorer: "adam" }
+          ]
+        }
+        allow(MatchDay).to receive(:transaction).and_raise(ArgumentError, "bad import")
+
+        result = described_class.call(
+          payload:,
+          season:,
+          available_players: Player.approved.active.order(:name)
+        )
+
+        expect(result).not_to be_success
+        expect(result.errors).to include("bad import")
       end
     end
   end

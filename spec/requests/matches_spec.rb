@@ -418,6 +418,27 @@ RSpec.describe "Matches" do
         end
       end
     end
+
+    it "redirects with an alert when the match cannot start" do
+      begin
+        original_admin_password = ENV["FOOTBALL_APP_ADMIN_PASSWORD"]
+        ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = "secret-password"
+        match = create(:match, started_at: nil)
+        post "/admin/session", params: { password: "secret-password" }
+
+        patch "/matches/#{match.id}/start"
+
+        expect(response).to redirect_to(match_path(match))
+        expect(flash[:alert]).to eq("Could not start match")
+        expect(match.reload.started_at).to be_nil
+      ensure
+        if original_admin_password.nil?
+          ENV.delete("FOOTBALL_APP_ADMIN_PASSWORD")
+        else
+          ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = original_admin_password
+        end
+      end
+    end
   end
 
   describe "PATCH /matches/:id/update_lineup" do
@@ -457,6 +478,42 @@ RSpec.describe "Matches" do
         expect(match.reload.home_team.players).to contain_exactly(second_player)
         expect(match.away_team.players).to contain_exactly(first_player)
         expect(match.teams.find_by!(name: "Waiting").players).to contain_exactly(third_player)
+      ensure
+        if original_admin_password.nil?
+          ENV.delete("FOOTBALL_APP_ADMIN_PASSWORD")
+        else
+          ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = original_admin_password
+        end
+      end
+    end
+
+    it "redirects with an alert when the edited lineup is invalid" do
+      begin
+        original_admin_password = ENV["FOOTBALL_APP_ADMIN_PASSWORD"]
+        ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = "secret-password"
+        match_day = create(:match_day)
+        team_setup = create(:team_setup, match_day:)
+        player = create(:player)
+        create(:match_day_player, match_day:, player:)
+        home_team = create(:team, team_setup:, name: "Team A", team_type: Team::TEAM_TYPE_MATCH)
+        away_team = create(:team, team_setup:, name: "Team B", team_type: Team::TEAM_TYPE_MATCH)
+        create(:team_player, team: home_team, player:)
+        match = create(:match, match_day:, home_team:, away_team:, started_at: nil)
+        home_team.update!(match:)
+        away_team.update!(match:)
+        post "/admin/session", params: { password: "secret-password" }
+
+        patch "/matches/#{match.id}/update_lineup", params: {
+          match: {
+            teams_data: [
+              { id: home_team.id, name: "Team A", player_ids: [ player.id.to_s ] },
+              { id: away_team.id, name: "Team B", player_ids: [ player.id.to_s ] }
+            ]
+          }
+        }
+
+        expect(response).to redirect_to(match_path(match))
+        expect(flash[:alert]).to eq("Player cannot be assigned to more than one lineup team")
       ensure
         if original_admin_password.nil?
           ENV.delete("FOOTBALL_APP_ADMIN_PASSWORD")
@@ -507,6 +564,32 @@ RSpec.describe "Matches" do
         end
       end
     end
+
+    it "redirects with an alert when no baseline teams are available" do
+      begin
+        original_admin_password = ENV["FOOTBALL_APP_ADMIN_PASSWORD"]
+        ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = "secret-password"
+        match_day = create(:match_day)
+        team_setup = create(:team_setup, match_day:)
+        home_team = create(:team, team_setup:, match: nil, name: "Old Team A", team_type: Team::TEAM_TYPE_MATCH)
+        away_team = create(:team, team_setup:, match: nil, name: "Old Team B", team_type: Team::TEAM_TYPE_MATCH)
+        match = create(:match, match_day:, home_team:, away_team:, started_at: nil)
+        home_team.update!(match:)
+        away_team.update!(match:)
+        post "/admin/session", params: { password: "secret-password" }
+
+        patch "/matches/#{match.id}/reset_to_baseline"
+
+        expect(response).to redirect_to(match_path(match))
+        expect(flash[:alert]).to eq("Could not reset lineup")
+      ensure
+        if original_admin_password.nil?
+          ENV.delete("FOOTBALL_APP_ADMIN_PASSWORD")
+        else
+          ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = original_admin_password
+        end
+      end
+    end
   end
 
   describe "PATCH /matches/:id/copy_previous_lineup" do
@@ -543,6 +626,32 @@ RSpec.describe "Matches" do
         expect(match.reload.home_team.players).to contain_exactly(first_player)
         expect(match.away_team.players).to contain_exactly(second_player)
         expect(match.teams.find_by!(name: "Waiting").players).to contain_exactly(third_player)
+      ensure
+        if original_admin_password.nil?
+          ENV.delete("FOOTBALL_APP_ADMIN_PASSWORD")
+        else
+          ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = original_admin_password
+        end
+      end
+    end
+
+    it "redirects with an alert when no previous match is available" do
+      begin
+        original_admin_password = ENV["FOOTBALL_APP_ADMIN_PASSWORD"]
+        ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = "secret-password"
+        match_day = create(:match_day)
+        team_setup = create(:team_setup, match_day:)
+        home_team = create(:team, team_setup:, match: nil, name: "Current A", team_type: Team::TEAM_TYPE_MATCH)
+        away_team = create(:team, team_setup:, match: nil, name: "Current B", team_type: Team::TEAM_TYPE_MATCH)
+        match = create(:match, match_day:, home_team:, away_team:, started_at: nil)
+        home_team.update!(match:)
+        away_team.update!(match:)
+        post "/admin/session", params: { password: "secret-password" }
+
+        patch "/matches/#{match.id}/copy_previous_lineup"
+
+        expect(response).to redirect_to(match_path(match))
+        expect(flash[:alert]).to eq("Could not copy previous lineup")
       ensure
         if original_admin_password.nil?
           ENV.delete("FOOTBALL_APP_ADMIN_PASSWORD")

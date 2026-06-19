@@ -44,10 +44,11 @@ Use this order:
 8. If the ticket is fully implemented already, mark it `done`, notify the user, and move to the next ticket.
 9. If the ticket is partially implemented, mark it `in_progress`, finish only the remaining correct work, and continue.
 10. If it is not implemented, mark it `in_progress` and implement it.
-11. Run local validation manually.
-12. Stage, commit, push, and create a draft PR.
-13. Put the ticket description from `.ai/gh_issues/<ticket-file>.json` into the PR description.
-14. Share the PR link with the user for review and stop.
+11. For new features, inspect SimpleCov line and branch coverage for the new or changed code. If a line or branch is not covered, decide whether the code is actually needed; remove unnecessary code, otherwise add the missing spec.
+12. Run local validation manually.
+13. Stage, commit, push, and create a draft PR.
+14. Put the ticket description from `.ai/gh_issues/<ticket-file>.json` into the PR description.
+15. Share the PR link with the user for review and stop.
 
 Do not merge without explicit user permission.
 
@@ -169,6 +170,8 @@ bundle exec rspec
 bin/rubocop
 bin/brakeman --no-pager
 ```
+
+For new features, do not stop at the aggregate SimpleCov percentage. Check the line and branch coverage for the files that changed. Any uncovered line or branch should trigger a small review: either the code is unnecessary and should be removed, or the behavior is real and needs a spec.
 
 ## Style Rules
 

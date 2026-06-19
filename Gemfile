@@ -63,6 +63,7 @@ end
 group :test do
   gem "factory_bot_rails"
   gem "rspec-rails"
+  gem "simplecov", require: false
 
   # Use system testing [https://guides.rubyonrails.org/testing.html#system-testing]
   gem "capybara"
