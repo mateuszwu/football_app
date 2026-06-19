@@ -30,7 +30,7 @@
         <ul class="live-match__team-goals">
           <% home_goals.each do |goal| %>
             <li>
-              ⚽ <%= goal.scorer.nickname.presence || goal.scorer.name %>
+              <span class="goal-marker">GOAL</span> <%= goal.scorer.nickname.presence || goal.scorer.name %>
               <% details = [] %>
               <% if match.started_at.present? %>
                 <% details << "#{match.elapsed_seconds(goal.scored_at) / 60}'" %>
@@ -88,7 +88,7 @@
         <ul class="live-match__team-goals">
           <% away_goals.each do |goal| %>
             <li>
-              ⚽ <%= goal.scorer.nickname.presence || goal.scorer.name %>
+              <span class="goal-marker">GOAL</span> <%= goal.scorer.nickname.presence || goal.scorer.name %>
               <% details = [] %>
               <% if match.started_at.present? %>
                 <% details << "#{match.elapsed_seconds(goal.scored_at) / 60}'" %>
@@ -149,7 +149,7 @@
       <ol class="live-match__event-list">
         <% recent_goals.each do |goal| %>
           <li class="live-match__event">
-            <span class="live-match__event-icon">⚽</span>
+            <span class="live-match__event-icon">GOAL</span>
             <span class="live-match__event-body">
               <strong><%= goal.scorer.nickname.presence || goal.scorer.name %></strong>
               <% if goal.assistant.present? %>

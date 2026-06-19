@@ -23,7 +23,18 @@
     <%= stylesheet_link_tag "application", "data-turbo-track": "reload" %>
   </head>
 
-  <body>
+  <%
+    body_class =
+      if controller_path.start_with?("admin/")
+        "theme-light admin-layout"
+      elsif controller_name == "matches" && action_name == "show"
+        "theme-dark live-layout"
+      else
+        "theme-dark public-layout"
+      end
+  %>
+
+  <body class="<%= body_class %>">
     <header class="site-header">
       <nav class="site-nav" aria-label="Main navigation">
         <%= link_to "Football App", root_path, class: "site-nav__brand" %>
@@ -46,7 +57,7 @@
       </nav>
     </header>
 
-    <main>
+    <main class="app-main">
       <% if notice.present? %>
         <p class="flash flash--notice"><%= notice %></p>
       <% end %>
