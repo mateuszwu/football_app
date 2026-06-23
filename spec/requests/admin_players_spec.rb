@@ -45,8 +45,8 @@ RSpec.describe "Admin players" do
           expect(response.body).to include("Bartek Kowal")
           expect(response.body).to include("+48111111111")
           expect(response.body).to include("+48222222222")
-          expect(response.body).to include("approved")
-          expect(response.body).to include("pending")
+          expect(response.body).to include("Zatwierdzony")
+          expect(response.body).to include("Oczekuje")
         ensure
           if original_admin_password.nil?
             ENV.delete("FOOTBALL_APP_ADMIN_PASSWORD")
@@ -67,7 +67,7 @@ RSpec.describe "Admin players" do
           get "/admin/players"
 
           expect(response).to have_http_status(:ok)
-          expect(response.body).to include("Brak zawodnikow do wyswietlenia.")
+          expect(response.body).to include("Brak zawodników do wyświetlenia.")
         ensure
           if original_admin_password.nil?
             ENV.delete("FOOTBALL_APP_ADMIN_PASSWORD")

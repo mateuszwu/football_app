@@ -25,7 +25,7 @@ RSpec.describe "Admin match days" do
           expect(response).to have_http_status(:ok)
           expect(response.body).to include("Spring 2026")
           expect(response.body).to include("2026-06-05")
-          expect(response.body).to include("setup")
+          expect(response.body).to include("Przygotowanie")
         ensure
           if original_admin_password.nil?
             ENV.delete("FOOTBALL_APP_ADMIN_PASSWORD")
@@ -46,7 +46,7 @@ RSpec.describe "Admin match days" do
           get "/admin/match_days"
 
           expect(response).to have_http_status(:ok)
-          expect(response.body).to include("Brak match days do wyswietlenia.")
+          expect(response.body).to include("Brak dni grania do wyświetlenia.")
         ensure
           if original_admin_password.nil?
             ENV.delete("FOOTBALL_APP_ADMIN_PASSWORD")
@@ -69,7 +69,7 @@ RSpec.describe "Admin match days" do
     end
 
     context "when the visitor is signed in as admin" do
-      it "renders the setup form with the current season selected" do
+      it "renders the Przygotowanie form with the current season selected" do
         begin
           original_admin_password = ENV["FOOTBALL_APP_ADMIN_PASSWORD"]
           ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = "secret-password"
@@ -82,15 +82,15 @@ RSpec.describe "Admin match days" do
           get "/admin/match_days/new"
 
           expect(response).to have_http_status(:ok)
-          expect(response.body).to include("Nowy match day")
+          expect(response.body).to include("Nowy dzień grania")
           expect(response.body).to include("Current Season")
-          expect(response.body).to include("setup")
+          expect(response.body).to include("Przygotowanie")
           expect(response.body).to include("Adam (adam)")
           expect(response.body).not_to include("Bartek (bartek)")
-          expect(response.body).to include("Manualny builder bazowych zespolow")
+          expect(response.body).to include("Manualny builder bazowych zespołów")
           expect(response.body).to include("Team A")
           expect(response.body).to include("Team B")
-          expect(response.body).to include("Liczba zespolow do wygenerowania")
+          expect(response.body).to include("Liczba zespołów do wygenerowania")
           expect(response.body).to include("data-controller=\"lineup-editor\"")
           expect(response.body).to include("data-lineup-editor-teams-value")
           expect(response.body).to include("selected=\"selected\"")
@@ -356,11 +356,11 @@ RSpec.describe "Admin match days" do
           get "/admin/match_days/#{match_day.id}/edit"
 
           expect(response).to have_http_status(:ok)
-          expect(response.body).to include("Edytuj match day")
+          expect(response.body).to include("Edytuj dzień grania")
           expect(response.body).to include("Spring 2026")
           expect(response.body).to include("2026-06-05")
           expect(response.body).to include("Adam (adam)")
-          expect(response.body).to include("Manualny builder bazowych zespolow")
+          expect(response.body).to include("Manualny builder bazowych zespołów")
           expect(response.body).to include("data-controller=\"lineup-editor\"")
           expect(response.body).to include("checked=\"checked\"")
         ensure

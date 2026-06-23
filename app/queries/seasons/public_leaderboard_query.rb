@@ -7,7 +7,33 @@ module Seasons
       :top_def,
       :elo_ranking,
       keyword_init: true
-    )
+    ) do
+      def ranked_top_scorers
+        ranked_entries(top_scorers, :goals)
+      end
+
+      def ranked_top_assistants
+        ranked_entries(top_assistants, :assists)
+      end
+
+      def ranked_top_mvp
+        ranked_entries(top_mvp, :mvp_votes_count)
+      end
+
+      def ranked_top_def
+        ranked_entries(top_def, :def_votes_count)
+      end
+
+      def ranked_elo
+        ranked_entries(elo_ranking, :elo)
+      end
+
+      private
+
+      def ranked_entries(entries, value_method)
+        Rankings::CompetitionRanker.call(entries:, value_method:)
+      end
+    end
 
     def self.call(season:)
       new(season:).call

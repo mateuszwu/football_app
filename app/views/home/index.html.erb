@@ -1,73 +1,316 @@
-<% content_for :title, "Football App" %>
+<% content_for :title, t("dashboard.title") %>
 
-<section class="hero" id="dashboard">
-  <div class="hero__content">
-    <p class="eyebrow">Weekendowe granie</p>
-    <h1>Football App</h1>
-    <p class="hero__lead">
-      Publiczny dashboard dla amatorskiej piłki: obecne mecze, leaderboardy i profile zawodników w jednym miejscu.
+<section class="dashboard-page" id="dashboard">
+  <div class="dashboard-page__header">
+    <p class="eyebrow"><%= t("app.tagline") %></p>
+    <h1><%= t("app.name") %></h1>
+    <p>
+      <%= t("dashboard.subtitle") %>
     </p>
   </div>
-</section>
 
-<section class="section">
-  <div class="section__header">
-    <h2>Dashboard</h2>
-    <p>Tu pojawi się aktualny dzień grania, status meczów i szybkie podsumowanie sezonu.</p>
-  </div>
+  <div class="dashboard-shell">
+    <div class="dashboard-content">
+      <div class="dashboard-grid">
+        <article class="dashboard-tile dashboard-tile--span-4" id="active_season">
+          <%= dashboard_icon("trophy", class_name: "dashboard-tile__watermark") %>
+          <div class="dashboard-tile__header">
+            <span class="dashboard-tile__number">1</span>
+            <h2 class="dashboard-tile__title"><%= t("dashboard.active_season") %></h2>
+          </div>
 
-  <div class="summary-grid">
-    <article class="summary-card">
-      <span class="summary-card__label">Najbliższy match day</span>
-      <strong>Do ustawienia</strong>
-    </article>
-    <article class="summary-card">
-      <span class="summary-card__label">Aktywny sezon</span>
-      <% if current_season %>
-        <strong><%= link_to current_season.name, season_path(current_season) %></strong>
-      <% else %>
-        <strong>Brak danych</strong>
-      <% end %>
-    </article>
-    <article class="summary-card">
-      <span class="summary-card__label">Zawodnicy</span>
-      <strong>Lista w przygotowaniu</strong>
-    </article>
-  </div>
-</section>
+          <div class="dashboard-tile__body">
+            <% if dashboard.current_season.present? %>
+              <div class="dashboard-split">
+                <div>
+                  <h3 class="dashboard-tile__headline"><%= dashboard.current_season.name %></h3>
+                  <p class="status-badge status-badge--<%= dashboard.current_season.status %>"><%= status_label(dashboard.current_season.status) %></p>
+                </div>
+              </div>
+              <div class="dashboard-metrics dashboard-metrics--two">
+                <div class="dashboard-metric">
+                  <span><%= t("dashboard.labels.start") %></span>
+                  <strong><%= l(dashboard.current_season.starts_on, format: :short) %></strong>
+                </div>
+                <div class="dashboard-metric">
+                  <span><%= t("dashboard.labels.end") %></span>
+                  <strong><%= dashboard.current_season.ends_on ? l(dashboard.current_season.ends_on, format: :short) : t("common.no_end_date") %></strong>
+                </div>
+              </div>
+              <div class="dashboard-metrics dashboard-metrics--three">
+                <div class="dashboard-metric">
+                  <span><%= t("dashboard.labels.match_days") %></span>
+                  <strong><%= dashboard.current_season.match_days_count %></strong>
+                </div>
+                <div class="dashboard-metric">
+                  <span><%= t("dashboard.labels.players") %></span>
+                  <strong><%= dashboard.current_season.unique_players_count %></strong>
+                </div>
+                <div class="dashboard-metric">
+                  <span><%= t("dashboard.labels.appearances") %></span>
+                  <strong><%= dashboard.current_season.player_appearances_count %></strong>
+                </div>
+              </div>
+            <% else %>
+              <div class="ui-empty-state">
+                <h3><%= t("dashboard.empty_states.no_active_season.title") %></h3>
+                <p><%= t("dashboard.empty_states.no_active_season.body") %></p>
+              </div>
+            <% end %>
+          </div>
 
-<section class="section section--muted" id="leaderboards">
-  <div class="section__header">
-    <h2>Leaderboardy</h2>
-    <p>Rankingi Elo, gole, asysty oraz głosy MVP/DEF będą publiczne po dodaniu danych sezonu.</p>
-  </div>
-
-  <p>
-    <%= link_to "Zobacz graf relacji", relationships_path, class: "button button--secondary" %>
-  </p>
-</section>
-
-<section class="section" id="players">
-  <div class="section__header">
-    <h2>Zawodnicy</h2>
-    <p>Aktywni zawodnicy z publicznymi profilami.</p>
-  </div>
-
-  <p>
-    <%= link_to "Wyslij zgloszenie zawodnika", new_player_path, class: "button button--secondary" %>
-  </p>
-
-  <% if players.any? %>
-    <div class="player-grid">
-      <% players.each do |player| %>
-        <article class="player-card">
-          <h3><%= link_to player.name, player_path(player) %></h3>
-          <p class="player-card__meta"><%= player.nickname %> &middot; <%= player.role_code %></p>
-          <p><%= truncate(player.description, length: 140) %></p>
+          <div class="dashboard-tile__footer">
+            <% if dashboard.current_season.present? %>
+              <%= link_to t("dashboard.cta.go_to_season"), season_path(dashboard.current_season), class: "dashboard-link" %>
+            <% else %>
+              <span class="dashboard-link dashboard-link--disabled"><%= t("dashboard.check_seasons") %></span>
+            <% end %>
+          </div>
         </article>
-      <% end %>
+
+        <article class="dashboard-tile dashboard-tile--span-4" id="players_summary">
+          <%= dashboard_icon("users", class_name: "dashboard-tile__watermark") %>
+          <div class="dashboard-tile__header">
+            <span class="dashboard-tile__number">2</span>
+            <h2 class="dashboard-tile__title"><%= t("dashboard.players") %></h2>
+          </div>
+
+          <div class="dashboard-tile__body dashboard-count-summary">
+            <% if dashboard.approved_active_players_count.positive? %>
+              <strong class="dashboard-count-summary__value"><%= dashboard.approved_active_players_count %></strong>
+              <span><%= t("dashboard.active_players_suffix") %></span>
+              <p><%= dashboard.approved_players_count %> <%= t("dashboard.labels.approved_profiles").downcase %></p>
+              <% if dashboard.pending_players_count.present? %>
+                <p class="dashboard-caption"><%= t("dashboard.pending_admin", count: dashboard.pending_players_count) %></p>
+              <% end %>
+            <% else %>
+              <div class="ui-empty-state">
+                <h3><%= t("dashboard.empty_states.no_players.title") %></h3>
+                <p><%= t("dashboard.empty_states.no_players.body") %></p>
+              </div>
+            <% end %>
+          </div>
+
+          <div class="dashboard-tile__footer">
+            <% if dashboard.approved_active_players_count.positive? %>
+              <span class="dashboard-link dashboard-link--disabled"><%= t("dashboard.cta.go_to_players") %></span>
+            <% else %>
+              <%= link_to t("dashboard.cta.join_game"), new_player_path, class: "dashboard-link" %>
+            <% end %>
+          </div>
+        </article>
+
+        <article class="dashboard-tile dashboard-tile--span-4 dashboard-tile--join" id="join_game">
+          <div class="dashboard-tile__header">
+            <h2 class="dashboard-tile__title"><%= t("dashboard.join_game") %></h2>
+          </div>
+          <div class="dashboard-tile__body">
+            <%= dashboard_icon("user-plus", class_name: "join-tile__icon") %>
+            <p><%= t("dashboard.join_body") %></p>
+            <% if dashboard.pending_players_count.present? %>
+              <p class="dashboard-caption"><%= t("dashboard.pending_submissions", count: dashboard.pending_players_count) %></p>
+            <% end %>
+          </div>
+          <div class="dashboard-tile__footer">
+            <%= link_to t("dashboard.cta.join"), new_player_path, class: "dashboard-button" %>
+          </div>
+        </article>
+
+        <article class="dashboard-tile dashboard-tile--span-6 dashboard-tile--tall" id="last_match">
+          <%= dashboard_icon("calendar-check", class_name: "dashboard-tile__watermark") %>
+          <div class="dashboard-tile__header day-balance-header">
+            <div class="day-balance-header__title">
+              <span class="dashboard-tile__number">3</span>
+              <h2 class="dashboard-tile__title"><%= t("dashboard.day_balance") %></h2>
+            </div>
+          </div>
+
+          <div class="dashboard-tile__body">
+            <% if dashboard.day_balance.present? && !dashboard.day_balance.empty? %>
+              <div class="day-balance-meta">
+                <p><%= dashboard.day_balance.match_day.played_on %> · <%= status_label(dashboard.day_balance.match_day.status) %></p>
+              </div>
+
+              <% if dashboard.day_balance.two_team_day? %>
+                <% first_team, second_team = dashboard.day_balance.team_records %>
+                <div class="day-balance-scoreboard">
+                  <div class="day-balance-team">
+                    <span><%= first_team.name %></span>
+                  </div>
+                  <div class="day-balance-score-wrap">
+                    <strong class="day-balance-score"><%= first_team.wins %> : <%= second_team.wins %></strong>
+                    <span class="day-balance-score-label"><%= t("dashboard.labels.in_matches") %></span>
+                  </div>
+                  <div class="day-balance-team">
+                    <span><%= second_team.name %></span>
+                  </div>
+                </div>
+                <% draws_count = first_team.draws %>
+                <% if draws_count.positive? %>
+                  <p class="day-balance-draws"><%= t("dashboard.labels.draw", count: draws_count) %></p>
+                <% end %>
+              <% else %>
+                <div class="day-balance-ranking">
+                  <strong><%= t("dashboard.table_day") %></strong>
+                  <% dashboard.day_balance.team_records.first(3).each_with_index do |team_record, index| %>
+                    <div class="day-balance-ranking__row">
+                      <span>#<%= index + 1 %></span>
+                      <strong><%= team_record.name %></strong>
+                      <em><%= team_record.points %> <%= t("dashboard.labels.points") %></em>
+                      <small><%= team_record.wins %>/<%= team_record.draws %>/<%= team_record.losses %></small>
+                    </div>
+                  <% end %>
+                  <% hidden_teams_count = dashboard.day_balance.team_records.size - 3 %>
+                  <% if hidden_teams_count.positive? %>
+                    <p class="dashboard-caption">+<%= hidden_teams_count %> teamy</p>
+                  <% end %>
+                </div>
+              <% end %>
+
+              <div class="day-balance-metrics">
+                <div class="day-balance-metric">
+                  <span><%= t("dashboard.labels.matches") %></span>
+                  <strong><%= dashboard.day_balance.finished_matches_count %></strong>
+                </div>
+                <div class="day-balance-metric">
+                  <span><%= t("dashboard.labels.goals") %></span>
+                  <strong><%= dashboard.day_balance.total_goals %></strong>
+                </div>
+                <div class="day-balance-metric">
+                  <span><%= t("dashboard.labels.assists") %></span>
+                  <strong><%= dashboard.day_balance.total_assists %></strong>
+                </div>
+              </div>
+
+              <% if dashboard.day_balance.top_player.present? %>
+                <div class="day-balance-top-player">
+                  <span><%= t("dashboard.labels.top_day") %></span>
+                  <strong><%= dashboard.day_balance.top_player.player.name %></strong>
+                  <small><%= dashboard.day_balance.top_player.goal_assists %> G+A</small>
+                </div>
+              <% end %>
+            <% else %>
+              <div class="ui-empty-state">
+                <h3><%= t("dashboard.empty_states.no_day_balance.title") %></h3>
+                <p><%= t("dashboard.empty_states.no_day_balance.body") %></p>
+              </div>
+            <% end %>
+          </div>
+
+          <div class="dashboard-tile__footer">
+            <% if dashboard.day_balance.present? && dashboard.day_balance.first_match.present? %>
+              <%= link_to t("dashboard.cta.see_day_matches"), match_path(dashboard.day_balance.first_match), class: "dashboard-link" %>
+            <% else %>
+              <span class="dashboard-link dashboard-link--disabled"><%= t("dashboard.cta.see_match_days") %></span>
+            <% end %>
+          </div>
+        </article>
+
+        <%= render "ranking_tile", id: "top_elo", icon: "trending-up", number: 4, title: t("dashboard.top_elo"), ranked_entries: dashboard.ranked_top_elo, empty_title: t("dashboard.ranking_empty.elo_title"), empty_body: t("dashboard.ranking_empty.elo_body"), cta_label: t("dashboard.cta.full_elo_ranking"), cta_path: root_path(anchor: "leaderboards") %>
+        <%= render "ranking_tile", id: "top_scorers", icon: "target", number: 5, title: t("dashboard.top_scorers"), ranked_entries: dashboard.ranked_top_scorers, empty_title: t("dashboard.ranking_empty.scorers_title"), empty_body: t("dashboard.ranking_empty.scorers_body"), cta_label: t("dashboard.cta.see_all"), cta_path: root_path(anchor: "leaderboards") %>
+        <%= render "ranking_tile", id: "top_assists", icon: "network", number: 6, title: t("dashboard.top_assists"), ranked_entries: dashboard.ranked_top_assists, empty_title: t("dashboard.ranking_empty.assists_title"), empty_body: t("dashboard.ranking_empty.assists_body"), cta_label: t("dashboard.cta.see_all"), cta_path: root_path(anchor: "leaderboards") %>
+
+        <article class="dashboard-tile dashboard-tile--span-5 dashboard-tile--wide" id="mvp_def">
+          <%= dashboard_icon("vote", class_name: "dashboard-tile__watermark") %>
+          <div class="dashboard-tile__header">
+            <span class="dashboard-tile__number">7</span>
+            <h2 class="dashboard-tile__title"><%= t("dashboard.mvp_def") %></h2>
+          </div>
+
+          <div class="dashboard-tile__body">
+            <% if dashboard.top_mvp.any? || dashboard.top_def.any? || dashboard.open_vote_tokens_count.positive? %>
+              <div class="dashboard-vote-grid">
+                <div class="dashboard-vote-card">
+                  <span class="dashboard-caption"><%= t("dashboard.labels.season_mvp") %></span>
+                  <% if dashboard.top_mvp.first.present? %>
+                    <strong><%= dashboard.top_mvp.first.player.name %></strong>
+                    <span><%= t("dashboard.labels.votes", count: dashboard.top_mvp.first.mvp_votes_count) %></span>
+                  <% else %>
+                    <strong><%= t("dashboard.votes.no_leader") %></strong>
+                    <span><%= t("dashboard.labels.votes", count: 0) %></span>
+                  <% end %>
+                </div>
+                <div class="dashboard-vote-card dashboard-vote-card--def">
+                  <span class="dashboard-caption"><%= t("dashboard.labels.best_def") %></span>
+                  <% if dashboard.top_def.first.present? %>
+                    <strong><%= dashboard.top_def.first.player.name %></strong>
+                    <span><%= t("dashboard.labels.votes", count: dashboard.top_def.first.def_votes_count) %></span>
+                  <% else %>
+                    <strong><%= t("dashboard.votes.no_leader") %></strong>
+                    <span><%= t("dashboard.labels.votes", count: 0) %></span>
+                  <% end %>
+                </div>
+              </div>
+              <div class="dashboard-voting-strip <%= "dashboard-voting-strip--active" if dashboard.open_vote_tokens_count.positive? %>">
+                <strong><%= dashboard.open_vote_tokens_count.positive? ? t("dashboard.votes.active") : t("dashboard.labels.voting_closed") %></strong>
+                <span><%= t("dashboard.labels.cast_votes", count: dashboard.cast_vote_tokens_count) %></span>
+              </div>
+            <% else %>
+              <div class="ui-empty-state">
+                <h3><%= t("dashboard.votes.empty_title") %></h3>
+                <p><%= t("dashboard.votes.empty_body") %></p>
+              </div>
+            <% end %>
+          </div>
+
+          <div class="dashboard-tile__footer">
+            <%= link_to t("dashboard.cta.go_to_votes"), root_path(anchor: "leaderboards"), class: "dashboard-link" %>
+          </div>
+        </article>
+
+        <article class="dashboard-tile dashboard-tile--span-4 dashboard-tile--wide" id="relationships">
+          <%= dashboard_icon("network", class_name: "dashboard-tile__watermark") %>
+          <div class="dashboard-tile__header">
+            <span class="dashboard-tile__number">8</span>
+            <h2 class="dashboard-tile__title"><%= t("dashboard.relationships") %></h2>
+          </div>
+
+          <div class="dashboard-tile__body dashboard-best-duo">
+            <% if dashboard.best_duo_summary.present? && !dashboard.best_duo_summary.empty? %>
+              <% best_duo = dashboard.best_duo_summary %>
+              <span class="dashboard-caption"><%= t("dashboard.labels.best_duo") %></span>
+              <div class="dashboard-best-duo__hero">
+                <div class="dashboard-best-duo__avatars" aria-hidden="true">
+                  <span><%= best_duo.player_a.name.split.map { |part| part.first }.join.first(2).upcase %></span>
+                  <span><%= best_duo.player_b.name.split.map { |part| part.first }.join.first(2).upcase %></span>
+                </div>
+                <h3 class="dashboard-best-duo__names">
+                  <%= best_duo.player_a.name %>
+                  <span>+</span>
+                  <%= best_duo.player_b.name %>
+                </h3>
+              </div>
+              <p class="dashboard-best-duo__days">
+                <%= t("dashboard.labels.shared_play_days", count: best_duo.shared_match_days_count) %>
+              </p>
+
+              <div class="dashboard-best-duo__stats">
+                <% if best_duo.record? %>
+                  <span><%= best_duo.wins %>W · <%= best_duo.draws %>R · <%= best_duo.losses %>P</span>
+                  <span><%= t("dashboard.labels.win_rate", value: best_duo.win_rate) %></span>
+                <% end %>
+                <% if best_duo.offensive_stats? %>
+                  <span>
+                    <%= t("dashboard.labels.goals_count", count: best_duo.goals) %>
+                    ·
+                    <%= t("dashboard.labels.assists_count", count: best_duo.assists) %>
+                  </span>
+                <% end %>
+              </div>
+            <% else %>
+              <div class="ui-empty-state">
+                <h3><%= t("dashboard.empty_states.no_relationships.title") %></h3>
+                <p><%= t("dashboard.empty_states.no_relationships.body") %></p>
+              </div>
+            <% end %>
+          </div>
+
+          <div class="dashboard-tile__footer">
+            <%= link_to t("dashboard.cta.go_to_relationships"), relationships_path, class: "dashboard-link" %>
+          </div>
+        </article>
+
+      </div>
     </div>
-  <% else %>
-    <p class="empty-state">Brak publicznych profili zawodnikow.</p>
-  <% end %>
+  </div>
 </section>

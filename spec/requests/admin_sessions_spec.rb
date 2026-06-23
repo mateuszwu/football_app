@@ -8,7 +8,7 @@ RSpec.describe "Admin sessions" do
 
         expect(response).to have_http_status(:ok)
         expect(response.body).to include("Zaloguj")
-        expect(response.body).to include("Haslo")
+        expect(response.body).to include("Hasło")
       end
     end
   end

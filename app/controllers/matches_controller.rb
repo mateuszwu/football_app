@@ -18,9 +18,9 @@ class MatchesController < ApplicationController
     match = Match.find(params[:id])
 
     if Matches::StartMatch.call(match:)
-      redirect_to match_path(match), notice: "Match started"
+      redirect_to match_path(match), notice: t("matches.started")
     else
-      redirect_to match_path(match), alert: "Could not start match"
+      redirect_to match_path(match), alert: t("matches.start_failed")
     end
   end
 
@@ -28,9 +28,9 @@ class MatchesController < ApplicationController
     match = Match.find(params[:id])
 
     if Teams::UpdateMatchLineup.call(match:, teams_data: Matches::UpdateLineupParams.call(params:))
-      redirect_to match_path(match), notice: "Lineup updated"
+      redirect_to match_path(match), notice: t("matches.lineup_updated")
     else
-      redirect_to match_path(match), alert: match.errors.full_messages.to_sentence.presence || "Could not update lineup"
+      redirect_to match_path(match), alert: match.errors.full_messages.to_sentence.presence || t("matches.lineup_update_failed")
     end
   end
 
@@ -38,9 +38,9 @@ class MatchesController < ApplicationController
     match = Match.find(params[:id])
 
     if Teams::CopyTeamsToMatch.call(match:, source: Teams::CopyTeamsToMatch::SOURCE_BASELINE)
-      redirect_to match_path(match), notice: "Lineup reset to baseline"
+      redirect_to match_path(match), notice: t("matches.lineup_reset")
     else
-      redirect_to match_path(match), alert: "Could not reset lineup"
+      redirect_to match_path(match), alert: t("matches.lineup_reset_failed")
     end
   end
 
@@ -48,9 +48,9 @@ class MatchesController < ApplicationController
     match = Match.find(params[:id])
 
     if Teams::CopyTeamsToMatch.call(match:, source: Teams::CopyTeamsToMatch::SOURCE_PREVIOUS)
-      redirect_to match_path(match), notice: "Previous match lineup copied"
+      redirect_to match_path(match), notice: t("matches.previous_lineup_copied")
     else
-      redirect_to match_path(match), alert: "Could not copy previous lineup"
+      redirect_to match_path(match), alert: t("matches.previous_lineup_failed")
     end
   end
 
@@ -58,9 +58,9 @@ class MatchesController < ApplicationController
     match = Match.find(params[:id])
 
     if Matches::FinishMatch.call(match:)
-      redirect_to match_path(match), notice: "Match finished"
+      redirect_to match_path(match), notice: t("matches.finished")
     else
-      redirect_to match_path(match), alert: "Could not finish match"
+      redirect_to match_path(match), alert: t("matches.finish_failed")
     end
   end
 

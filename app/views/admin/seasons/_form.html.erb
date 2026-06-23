@@ -1,6 +1,6 @@
 <% if season.errors.any? %>
   <div class="form-errors">
-    <p>Popraw bledy formularza:</p>
+    <p><%= t("common.form_errors") %></p>
     <ul>
       <% season.errors.full_messages.each do |message| %>
         <li><%= message %></li>
@@ -11,97 +11,97 @@
 
 <%= form_with model: [:admin, season], class: "admin-form" do |form| %>
   <div class="form-field">
-    <%= form.label :name, "Nazwa" %>
+    <%= form.label :name, t("seasons.name") %>
     <%= form.text_field :name, required: true %>
   </div>
 
   <div class="form-field">
-    <%= form.label :starts_on, "Start" %>
+    <%= form.label :starts_on, t("seasons.start") %>
     <%= form.date_field :starts_on, required: true %>
   </div>
 
   <div class="form-field">
-    <%= form.label :ends_on, "Koniec" %>
+    <%= form.label :ends_on, t("seasons.end") %>
     <%= form.date_field :ends_on %>
   </div>
 
   <div class="form-field">
-    <%= form.label :status, "Status" %>
-    <%= form.select :status, Season::STATUSES, {}, required: true %>
+    <%= form.label :status, t("seasons.status") %>
+    <%= form.select :status, status_options(Season::STATUSES), {}, required: true %>
   </div>
 
   <div class="form-field">
-    <%= form.label :initial_elo, "Initial Elo" %>
+    <%= form.label :initial_elo, t("seasons.initial_elo") %>
     <%= form.number_field :initial_elo, min: 1, required: true %>
   </div>
 
   <div class="form-field">
-    <%= form.label :elo_k_factor, "K-factor" %>
+    <%= form.label :elo_k_factor, t("seasons.k_factor") %>
     <%= form.number_field :elo_k_factor, min: 1, required: true %>
   </div>
 
   <div class="form-field">
-    <%= form.label :mvp_vote_bonus, "MVP bonus" %>
+    <%= form.label :mvp_vote_bonus, t("seasons.mvp_bonus") %>
     <%= form.number_field :mvp_vote_bonus, min: 0, required: true %>
   </div>
 
   <div class="form-field">
-    <%= form.label :def_vote_bonus, "DEF bonus" %>
+    <%= form.label :def_vote_bonus, t("seasons.def_bonus") %>
     <%= form.number_field :def_vote_bonus, min: 0, required: true %>
   </div>
 
   <div class="form-field">
-    <%= form.label :elo_k_value, "Elo K value" %>
+    <%= form.label :elo_k_value, t("seasons.elo_k_value") %>
     <%= form.number_field :elo_k_value, min: 0, step: 0.01, required: true %>
   </div>
 
   <div class="form-field">
-    <%= form.label :player_advantage_elo, "Player advantage Elo" %>
+    <%= form.label :player_advantage_elo, t("seasons.advantage_elo") %>
     <%= form.number_field :player_advantage_elo, min: 0, step: 0.01, required: true %>
   </div>
 
   <div class="form-field">
-    <%= form.label :season_elo_carryover_factor, "Carryover factor" %>
+    <%= form.label :season_elo_carryover_factor, t("seasons.carryover_factor") %>
     <%= form.number_field :season_elo_carryover_factor, min: 0, max: 1, step: 0.01, required: true %>
   </div>
 
   <div class="form-field">
-    <%= form.label :goal_points, "Goal points" %>
+    <%= form.label :goal_points, t("seasons.goal_points") %>
     <%= form.number_field :goal_points, min: 0, step: 0.01, required: true %>
   </div>
 
   <div class="form-field">
-    <%= form.label :assist_points, "Assist points" %>
+    <%= form.label :assist_points, t("seasons.assist_points") %>
     <%= form.number_field :assist_points, min: 0, step: 0.01, required: true %>
   </div>
 
   <div class="form-field">
-    <%= form.label :mvp_max_points, "MVP max points" %>
+    <%= form.label :mvp_max_points, t("seasons.mvp_max_points") %>
     <%= form.number_field :mvp_max_points, min: 0, step: 0.01, required: true %>
   </div>
 
   <div class="form-field">
-    <%= form.label :def_max_points, "DEF max points" %>
+    <%= form.label :def_max_points, t("seasons.def_max_points") %>
     <%= form.number_field :def_max_points, min: 0, step: 0.01, required: true %>
   </div>
 
   <div class="form-field">
-    <%= form.label :voting_bonus_cap, "Voting bonus cap" %>
+    <%= form.label :voting_bonus_cap, t("seasons.voting_bonus_cap") %>
     <%= form.number_field :voting_bonus_cap, min: 0, step: 0.01, required: true %>
   </div>
 
   <div class="form-field">
-    <%= form.label :expected_voters_count, "Expected voters count" %>
+    <%= form.label :expected_voters_count, t("seasons.expected_voters_count") %>
     <%= form.number_field :expected_voters_count, min: 1, required: true %>
   </div>
 
   <div class="form-checkbox">
     <%= form.check_box :elo_settings_locked %>
-    <%= form.label :elo_settings_locked, "Elo settings locked" %>
+    <%= form.label :elo_settings_locked, t("seasons.elo_settings_locked") %>
   </div>
 
   <div class="form-actions">
-    <%= form.submit "Zapisz", class: "button button--primary" %>
-    <%= link_to "Wroc", admin_seasons_path, class: "button button--secondary" %>
+    <%= form.submit t("common.save"), class: "button button--primary" %>
+    <%= link_to t("common.back"), admin_seasons_path, class: "button button--secondary" %>
   </div>
 <% end %>

@@ -1,10 +1,10 @@
-<% content_for :title, "Admin Players" %>
+<% content_for :title, t("admin.players_title") %>
 
 <section class="section" id="admin-players">
   <div class="section__header">
     <span class="section__eyebrow">Admin</span>
-    <h1>Zawodnicy</h1>
-    <p>Lista zawodnikow z danymi administracyjnymi.</p>
+    <h1><%= t("players.title") %></h1>
+    <p><%= t("admin.players_intro") %></p>
   </div>
 
   <% if players.any? %>
@@ -12,13 +12,13 @@
       <table class="admin-table">
         <thead>
           <tr>
-            <th scope="col">Imie</th>
-            <th scope="col">Nick</th>
-            <th scope="col">Telefon</th>
-            <th scope="col">Rola</th>
-            <th scope="col">Status</th>
-            <th scope="col">Aktywny</th>
-            <th scope="col">Akcje</th>
+            <th scope="col"><%= t("players.short_name") %></th>
+            <th scope="col"><%= t("players.nickname") %></th>
+            <th scope="col"><%= t("players.phone") %></th>
+            <th scope="col"><%= t("players.role") %></th>
+            <th scope="col"><%= t("players.status") %></th>
+            <th scope="col"><%= t("players.active") %></th>
+            <th scope="col"><%= t("admin.actions") %></th>
           </tr>
         </thead>
         <tbody>
@@ -27,13 +27,13 @@
               <td><%= player.name %></td>
               <td><%= player.nickname %></td>
               <td><%= player.phone %></td>
-              <td><%= player.role_code %></td>
-              <td><%= player.approval_status %></td>
-              <td><%= player.active? ? "Tak" : "Nie" %></td>
+              <td><%= role_label(player.role_code) %></td>
+              <td><%= status_label(player.approval_status) %></td>
+              <td><%= yes_no_label(player.active?) %></td>
               <td class="admin-table__actions">
-                <%= link_to "Edytuj", edit_admin_player_path(player) %>
-                <%= button_to "Approve", approve_admin_player_path(player), method: :patch, class: "link-button" %>
-                <%= button_to "Reject", reject_admin_player_path(player), method: :patch, class: "link-button" %>
+                <%= link_to t("admin.edit"), edit_admin_player_path(player) %>
+                <%= button_to t("admin.approve"), approve_admin_player_path(player), method: :patch, class: "link-button" %>
+                <%= button_to t("admin.reject"), reject_admin_player_path(player), method: :patch, class: "link-button" %>
               </td>
             </tr>
           <% end %>
@@ -41,6 +41,6 @@
       </table>
     </div>
   <% else %>
-    <p>Brak zawodnikow do wyswietlenia.</p>
+    <p><%= t("admin.no_players") %></p>
   <% end %>
 </section>

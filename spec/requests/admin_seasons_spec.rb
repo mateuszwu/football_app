@@ -69,7 +69,7 @@ RSpec.describe "Admin seasons" do
           get "/admin/seasons"
 
           expect(response).to have_http_status(:ok)
-          expect(response.body).to include("Brak sezonow do wyswietlenia.")
+          expect(response.body).to include("Brak sezonów do wyświetlenia.")
         ensure
           if original_admin_password.nil?
             ENV.delete("FOOTBALL_APP_ADMIN_PASSWORD")
@@ -102,11 +102,11 @@ RSpec.describe "Admin seasons" do
 
           expect(response).to have_http_status(:ok)
           expect(response.body).to include("Nowy sezon")
-          expect(response.body).to include("Initial Elo")
-          expect(response.body).to include("Elo K value")
-          expect(response.body).to include("Player advantage Elo")
-          expect(response.body).to include("MVP bonus")
-          expect(response.body).to include("DEF bonus")
+          expect(response.body).to include("Początkowe ELO")
+          expect(response.body).to include("Wartość K ELO")
+          expect(response.body).to include("Przewaga ELO")
+          expect(response.body).to include("Bonus MVP")
+          expect(response.body).to include("Bonus DEF")
         ensure
           if original_admin_password.nil?
             ENV.delete("FOOTBALL_APP_ADMIN_PASSWORD")
@@ -263,7 +263,7 @@ RSpec.describe "Admin seasons" do
           expect(response.body).to include("Edytuj sezon")
           expect(response.body).to include("Spring 2026")
           expect(response.body).to include("1100")
-          expect(response.body).to include("active")
+          expect(response.body).to include("Aktywny")
         ensure
           if original_admin_password.nil?
             ENV.delete("FOOTBALL_APP_ADMIN_PASSWORD")

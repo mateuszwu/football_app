@@ -27,20 +27,20 @@ RSpec.describe "Matches" do
           get "/matches/#{match.id}"
 
           expect(response).to have_http_status(:ok)
-          expect(response.body).to include("Live match")
+          expect(response.body).to include("Mecz live")
           expect(response.body).to include("Team A vs Team B")
           expect(response.body).to include("Summer 2026")
           expect(response.body).to include("2026-06-19")
-          expect(response.body).to include("Home")
-          expect(response.body).to include("Away")
+          expect(response.body).to include("Gospodarze")
+          expect(response.body).to include("Goście")
           expect(response.body).to include("2")
           expect(response.body).to include("1")
-          expect(response.body).to include("in_progress")
-          expect(response.body).to include("Started at 19:15")
-          expect(response.body).to include("Match timer")
+          expect(response.body).to include("W trakcie")
+          expect(response.body).to include("Rozpoczęto o 19:15")
+          expect(response.body).to include("Czas meczu")
           expect(response.body).to include("34:30")
-          expect(response.body).to include("Team A lineup")
-          expect(response.body).to include("Team B lineup")
+          expect(response.body).to include("Team A skład")
+          expect(response.body).to include("Team B skład")
           expect(response.body).to include("Adam Nowak")
           expect(response.body).to include("adam")
           expect(response.body).to include("Marek Kowalski")
@@ -125,7 +125,7 @@ RSpec.describe "Matches" do
         get "/matches/#{match.id}"
 
         expect(response).to have_http_status(:ok)
-        expect(response.body).to include("Recent events")
+        expect(response.body).to include("Ostatnie wydarzenia")
         expect(response.body).to include("Team A")
         expect(response.body).to include("adam")
         expect(response.body).to include("jan")
@@ -170,11 +170,11 @@ RSpec.describe "Matches" do
         get "/matches/#{match.id}"
 
         expect(response).to have_http_status(:ok)
-        expect(response.body).to include("not_started")
-        expect(response.body).to include("Kick-off not started yet.")
-        expect(response.body).to include("Match timer")
+        expect(response.body).to include("Nierozpoczęty")
+        expect(response.body).to include("Mecz jeszcze się nie rozpoczął.")
+        expect(response.body).to include("Czas meczu")
         expect(response.body).to include("00:00")
-        expect(response.body).to include("No players assigned yet.")
+        expect(response.body).to include("Brak przypisanych zawodników.")
       end
 
       it "shows the pre-match lineup editor only for admins" do
@@ -216,7 +216,7 @@ RSpec.describe "Matches" do
       end
     end
 
-    context "when the match is finished" do
+    context "when the match is Zakończony" do
       it "renders the final timer value" do
         match = create(
           :match,
@@ -227,8 +227,8 @@ RSpec.describe "Matches" do
         get "/matches/#{match.id}"
 
         expect(response).to have_http_status(:ok)
-        expect(response.body).to include("finished")
-        expect(response.body).to include("Match timer")
+        expect(response.body).to include("Zakończony")
+        expect(response.body).to include("Czas meczu")
         expect(response.body).to include("47:10")
       end
 
@@ -288,7 +288,7 @@ RSpec.describe "Matches" do
           end
 
           expect(response).to redirect_to(match_path(match))
-          expect(flash[:notice]).to eq("Match finished")
+          expect(flash[:notice]).to eq("Mecz zakończony")
           expect(match.reload.finished_at).to eq(Time.zone.parse("2026-06-19 20:02:10"))
           expect(match_day.reload.status).to eq("finished")
           expect(match.home_team.reload.result).to eq(Team::RESULT_DRAW)
@@ -314,7 +314,7 @@ RSpec.describe "Matches" do
           patch "/matches/#{match.id}/finish"
 
           expect(response).to redirect_to(match_path(match))
-          expect(flash[:notice]).to eq("Match finished")
+          expect(flash[:notice]).to eq("Mecz zakończony")
           expect(match.reload.finished_at).to be_present
           expect(match_day.reload.status).to eq("in_progress")
         ensure
@@ -336,7 +336,7 @@ RSpec.describe "Matches" do
           patch "/matches/#{match.id}/finish"
 
           expect(response).to redirect_to(match_path(match))
-          expect(flash[:alert]).to eq("Could not finish match")
+          expect(flash[:alert]).to eq("Nie udało się zakończyć meczu")
           expect(match.reload.finished_at).to be_nil
         ensure
           if original_admin_password.nil?
@@ -407,7 +407,7 @@ RSpec.describe "Matches" do
         end
 
         expect(response).to redirect_to(match_path(match))
-        expect(flash[:notice]).to eq("Match started")
+        expect(flash[:notice]).to eq("Mecz rozpoczęty")
         expect(match.reload.started_at).to eq(Time.zone.parse("2026-06-19 19:15:00"))
         expect(match_day.reload.status).to eq("in_progress")
       ensure
@@ -429,7 +429,7 @@ RSpec.describe "Matches" do
         patch "/matches/#{match.id}/start"
 
         expect(response).to redirect_to(match_path(match))
-        expect(flash[:alert]).to eq("Could not start match")
+        expect(flash[:alert]).to eq("Nie udało się rozpocząć meczu")
         expect(match.reload.started_at).to be_nil
       ensure
         if original_admin_password.nil?
@@ -474,7 +474,7 @@ RSpec.describe "Matches" do
         }
 
         expect(response).to redirect_to(match_path(match))
-        expect(flash[:notice]).to eq("Lineup updated")
+        expect(flash[:notice]).to eq("Skład został zaktualizowany")
         expect(match.reload.home_team.players).to contain_exactly(second_player)
         expect(match.away_team.players).to contain_exactly(first_player)
         expect(match.teams.find_by!(name: "Waiting").players).to contain_exactly(third_player)
@@ -552,7 +552,7 @@ RSpec.describe "Matches" do
         patch "/matches/#{match.id}/reset_to_baseline"
 
         expect(response).to redirect_to(match_path(match))
-        expect(flash[:notice]).to eq("Lineup reset to baseline")
+        expect(flash[:notice]).to eq("Skład przywrócony do bazowego")
         expect(match.reload.home_team.players).to contain_exactly(first_player)
         expect(match.away_team.players).to contain_exactly(second_player)
         expect(match.teams.find_by!(name: "Waiting").players).to contain_exactly(third_player)
@@ -581,7 +581,7 @@ RSpec.describe "Matches" do
         patch "/matches/#{match.id}/reset_to_baseline"
 
         expect(response).to redirect_to(match_path(match))
-        expect(flash[:alert]).to eq("Could not reset lineup")
+        expect(flash[:alert]).to eq("Nie udało się przywrócić składu")
       ensure
         if original_admin_password.nil?
           ENV.delete("FOOTBALL_APP_ADMIN_PASSWORD")
@@ -622,7 +622,7 @@ RSpec.describe "Matches" do
         patch "/matches/#{match.id}/copy_previous_lineup"
 
         expect(response).to redirect_to(match_path(match))
-        expect(flash[:notice]).to eq("Previous match lineup copied")
+        expect(flash[:notice]).to eq("Skład z poprzedniego meczu został skopiowany")
         expect(match.reload.home_team.players).to contain_exactly(first_player)
         expect(match.away_team.players).to contain_exactly(second_player)
         expect(match.teams.find_by!(name: "Waiting").players).to contain_exactly(third_player)
@@ -651,7 +651,7 @@ RSpec.describe "Matches" do
         patch "/matches/#{match.id}/copy_previous_lineup"
 
         expect(response).to redirect_to(match_path(match))
-        expect(flash[:alert]).to eq("Could not copy previous lineup")
+        expect(flash[:alert]).to eq("Nie udało się skopiować poprzedniego składu")
       ensure
         if original_admin_password.nil?
           ENV.delete("FOOTBALL_APP_ADMIN_PASSWORD")

@@ -1,27 +1,28 @@
-<% content_for :title, "#{match.home_team.name} vs #{match.away_team.name} - Football App" %>
+<% content_for :title, "#{match.home_team.name} vs #{match.away_team.name} - #{t("app.name")}" %>
 
 <%
   timer_seconds = match.elapsed_seconds
   timer_minutes = timer_seconds / 60
   timer_remainder_seconds = timer_seconds % 60
+  match_status = match.finished? ? "finished" : (match.in_progress? ? "in_progress" : "not_started")
 %>
 
 <section class="live-match">
   <div class="section__header">
-    <p class="eyebrow">Live match</p>
+    <p class="eyebrow"><%= t("matches.live_match") %></p>
     <h1><%= match.home_team.name %> vs <%= match.away_team.name %></h1>
     <p>
       Sezon:
       <%= link_to match.match_day.season.name, season_path(match.match_day.season) %>
       ·
-      Match day:
+      <%= t("matches.match_day") %>:
       <%= match.match_day.played_on %>
     </p>
   </div>
 
   <div class="live-match__scoreboard">
     <article class="live-match__team">
-      <p class="live-match__team-label">Home</p>
+      <p class="live-match__team-label"><%= t("matches.home") %></p>
       <h2><%= match.home_team.name %></h2>
       <strong class="live-match__score"><%= match.home_score %></strong>
 
@@ -30,13 +31,13 @@
         <ul class="live-match__team-goals">
           <% home_goals.each do |goal| %>
             <li>
-              <span class="goal-marker">GOAL</span> <%= goal.scorer.nickname.presence || goal.scorer.name %>
+              <span class="goal-marker"><%= t("matches.goal") %></span> <%= goal.scorer.nickname.presence || goal.scorer.name %>
               <% details = [] %>
               <% if match.started_at.present? %>
                 <% details << "#{match.elapsed_seconds(goal.scored_at) / 60}'" %>
               <% end %>
               <% if goal.assistant.present? %>
-                <% details << "ass: #{goal.assistant.nickname.presence || goal.assistant.name}" %>
+                <% details << "#{t("matches.assist")}: #{goal.assistant.nickname.presence || goal.assistant.name}" %>
               <% end %>
               <% if details.any? %>
                 <span class="goal-time">(<%= details.join(", ") %>)</span>
@@ -48,16 +49,16 @@
     </article>
 
     <div class="live-match__status-card">
-      <p class="status-badge"><%= match.finished? ? "finished" : (match.in_progress? ? "in_progress" : "not_started") %></p>
+      <p class="status-badge"><%= status_label(match_status) %></p>
 
       <div
         class="live-match__timer"
         data-controller="match-timer"
         data-match-timer-started-at-value="<%= match.started_at&.iso8601 %>"
         data-match-timer-finished-at-value="<%= match.finished_at&.iso8601 %>"
-        data-match-timer-status-value="<%= match.finished? ? "finished" : (match.in_progress? ? "in_progress" : "not_started") %>"
+        data-match-timer-status-value="<%= match_status %>"
       >
-        <p class="live-match__timer-label">Match timer</p>
+        <p class="live-match__timer-label"><%= t("matches.timer") %></p>
         <p class="live-match__timer-value" data-match-timer-target="clock">
           <%= format("%02d:%02d", timer_minutes, timer_remainder_seconds) %>
         </p>
@@ -66,20 +67,20 @@
       <% if match.finished? %>
         <p>
           <% if match.draw? %>
-            Match finished as a draw.
+            <%= t("matches.draw_finished") %>
           <% else %>
-            Winner: <strong><%= match.winner.name %></strong>
+            <%= t("matches.winner") %>: <strong><%= match.winner.name %></strong>
           <% end %>
         </p>
       <% elsif match.in_progress? %>
-        <p>Started at <%= match.started_at.strftime("%H:%M") %></p>
+        <p><%= t("matches.started_at", time: match.started_at.strftime("%H:%M")) %></p>
       <% else %>
-        <p>Kick-off not started yet.</p>
+        <p><%= t("matches.not_started") %></p>
       <% end %>
     </div>
 
     <article class="live-match__team">
-      <p class="live-match__team-label">Away</p>
+      <p class="live-match__team-label"><%= t("matches.away") %></p>
       <h2><%= match.away_team.name %></h2>
       <strong class="live-match__score"><%= match.away_score %></strong>
 
@@ -88,13 +89,13 @@
         <ul class="live-match__team-goals">
           <% away_goals.each do |goal| %>
             <li>
-              <span class="goal-marker">GOAL</span> <%= goal.scorer.nickname.presence || goal.scorer.name %>
+              <span class="goal-marker"><%= t("matches.goal") %></span> <%= goal.scorer.nickname.presence || goal.scorer.name %>
               <% details = [] %>
               <% if match.started_at.present? %>
                 <% details << "#{match.elapsed_seconds(goal.scored_at) / 60}'" %>
               <% end %>
               <% if goal.assistant.present? %>
-                <% details << "ass: #{goal.assistant.nickname.presence || goal.assistant.name}" %>
+                <% details << "#{t("matches.assist")}: #{goal.assistant.nickname.presence || goal.assistant.name}" %>
               <% end %>
               <% if details.any? %>
                 <span class="goal-time">(<%= details.join(", ") %>)</span>
@@ -108,7 +109,7 @@
 
   <div class="live-match__lineups">
     <article class="live-match__lineup">
-      <h2><%= match.home_team.name %> lineup</h2>
+      <h2><%= match.home_team.name %> <%= t("matches.lineup").downcase %></h2>
 
       <% if match.home_team.players.any? %>
         <ul class="live-match__players">
@@ -120,12 +121,12 @@
           <% end %>
         </ul>
       <% else %>
-        <p class="empty-state">No players assigned yet.</p>
+        <p class="empty-state"><%= t("matches.no_players") %></p>
       <% end %>
     </article>
 
     <article class="live-match__lineup">
-      <h2><%= match.away_team.name %> lineup</h2>
+      <h2><%= match.away_team.name %> <%= t("matches.lineup").downcase %></h2>
 
       <% if match.away_team.players.any? %>
         <ul class="live-match__players">
@@ -137,7 +138,7 @@
           <% end %>
         </ul>
       <% else %>
-        <p class="empty-state">No players assigned yet.</p>
+        <p class="empty-state"><%= t("matches.no_players") %></p>
       <% end %>
     </article>
   </div>
@@ -145,15 +146,15 @@
 <% recent_goals = match.match_goals.active.includes(:scoring_team, scorer_team_player: :player, assistant_team_player: :player).order(scored_at: :desc) %>
   <% if recent_goals.any? %>
     <section class="live-match__events">
-      <h2>Recent events</h2>
+      <h2><%= t("matches.recent_events") %></h2>
       <ol class="live-match__event-list">
         <% recent_goals.each do |goal| %>
           <li class="live-match__event">
-            <span class="live-match__event-icon">GOAL</span>
+            <span class="live-match__event-icon"><%= t("matches.goal") %></span>
             <span class="live-match__event-body">
               <strong><%= goal.scorer.nickname.presence || goal.scorer.name %></strong>
               <% if goal.assistant.present? %>
-                <span class="live-match__event-assist">(ass: <%= goal.assistant.nickname.presence || goal.assistant.name %>)</span>
+                <span class="live-match__event-assist">(<%= t("matches.assist") %>: <%= goal.assistant.nickname.presence || goal.assistant.name %>)</span>
               <% end %>
               &mdash;
               <span class="live-match__event-team"><%= goal.scoring_team.name %></span>
@@ -162,7 +163,7 @@
               <span class="live-match__event-time"><%= match.elapsed_seconds(goal.scored_at) / 60 %>'</span>
             <% end %>
             <% if admin_signed_in? && match.started_at.present? %>
-              <%= button_to "Undo", match_goal_path(match, goal), method: :delete, class: "button button--danger button--small", data: { turbo_confirm: "Remove this goal?" } %>
+              <%= button_to t("matches.undo"), match_goal_path(match, goal), method: :delete, class: "button button--danger button--small", data: { turbo_confirm: t("matches.remove_goal_confirm") } %>
             <% end %>
           </li>
         <% end %>

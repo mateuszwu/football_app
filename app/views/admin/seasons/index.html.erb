@@ -1,32 +1,32 @@
-<% content_for :title, "Admin Seasons" %>
+<% content_for :title, t("seasons.admin_title") %>
 
 <section class="section" id="admin-seasons">
   <div class="section__header">
     <span class="section__eyebrow">Admin</span>
-    <h1>Sezony</h1>
-    <p>Konfiguracja sezonow, Elo, punktow i bonusow glosowania.</p>
+    <h1><%= t("seasons.title") %></h1>
+    <p><%= t("seasons.admin_intro") %></p>
   </div>
 
-  <p><%= link_to "Nowy sezon", new_admin_season_path, class: "button button--secondary" %></p>
+  <p><%= link_to t("seasons.new"), new_admin_season_path, class: "button button--secondary" %></p>
 
   <% if seasons.any? %>
     <div class="table-wrapper">
       <table class="admin-table">
         <thead>
           <tr>
-            <th scope="col">Nazwa</th>
-            <th scope="col">Start</th>
-            <th scope="col">Koniec</th>
-            <th scope="col">Status</th>
-            <th scope="col">Initial Elo</th>
-            <th scope="col">K-factor</th>
-            <th scope="col">Elo K value</th>
-            <th scope="col">Advantage Elo</th>
-            <th scope="col">MVP bonus</th>
-            <th scope="col">DEF bonus</th>
-            <th scope="col">Goal pts</th>
-            <th scope="col">Assist pts</th>
-            <th scope="col">Akcje</th>
+            <th scope="col"><%= t("seasons.name") %></th>
+            <th scope="col"><%= t("seasons.start") %></th>
+            <th scope="col"><%= t("seasons.end") %></th>
+            <th scope="col"><%= t("seasons.status") %></th>
+            <th scope="col"><%= t("seasons.initial_elo") %></th>
+            <th scope="col"><%= t("seasons.k_factor") %></th>
+            <th scope="col"><%= t("seasons.elo_k_value") %></th>
+            <th scope="col"><%= t("seasons.advantage_elo") %></th>
+            <th scope="col"><%= t("seasons.mvp_bonus") %></th>
+            <th scope="col"><%= t("seasons.def_bonus") %></th>
+            <th scope="col"><%= t("seasons.goal_points") %></th>
+            <th scope="col"><%= t("seasons.assist_points") %></th>
+            <th scope="col"><%= t("admin.actions") %></th>
           </tr>
         </thead>
         <tbody>
@@ -34,8 +34,8 @@
             <tr>
               <td><%= season.name %></td>
               <td><%= season.starts_on %></td>
-              <td><%= season.ends_on || "Brak" %></td>
-              <td><%= season.status %></td>
+              <td><%= season.ends_on || t("common.none") %></td>
+              <td><%= status_label(season.status) %></td>
               <td><%= season.initial_elo %></td>
               <td><%= season.elo_k_factor %></td>
               <td><%= season.elo_k_value %></td>
@@ -45,8 +45,8 @@
               <td><%= season.goal_points %></td>
               <td><%= season.assist_points %></td>
               <td class="admin-table__actions">
-                <%= link_to "Edytuj", edit_admin_season_path(season) %>
-                <%= button_to "Usun", admin_season_path(season), method: :delete, class: "link-button" %>
+                <%= link_to t("admin.edit"), edit_admin_season_path(season) %>
+                <%= button_to t("admin.delete"), admin_season_path(season), method: :delete, class: "link-button" %>
               </td>
             </tr>
           <% end %>
@@ -54,6 +54,6 @@
       </table>
     </div>
   <% else %>
-    <p>Brak sezonow do wyswietlenia.</p>
+    <p><%= t("seasons.no_seasons") %></p>
   <% end %>
 </section>

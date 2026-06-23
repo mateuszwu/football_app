@@ -1,8 +1,7 @@
 class HomeController < ApplicationController
   def index
-    current_season = Season.current_active
-    players = Player.approved.active.order(:name)
+    dashboard = Dashboard::TilesQuery.call(admin_signed_in: admin_signed_in?)
 
-    render :index, locals: { current_season: current_season, players: players }
+    render :index, locals: { dashboard: }
   end
 end

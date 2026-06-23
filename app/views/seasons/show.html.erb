@@ -1,142 +1,152 @@
-<% content_for :title, "#{season.name} - Football App" %>
+<% content_for :title, "#{season.name} - #{t("app.name")}" %>
 
 <section class="section season-stats">
   <div class="section__header">
-    <p class="eyebrow">Statystyki sezonu</p>
+    <p class="eyebrow"><%= t("seasons.public_stats") %></p>
     <h1><%= season.name %></h1>
     <p>
       <%= season.starts_on %>
       -
-      <%= season.ends_on || "bez daty konca" %>
+      <%= season.ends_on || t("common.no_end_date") %>
     </p>
   </div>
 
   <%= form_with url: season_path(season), method: :get, local: true, class: "admin-form" do |form| %>
     <div class="form-field">
-      <%= form.label :season_id, "Sezon" %>
+      <%= form.label :season_id, t("seasons.season") %>
       <%= form.select :season_id, options_from_collection_for_select(available_seasons, :id, :name, season.id) %>
     </div>
     <div class="form-actions">
-      <%= form.submit "Filtruj", class: "button button--secondary" %>
+      <%= form.submit t("common.filter"), class: "button button--secondary" %>
     </div>
   <% end %>
 
   <div class="summary-grid">
     <article class="summary-card">
-      <span class="summary-card__label">Match days</span>
+      <span class="summary-card__label"><%= t("dashboard.labels.match_days") %></span>
       <strong><%= season.match_days_count %></strong>
     </article>
     <article class="summary-card">
-      <span class="summary-card__label">Zawodnicy</span>
+      <span class="summary-card__label"><%= t("dashboard.labels.players") %></span>
       <strong><%= season.unique_players_count %></strong>
     </article>
     <article class="summary-card">
-      <span class="summary-card__label">Wystepy</span>
+      <span class="summary-card__label"><%= t("dashboard.labels.appearances") %></span>
       <strong><%= season.player_appearances_count %></strong>
     </article>
   </div>
 
   <div class="player-profile__body">
-    <h2>Ranking Elo</h2>
+    <h2><%= t("seasons.elo_ranking") %></h2>
 
     <% if leaderboards.elo_ranking.any? %>
-      <ol>
-        <% leaderboards.elo_ranking.each do |player_stat| %>
+      <ul class="leaderboard-list">
+        <% leaderboards.ranked_elo.each do |ranked_stat| %>
+          <% player_stat = ranked_stat.entry %>
           <li>
+            <span class="leaderboard-rank"><%= ranked_stat.rank %></span>
             <strong><%= link_to player_stat.player.name, player_path(player_stat.player) %></strong>
             <span><%= player_stat.player.nickname %></span>
-            <span><%= player_stat.elo || "-" %> Elo</span>
+            <span><%= ranked_entry_display_value(ranked_stat) %> Elo</span>
           </li>
         <% end %>
-      </ol>
+      </ul>
     <% else %>
-      <p class="empty-state">Brak zawodnikow w rankingu Elo.</p>
+      <p class="empty-state"><%= t("seasons.no_elo") %></p>
     <% end %>
   </div>
 
   <div class="player-profile__body">
-    <h2>Top strzelcy</h2>
+    <h2><%= t("seasons.top_scorers") %></h2>
 
     <% if leaderboards.top_scorers.any? %>
-      <ol>
-        <% leaderboards.top_scorers.each do |player_stat| %>
+      <ul class="leaderboard-list">
+        <% leaderboards.ranked_top_scorers.each do |ranked_stat| %>
+          <% player_stat = ranked_stat.entry %>
           <li>
+            <span class="leaderboard-rank"><%= ranked_stat.rank %></span>
             <strong><%= player_stat.player.name %></strong>
-            <span><%= player_stat.goals %> goli</span>
+            <span><%= t("dashboard.labels.goals_count", count: ranked_entry_display_value(ranked_stat).to_i) %></span>
           </li>
         <% end %>
-      </ol>
+      </ul>
     <% else %>
-      <p class="empty-state">Brak strzelcow w tym sezonie.</p>
+      <p class="empty-state"><%= t("seasons.no_scorers") %></p>
     <% end %>
   </div>
 
   <div class="player-profile__body">
-    <h2>Top asysty</h2>
+    <h2><%= t("seasons.top_assists") %></h2>
 
     <% if leaderboards.top_assistants.any? %>
-      <ol>
-        <% leaderboards.top_assistants.each do |player_stat| %>
+      <ul class="leaderboard-list">
+        <% leaderboards.ranked_top_assistants.each do |ranked_stat| %>
+          <% player_stat = ranked_stat.entry %>
           <li>
+            <span class="leaderboard-rank"><%= ranked_stat.rank %></span>
             <strong><%= player_stat.player.name %></strong>
-            <span><%= player_stat.assists %> asyst</span>
+            <span><%= t("dashboard.labels.assists_count", count: ranked_entry_display_value(ranked_stat).to_i) %></span>
           </li>
         <% end %>
-      </ol>
+      </ul>
     <% else %>
-      <p class="empty-state">Brak asyst w tym sezonie.</p>
+      <p class="empty-state"><%= t("seasons.no_assists") %></p>
     <% end %>
   </div>
 
   <div class="player-profile__body">
-    <h2>Top MVP</h2>
+    <h2><%= t("seasons.top_mvp") %></h2>
 
     <% if leaderboards.top_mvp.any? %>
-      <ol>
-        <% leaderboards.top_mvp.each do |player_stat| %>
+      <ul class="leaderboard-list">
+        <% leaderboards.ranked_top_mvp.each do |ranked_stat| %>
+          <% player_stat = ranked_stat.entry %>
           <li>
+            <span class="leaderboard-rank"><%= ranked_stat.rank %></span>
             <strong><%= player_stat.player.name %></strong>
-            <span><%= player_stat.mvp_votes_count %> MVP</span>
+            <span><%= ranked_entry_display_value(ranked_stat) %> MVP</span>
           </li>
         <% end %>
-      </ol>
+      </ul>
     <% else %>
-      <p class="empty-state">Brak glosow MVP w tym sezonie.</p>
+      <p class="empty-state"><%= t("seasons.no_mvp_votes") %></p>
     <% end %>
   </div>
 
   <div class="player-profile__body">
-    <h2>Top DEF</h2>
+    <h2><%= t("seasons.top_def") %></h2>
 
     <% if leaderboards.top_def.any? %>
-      <ol>
-        <% leaderboards.top_def.each do |player_stat| %>
+      <ul class="leaderboard-list">
+        <% leaderboards.ranked_top_def.each do |ranked_stat| %>
+          <% player_stat = ranked_stat.entry %>
           <li>
+            <span class="leaderboard-rank"><%= ranked_stat.rank %></span>
             <strong><%= player_stat.player.name %></strong>
-            <span><%= player_stat.def_votes_count %> DEF</span>
+            <span><%= ranked_entry_display_value(ranked_stat) %> DEF</span>
           </li>
         <% end %>
-      </ol>
+      </ul>
     <% else %>
-      <p class="empty-state">Brak glosow DEF w tym sezonie.</p>
+      <p class="empty-state"><%= t("seasons.no_def_votes") %></p>
     <% end %>
   </div>
 
   <div class="player-profile__body">
-    <h2>Ostatnie match days</h2>
+    <h2><%= t("seasons.recent_match_days") %></h2>
 
     <% if recent_match_days.any? %>
       <ul>
         <% recent_match_days.each do |match_day| %>
           <li>
             <strong><%= match_day.played_on %></strong>
-            <span><%= match_day.status %></span>
-            <span><%= pluralize(match_day.players.size, "player") %></span>
+            <span><%= status_label(match_day.status) %></span>
+            <span><%= t("dashboard.labels.players") %>: <%= match_day.players.size %></span>
           </li>
         <% end %>
       </ul>
     <% else %>
-      <p class="empty-state">Brak match days w tym sezonie.</p>
+      <p class="empty-state"><%= t("seasons.no_match_days") %></p>
     <% end %>
   </div>
 </section>

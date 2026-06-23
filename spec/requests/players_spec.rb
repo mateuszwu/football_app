@@ -19,8 +19,8 @@ RSpec.describe "Players" do
       get "/players/new"
 
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include("Zgloszenie zawodnika")
-      expect(response.body).to include("Imie i nazwisko")
+      expect(response.body).to include("Zgłoszenie zawodnika")
+      expect(response.body).to include("Imię i nazwisko")
       expect(response.body).to include("Nick")
       expect(response.body).to include("Telefon")
       expect(response.body).to include("Opis")
@@ -45,7 +45,7 @@ RSpec.describe "Players" do
         player = Player.order(:created_at).last
 
         expect(response).to redirect_to("/players/#{player.id}/edit")
-        expect(flash[:notice]).to eq("Zgloszenie zawodnika zostalo zapisane i czeka na akceptacje.")
+        expect(flash[:notice]).to eq("Zgłoszenie zawodnika zostało zapisane i czeka na akceptację.")
         expect(player.name).to eq("Adam Nowak")
         expect(player.nickname).to eq("adam")
         expect(player.phone).to eq("+48111111111")
@@ -85,7 +85,7 @@ RSpec.describe "Players" do
         }
 
         expect(response).to have_http_status(:unprocessable_content)
-        expect(response.body).to include("Popraw bledy formularza:")
+        expect(response.body).to include("Popraw błędy formularza:")
         expect(response.body).to include("Name can&#39;t be blank")
         expect(response.body).to include("Nickname can&#39;t be blank")
         expect(response.body).to include("Phone can&#39;t be blank")
@@ -106,7 +106,7 @@ RSpec.describe "Players" do
         get "/players/#{player.id}/edit"
 
         expect(response).to have_http_status(:ok)
-        expect(response.body).to include("Edytuj zgloszenie zawodnika")
+        expect(response.body).to include("Edytuj zgłoszenie zawodnika")
         expect(response.body).to include(player.name)
         expect(response.body).to include(player.nickname)
         expect(response.body).to include(player.phone)
@@ -122,7 +122,7 @@ RSpec.describe "Players" do
         get "/players/#{player.id}/edit"
 
         expect(response).to redirect_to("/players/new")
-        expect(flash[:alert]).to eq("Brak dostepu do edycji tego zgloszenia.")
+        expect(flash[:alert]).to eq("Brak dostępu do edycji tego zgłoszenia.")
       end
     end
 
@@ -133,7 +133,7 @@ RSpec.describe "Players" do
         get "/players/#{player.id}/edit"
 
         expect(response).to redirect_to("/players/new")
-        expect(flash[:alert]).to eq("Brak dostepu do edycji tego zgloszenia.")
+        expect(flash[:alert]).to eq("Brak dostępu do edycji tego zgłoszenia.")
       end
     end
 
@@ -154,7 +154,7 @@ RSpec.describe "Players" do
         get "/players/#{player.id}/edit"
 
         expect(response).to redirect_to("/players/new")
-        expect(flash[:alert]).to eq("Brak dostepu do edycji tego zgloszenia.")
+        expect(flash[:alert]).to eq("Brak dostępu do edycji tego zgłoszenia.")
       end
     end
 
@@ -166,7 +166,7 @@ RSpec.describe "Players" do
         get "/players/#{player.id}/edit"
 
         expect(response).to redirect_to("/players/new")
-        expect(flash[:alert]).to eq("Brak dostepu do edycji tego zgloszenia.")
+        expect(flash[:alert]).to eq("Brak dostępu do edycji tego zgłoszenia.")
       end
     end
   end
@@ -188,7 +188,7 @@ RSpec.describe "Players" do
         }
 
         expect(response).to redirect_to("/players/#{player.id}/edit")
-        expect(flash[:notice]).to eq("Zgloszenie zawodnika zostalo zaktualizowane.")
+        expect(flash[:notice]).to eq("Zgłoszenie zawodnika zostało zaktualizowane.")
         expect(player.reload.name).to eq("New Name")
         expect(player.nickname).to eq("newnick")
         expect(player.description).to eq("Updated description")
@@ -213,7 +213,7 @@ RSpec.describe "Players" do
         }
 
         expect(response).to redirect_to("/players/new")
-        expect(flash[:alert]).to eq("Brak dostepu do edycji tego zgloszenia.")
+        expect(flash[:alert]).to eq("Brak dostępu do edycji tego zgłoszenia.")
         expect(player.reload.name).to eq("Old Name")
       end
     end
@@ -234,7 +234,7 @@ RSpec.describe "Players" do
         }
 
         expect(response).to redirect_to("/players/new")
-        expect(flash[:alert]).to eq("Brak dostepu do edycji tego zgloszenia.")
+        expect(flash[:alert]).to eq("Brak dostępu do edycji tego zgłoszenia.")
         expect(player.reload.name).to eq("Old Name")
       end
     end
@@ -275,23 +275,23 @@ RSpec.describe "Players" do
         expect(response).to have_http_status(:ok)
         expect(response.body).to include("Adam Nowak")
         expect(response.body).to include("adam")
-        expect(response.body).to include("DEF")
+        expect(response.body).to include("Obrońca")
         expect(response.body).to include("Solid defender")
-        expect(response.body).to include("Elo globalne:")
-        expect(response.body).to include("Elo sezonu Summer 2026:")
+        expect(response.body).to include("ELO globalne:")
+        expect(response.body).to include("ELO sezonu Summer 2026:")
         expect(response.body).to include("1020")
         expect(response.body).to include("Mecze")
         expect(response.body).to include("Bilans")
-        expect(response.body).to include("Win rate")
+        expect(response.body).to include("Wygrane")
         expect(response.body).to include("1-0-0")
         expect(response.body).to include("100%")
         expect(response.body).to include("3 / 2")
         expect(response.body).to include("4 / 1")
-        expect(response.body).to include("Historia meczow")
+        expect(response.body).to include("Historia meczów")
         expect(response.body).to include("2026-05-29")
         expect(response.body).to include("Summer 2026")
         expect(response.body).to include("2:1")
-        expect(response.body).to include("win")
+        expect(response.body).to include("Wygrana")
         expect(response.body).to include("Sezon")
         expect(response.body).to include("Filtruj")
         expect(response.body).not_to include("2026-05-22")
@@ -308,7 +308,7 @@ RSpec.describe "Players" do
         get "/players/#{player.id}"
 
         expect(response).to have_http_status(:ok)
-        expect(response.body).to include("Brak rozegranych meczow.")
+        expect(response.body).to include("Brak rozegranych meczów.")
       end
     end
 

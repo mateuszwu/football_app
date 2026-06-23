@@ -1,6 +1,6 @@
 <% if match_day.errors.any? %>
   <div class="form-errors">
-    <p>Popraw bledy formularza:</p>
+    <p><%= t("common.form_errors") %></p>
     <ul>
       <% match_day.errors.full_messages.each do |message| %>
         <li><%= message %></li>
@@ -15,22 +15,22 @@
   <%= hidden_field_tag "match_day[reroll_count]", reroll_count %>
 
   <div class="form-field">
-    <%= form.label :season_id, "Sezon" %>
-    <%= form.collection_select :season_id, seasons, :id, :name, { prompt: "Wybierz sezon" }, required: true %>
+    <%= form.label :season_id, t("seasons.season") %>
+    <%= form.collection_select :season_id, seasons, :id, :name, { prompt: t("seasons.season") }, required: true %>
   </div>
 
   <div class="form-field">
-    <%= form.label :played_on, "Data grania" %>
+    <%= form.label :played_on, t("match_days.play_date") %>
     <%= form.date_field :played_on, required: true %>
   </div>
 
   <div class="form-field">
-    <label>Status</label>
-    <p class="status-badge"><%= match_day.status.presence || "setup" %></p>
+    <label><%= t("match_days.status") %></label>
+    <p class="status-badge"><%= status_label(match_day.status.presence || "setup") %></p>
   </div>
 
   <div class="form-field">
-    <label>Obecni zawodnicy</label>
+    <label><%= t("match_days.present_players") %></label>
     <% if players.any? %>
       <div class="checkbox-list">
         <% players.each do |player| %>
@@ -41,33 +41,33 @@
         <% end %>
       </div>
     <% else %>
-      <p class="empty-state">Brak aktywnych i zatwierdzonych zawodnikow.</p>
+      <p class="empty-state"><%= t("match_days.no_active_players") %></p>
     <% end %>
   </div>
 
   <div class="form-field">
     <div class="field-header">
-      <label>Manualny builder bazowych zespolow</label>
+      <label><%= t("match_days.team_builder") %></label>
       <div class="form-actions">
         <button type="submit" name="preview_auto_proposal" value="1" class="button button--small button--secondary">
-          Generuj auto
+          <%= t("match_days.generate_auto") %>
         </button>
         <% if setup_method == TeamSetup::SETUP_METHOD_AUTO %>
           <button type="submit" name="reroll_auto_proposal" value="1" class="button button--small button--secondary">
-            Przelosuj
+            <%= t("match_days.reroll") %>
           </button>
         <% end %>
         <button type="button" class="button button--small button--secondary" data-action="lineup-editor#addTeam">
-          Dodaj zespol
+          <%= t("match_days.add_team") %>
         </button>
       </div>
     </div>
     <div class="form-field">
-      <%= label_tag "match_day_team_count", "Liczba zespolow do wygenerowania" %>
+      <%= label_tag "match_day_team_count", t("match_days.team_count") %>
       <%= number_field_tag "match_day[team_count]", team_count, min: 2, step: 1, class: "input" %>
     </div>
     <p class="field-hint">
-      Przeciagnij zaznaczonych zawodnikow do zespolow.
+      <%= t("match_days.builder_hint") %>
       <% if setup_method == TeamSetup::SETUP_METHOD_AUTO %>
         Auto proposal <%= algorithm_version.presence || Teams::GenerateProposal::ALGORITHM_VERSION %>, zespoly: <%= team_count %>, rerolle: <%= reroll_count %>.
       <% end %>
@@ -82,8 +82,8 @@
         <div class="lineup-editor__columns">
           <section class="lineup-column" data-lineup-column="pool">
             <header class="lineup-column__header">
-              <h3>Dostepni</h3>
-              <p>Zaznaczeni zawodnicy gotowi do przypisania.</p>
+              <h3><%= t("match_days.available") %></h3>
+              <p><%= t("match_days.available_hint") %></p>
             </header>
             <div class="lineup-column__list" data-lineup-list="pool" data-lineup-editor-target="pool"></div>
           </section>
@@ -94,12 +94,12 @@
         </div>
       </div>
     <% else %>
-      <p class="empty-state">Brak zawodnikow do przypisania.</p>
+      <p class="empty-state"><%= t("match_days.no_assignable_players") %></p>
     <% end %>
   </div>
 
   <div class="form-actions">
-    <%= form.submit "Zapisz", class: "button button--primary" %>
-    <%= link_to "Wroc", admin_match_days_path, class: "button button--secondary" %>
+    <%= form.submit t("match_days.save"), class: "button button--primary" %>
+    <%= link_to t("match_days.back"), admin_match_days_path, class: "button button--secondary" %>
   </div>
 <% end %>

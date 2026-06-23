@@ -1,0 +1,36 @@
+<article class="dashboard-tile dashboard-tile--span-3 dashboard-tile--ranking" id="<%= id %>">
+  <%= dashboard_icon(icon, class_name: "dashboard-tile__watermark") %>
+  <div class="dashboard-tile__header">
+    <span class="dashboard-tile__number"><%= number %></span>
+    <h2 class="dashboard-tile__title"><%= title %></h2>
+  </div>
+
+  <div class="dashboard-tile__body">
+    <% if ranked_entries.any? %>
+      <ol class="ranking-preview">
+        <% ranked_entries.each do |ranked_entry| %>
+          <% entry = ranked_entry.entry %>
+          <% initials = entry.player.name.split.map { |part| part.first }.join.first(2).upcase %>
+          <li class="ranking-preview__row">
+            <span class="ranking-preview__rank"><%= ranked_entry.rank %></span>
+            <span class="ranking-preview__avatar"><%= initials %></span>
+            <span class="ranking-preview__player">
+              <strong><%= link_to entry.player.name, player_path(entry.player) %></strong>
+              <small><%= role_label(entry.player.role_code) %></small>
+            </span>
+            <strong class="ranking-preview__value"><%= ranked_entry_display_value(ranked_entry) %></strong>
+          </li>
+        <% end %>
+      </ol>
+    <% else %>
+      <div class="ui-empty-state">
+        <h3><%= empty_title %></h3>
+        <p><%= empty_body %></p>
+      </div>
+    <% end %>
+  </div>
+
+  <div class="dashboard-tile__footer">
+    <%= link_to cta_label, cta_path, class: "dashboard-link" %>
+  </div>
+</article>

@@ -1,23 +1,23 @@
-<% content_for :title, "Admin Match Days" %>
+<% content_for :title, t("match_days.admin_title") %>
 
 <section class="section" id="admin-match-days">
   <div class="section__header">
     <span class="section__eyebrow">Admin</span>
-    <h1>Match days</h1>
-    <p>Konfiguracja terminow grania i ich statusu roboczego.</p>
+    <h1><%= t("match_days.title") %></h1>
+    <p><%= t("match_days.intro") %></p>
   </div>
 
-  <p><%= link_to "Nowy match day", new_admin_match_day_path, class: "button button--secondary" %></p>
+  <p><%= link_to t("match_days.new"), new_admin_match_day_path, class: "button button--secondary" %></p>
 
   <% if match_days.any? %>
     <div class="table-wrapper">
       <table class="admin-table">
         <thead>
           <tr>
-            <th scope="col">Sezon</th>
-            <th scope="col">Data</th>
-            <th scope="col">Status</th>
-            <th scope="col">Akcje</th>
+            <th scope="col"><%= t("seasons.season") %></th>
+            <th scope="col"><%= t("match_days.date") %></th>
+            <th scope="col"><%= t("match_days.status") %></th>
+            <th scope="col"><%= t("match_days.actions") %></th>
           </tr>
         </thead>
         <tbody>
@@ -25,9 +25,9 @@
             <tr>
               <td><%= match_day.season.name %></td>
               <td><%= match_day.played_on %></td>
-              <td><span class="status-badge"><%= match_day.status %></span></td>
+              <td><span class="status-badge"><%= status_label(match_day.status) %></span></td>
               <td class="admin-table__actions">
-                <%= link_to "Edytuj", edit_admin_match_day_path(match_day) %>
+                <%= link_to t("admin.edit"), edit_admin_match_day_path(match_day) %>
               </td>
             </tr>
           <% end %>
@@ -35,6 +35,6 @@
       </table>
     </div>
   <% else %>
-    <p>Brak match days do wyswietlenia.</p>
+    <p><%= t("match_days.no_match_days") %></p>
   <% end %>
 </section>

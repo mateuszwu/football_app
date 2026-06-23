@@ -17,7 +17,7 @@ class PlayersController < ApplicationController
         secure: Rails.env.production?
       }
 
-      redirect_to edit_player_path(player), notice: "Zgloszenie zawodnika zostalo zapisane i czeka na akceptacje."
+      redirect_to edit_player_path(player), notice: t("players.submission_created")
     else
       render :new, locals: { player: player }, status: :unprocessable_content
     end
@@ -35,7 +35,7 @@ class PlayersController < ApplicationController
     return if performed?
 
     if player.update(player_params)
-      redirect_to edit_player_path(player), notice: "Zgloszenie zawodnika zostalo zaktualizowane."
+      redirect_to edit_player_path(player), notice: t("players.submission_updated")
     else
       render :edit, locals: { player: player }, status: :unprocessable_content
     end
@@ -58,8 +58,8 @@ class PlayersController < ApplicationController
     payload = Players::DecodeEditToken.call(token: cookies.encrypted[:pending_player_edit_token])
     player = Player.pending.find_by(id: params[:id])
 
-    return redirect_to(new_player_path, alert: "Brak dostepu do edycji tego zgloszenia.") if payload.blank? || player.blank?
-    return redirect_to(new_player_path, alert: "Brak dostepu do edycji tego zgloszenia.") if payload.fetch("player_id", nil) != player.id
+    return redirect_to(new_player_path, alert: t("players.edit_access_denied")) if payload.blank? || player.blank?
+    return redirect_to(new_player_path, alert: t("players.edit_access_denied")) if payload.fetch("player_id", nil) != player.id
 
     player
   end

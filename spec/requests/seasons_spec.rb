@@ -17,7 +17,7 @@ RSpec.describe "Seasons" do
         create(:match_day_player, match_day: latest_match_day, player: def_player)
         create(:player_season_stat, season: season, player: scorer, elo: 1042, goals: 5, assists: 1, mvp_votes_count: 3, def_votes_count: 0)
         create(:player_season_stat, season: season, player: assister, elo: 1030, goals: 2, assists: 6, mvp_votes_count: 1, def_votes_count: 1)
-        create(:player_season_stat, season: season, player: def_player, elo: 1018, goals: 0, assists: 2, mvp_votes_count: 0, def_votes_count: 4)
+        create(:player_season_stat, season: season, player: def_player, elo: 1018, goals: 5, assists: 2, mvp_votes_count: 0, def_votes_count: 4)
         create(:player_season_stat, season: spring, player: scorer, elo: 990, goals: 1, assists: 1, mvp_votes_count: 0, def_votes_count: 0)
 
         get "/seasons/#{season.id}", params: { season_id: season.id }
@@ -28,10 +28,10 @@ RSpec.describe "Seasons" do
         expect(response.body).to include("2026-08-31")
         expect(response.body).to include("Sezon")
         expect(response.body).to include("Filtruj")
-        expect(response.body).to include("Match days")
+        expect(response.body).to include("Dni grania")
         expect(response.body).to include("Zawodnicy")
-        expect(response.body).to include("Wystepy")
-        expect(response.body).to include("Ranking Elo")
+        expect(response.body).to include("Występy")
+        expect(response.body).to include("Ranking ELO")
         expect(response.body).to include("Top strzelcy")
         expect(response.body).to include("Top asysty")
         expect(response.body).to include("Top MVP")
@@ -47,10 +47,12 @@ RSpec.describe "Seasons" do
         expect(response.body).to include("3 MVP")
         expect(response.body).to include("4 DEF")
         expect(response.body.index("Adam Nowak")).to be < response.body.index("Marek Kowalski")
+        top_scorers_section = response.body[/<h2>Top strzelcy<\/h2>.*?<h2>Top asysty<\/h2>/m]
+        expect(top_scorers_section.scan(/leaderboard-rank">(\d+)</).flatten).to eq(%w[1 1 3])
         expect(response.body).to include("2026-06-12")
-        expect(response.body).to include("ready")
+        expect(response.body).to include("Gotowy")
         expect(response.body).to include("2026-06-05")
-        expect(response.body).to include("finished")
+        expect(response.body).to include("Zakończony")
         expect(response.body.index("2026-06-12")).to be < response.body.index("2026-06-05")
         expect(response.body).to include("Spring 2026")
         expect(response.body).not_to include("+48111111111")
@@ -68,12 +70,12 @@ RSpec.describe "Seasons" do
 
         expect(response).to have_http_status(:ok)
         expect(response.body).to include("Summer 2026")
-        expect(response.body).to include("Brak zawodnikow w rankingu Elo.")
-        expect(response.body).to include("Brak strzelcow w tym sezonie.")
+        expect(response.body).to include("Brak zawodników w rankingu ELO.")
+        expect(response.body).to include("Brak strzelców w tym sezonie.")
         expect(response.body).to include("Brak asyst w tym sezonie.")
-        expect(response.body).to include("Brak glosow MVP w tym sezonie.")
-        expect(response.body).to include("Brak glosow DEF w tym sezonie.")
-        expect(response.body).to include("Brak match days w tym sezonie.")
+        expect(response.body).to include("Brak głosów MVP w tym sezonie.")
+        expect(response.body).to include("Brak głosów DEF w tym sezonie.")
+        expect(response.body).to include("Brak dni grania w tym sezonie.")
       end
     end
   end

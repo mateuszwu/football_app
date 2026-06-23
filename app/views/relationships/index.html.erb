@@ -1,29 +1,29 @@
-<% content_for :title, "Graf relacji - Football App" %>
+<% content_for :title, "#{t("relationships.graph_title")} - #{t("app.name")}" %>
 <% graph_layout = relationship_graph_layout(players: players, edges: edges) %>
 
 <section class="section">
   <div class="section__header">
-    <p class="eyebrow">Relacje zawodnikow</p>
-    <h1>Graf relacji</h1>
-    <p>Publiczny widok polaczen zbudowanych na wspolnych match dayach approved aktywnych zawodnikow.</p>
+    <p class="eyebrow"><%= t("relationships.title") %></p>
+    <h1><%= t("relationships.graph_title") %></h1>
+    <p><%= t("relationships.graph_intro") %></p>
   </div>
 
   <div class="summary-grid">
     <article class="summary-card">
-      <span class="summary-card__label">Publiczni zawodnicy</span>
+      <span class="summary-card__label"><%= t("relationships.public_players") %></span>
       <strong><%= players.count %></strong>
     </article>
     <article class="summary-card">
-      <span class="summary-card__label">Widoczne polaczenia</span>
+      <span class="summary-card__label"><%= t("relationships.visible_connections") %></span>
       <strong><%= edges.count %></strong>
     </article>
     <article class="summary-card">
-      <span class="summary-card__label">Najsilniejszy duet</span>
+      <span class="summary-card__label"><%= t("relationships.strongest_duo") %></span>
       <% if strongest_edge %>
         <strong><%= strongest_edge.player_one.name %> + <%= strongest_edge.player_two.name %></strong>
-        <span><%= pluralize(strongest_edge.shared_match_days_count, "shared match day") %></span>
+        <span><%= t("dashboard.labels.shared_play_days", count: strongest_edge.shared_match_days_count) %></span>
       <% else %>
-        <strong>Brak danych</strong>
+        <strong><%= t("common.none") %></strong>
       <% end %>
     </article>
   </div>
@@ -31,8 +31,8 @@
 
 <section class="section">
   <div class="section__header">
-    <h2>Wizualna siec polaczen</h2>
-    <p>Statyczny graf SVG pokazujacy publicznych zawodnikow i sile ich wspolnych match dayow.</p>
+    <h2><%= t("relationships.visual_network") %></h2>
+    <p><%= t("relationships.visual_network_intro") %></p>
   </div>
 
   <% if graph_layout.nodes.any? %>
@@ -43,7 +43,7 @@
         role="img"
         viewBox="0 0 <%= graph_layout.width %> <%= graph_layout.height %>"
       >
-        <title id="relationship-graph-title">Graf relacji publicznych zawodnikow</title>
+        <title id="relationship-graph-title"><%= t("relationships.graph_accessible_title") %></title>
 
         <% graph_layout.edges.each do |edge| %>
           <line
@@ -54,7 +54,7 @@
             y2="<%= edge.y2 %>"
             stroke-width="<%= edge.stroke_width %>"
           >
-            <title><%= "#{edge.player_one.name} i #{edge.player_two.name}: #{pluralize(edge.shared_match_days_count, "shared match day")}" %></title>
+            <title><%= "#{edge.player_one.name} i #{edge.player_two.name}: #{t("dashboard.labels.shared_play_days", count: edge.shared_match_days_count)}" %></title>
           </line>
         <% end %>
 
@@ -79,14 +79,14 @@
       </svg>
     </div>
   <% else %>
-    <p class="empty-state">Brak publicznych zawodnikow do narysowania grafu relacji.</p>
+    <p class="empty-state"><%= t("relationships.no_graph_players") %></p>
   <% end %>
 </section>
 
 <section class="section section--muted">
   <div class="section__header">
-    <h2>Najmocniejsze polaczenia</h2>
-    <p>Duety uporzadkowane po liczbie wspolnych match dayow.</p>
+    <h2><%= t("relationships.strongest_connections") %></h2>
+    <p><%= t("relationships.strongest_connections_intro") %></p>
   </div>
 
   <% if edges.any? %>
@@ -98,19 +98,19 @@
             <span class="relationship-list__connector">&harr;</span>
             <strong><%= link_to edge.player_two.name, player_path(edge.player_two) %></strong>
           </div>
-          <span class="status-badge"><%= pluralize(edge.shared_match_days_count, "shared match day") %></span>
+          <span class="status-badge"><%= t("dashboard.labels.shared_play_days", count: edge.shared_match_days_count) %></span>
         </li>
       <% end %>
     </ol>
   <% else %>
-    <p class="empty-state">Brak publicznych polaczen do wyswietlenia.</p>
+    <p class="empty-state"><%= t("relationships.no_connections") %></p>
   <% end %>
 </section>
 
 <section class="section">
   <div class="section__header">
-    <h2>Najlepsi teammatezi</h2>
-    <p>Top relacje dla kazdego publicznego zawodnika.</p>
+    <h2><%= t("relationships.best_teammates") %></h2>
+    <p><%= t("relationships.best_teammates_intro") %></p>
   </div>
 
   <% if nodes.any? %>
@@ -118,22 +118,22 @@
       <% nodes.each do |node| %>
         <article class="player-card">
           <h3><%= link_to node.player.name, player_path(node.player) %></h3>
-          <p class="player-card__meta"><%= node.player.nickname %> &middot; <%= node.player.role_code %></p>
+          <p class="player-card__meta"><%= node.player.nickname %> &middot; <%= role_label(node.player.role_code) %></p>
 
           <% if node.top_teammates.any? %>
-            <p>Najlepsze polaczenie:</p>
+            <p><%= t("relationships.best_connection") %></p>
             <ul class="relationship-node-list">
               <% node.top_teammates.each do |teammate| %>
                 <li><%= link_to teammate.name, player_path(teammate) %></li>
               <% end %>
             </ul>
           <% else %>
-            <p class="empty-state">Brak publicznych teammateow.</p>
+            <p class="empty-state"><%= t("relationships.no_teammates") %></p>
           <% end %>
         </article>
       <% end %>
     </div>
   <% else %>
-    <p class="empty-state">Brak publicznych zawodnikow do zbudowania grafu relacji.</p>
+    <p class="empty-state"><%= t("relationships.no_players_for_graph") %></p>
   <% end %>
 </section>

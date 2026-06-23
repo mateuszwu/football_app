@@ -1,15 +1,15 @@
-<% content_for :title, "Dolacz jako zawodnik - Football App" %>
+<% content_for :title, "#{t("players.submit_title")} - #{t("app.name")}" %>
 
 <section class="section" id="player-submission">
   <div class="section__header">
-    <p class="eyebrow">Dolacz do gry</p>
-    <h1>Zgloszenie zawodnika</h1>
-    <p>Wypelnij formularz, aby przeslac profil do akceptacji administratora.</p>
+    <p class="eyebrow"><%= t("dashboard.join_game") %></p>
+    <h1><%= t("players.submit_title") %></h1>
+    <p><%= t("players.submit_intro") %></p>
   </div>
 
   <% if player.errors.any? %>
     <div class="form-errors">
-      <p>Popraw bledy formularza:</p>
+      <p><%= t("common.form_errors") %></p>
       <ul>
         <% player.errors.full_messages.each do |message| %>
           <li><%= message %></li>
@@ -20,33 +20,33 @@
 
   <%= form_with model: player, class: "admin-form" do |form| %>
     <div class="form-field">
-      <%= form.label :name, "Imie i nazwisko" %>
+      <%= form.label :name, t("players.name") %>
       <%= form.text_field :name, required: true %>
     </div>
 
     <div class="form-field">
-      <%= form.label :nickname, "Nick" %>
+      <%= form.label :nickname, t("players.nickname") %>
       <%= form.text_field :nickname, required: true %>
     </div>
 
     <div class="form-field">
-      <%= form.label :phone, "Telefon" %>
+      <%= form.label :phone, t("players.phone") %>
       <%= form.telephone_field :phone, required: true %>
     </div>
 
     <div class="form-field">
-      <%= form.label :description, "Opis" %>
+      <%= form.label :description, t("players.description") %>
       <%= form.text_area :description, required: true, rows: 4 %>
     </div>
 
     <div class="form-field">
-      <%= form.label :role_code, "Rola" %>
-      <%= form.select :role_code, Player::ROLE_CODES, {}, required: true %>
+      <%= form.label :role_code, t("players.role") %>
+      <%= form.select :role_code, role_options(Player::ROLE_CODES), {}, required: true %>
     </div>
 
     <div class="form-actions">
-      <%= form.submit "Wyslij zgloszenie", class: "button button--primary" %>
-      <%= link_to "Wroc", root_path(anchor: "players"), class: "button button--secondary" %>
+      <%= form.submit t("players.submit_player"), class: "button button--primary" %>
+      <%= link_to t("common.back"), root_path(anchor: "players"), class: "button button--secondary" %>
     </div>
   <% end %>
 </section>

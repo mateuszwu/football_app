@@ -1,18 +1,18 @@
-<% content_for :title, "Admin Login" %>
+<% content_for :title, t("admin.login") %>
 
 <section class="section" id="admin-login">
   <div class="section__header">
     <span class="section__eyebrow">Admin</span>
-    <h1>Zaloguj</h1>
-    <p>Podaj haslo administratora, aby przejsc do panelu zarzadzania.</p>
+    <h1><%= t("navigation.login") %></h1>
+    <p><%= t("admin.login_intro") %></p>
   </div>
 
   <%= form_with url: admin_session_path, method: :post, class: "admin-login-form" do |form| %>
     <div class="form-field">
-      <%= form.label :password, "Haslo" %>
+      <%= form.label :password, t("common.password") %>
       <%= form.password_field :password, autocomplete: "current-password", required: true %>
     </div>
 
-    <%= form.submit "Zaloguj", class: "button button--primary" %>
+    <%= form.submit t("navigation.login"), class: "button button--primary" %>
   <% end %>
 </section>

@@ -1,10 +1,10 @@
-<% content_for :title, "New Match Day" %>
+<% content_for :title, t("match_days.new") %>
 
 <section class="section" id="admin-match-day-new">
   <div class="section__header">
     <span class="section__eyebrow">Admin</span>
-    <h1>Nowy match day</h1>
-    <p>Ustaw sezon i termin grania przed wyborem obecnych zawodnikow.</p>
+    <h1><%= t("match_days.new") %></h1>
+    <p><%= t("match_days.new_intro") %></p>
   </div>
 
   <%= render "form",

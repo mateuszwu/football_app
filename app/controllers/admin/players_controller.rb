@@ -18,7 +18,7 @@ module Admin
       player = Player.find(params[:id])
 
       if player.update(player_params)
-        redirect_to admin_players_path, notice: "Player updated"
+        redirect_to admin_players_path, notice: t("admin.player_updated")
       else
         render :edit, locals: { player: player }, status: :unprocessable_content
       end
@@ -28,14 +28,14 @@ module Admin
       player = Player.find(params[:id])
       player.update!(approval_status: "approved", approved_at: Time.current, rejected_at: nil, active: true)
 
-      redirect_to admin_players_path, notice: "Player approved"
+      redirect_to admin_players_path, notice: t("admin.player_approved")
     end
 
     def reject
       player = Player.find(params[:id])
       player.update!(approval_status: "rejected", rejected_at: Time.current, approved_at: nil, active: false)
 
-      redirect_to admin_players_path, notice: "Player rejected"
+      redirect_to admin_players_path, notice: t("admin.player_rejected")
     end
 
     private
