@@ -13,6 +13,133 @@ module RelationshipsHelper
     keyword_init: true
   )
 
+  def relationship_summary_cards(duo_insights)
+    [
+      relationship_summary_card(:best_overall_duo, duo_insights.best_overall_duo, :win_rate, "star", "award"),
+      relationship_summary_card(:most_played_duo, duo_insights.most_played_duo, :shared_count, "users", "link"),
+      relationship_summary_card(:best_win_rate_duo, duo_insights.best_win_rate_duo, :win_rate, "trending-up", "target"),
+      relationship_summary_card(:best_offensive_duo, duo_insights.best_offensive_duo, :offense_total, "zap", "target")
+    ]
+  end
+
+  def relationship_tabs(active_tab)
+    [
+      [ "duos", t("relationships.tabs.duos") ],
+      [ "trios", t("relationships.tabs.trios") ],
+      [ "fours", t("relationships.tabs.fours") ],
+      [ "fives", t("relationships.tabs.fives") ],
+      [ "graph", t("relationships.tabs.graph") ]
+    ].map do |key, label|
+      { key:, label:, active: active_tab == key }
+    end
+  end
+
+  def relationship_player_initials(player)
+    player.name.split.map { |part| part.first.upcase }.first(2).join
+  end
+
+  def relationship_combination_label(active_tab)
+    key = {
+      "duos" => "duo",
+      "trios" => "trio",
+      "fours" => "four",
+      "fives" => "five",
+      "graph" => "duo"
+    }.fetch(active_tab, "duo")
+
+    t("relationships.table.#{key}")
+  end
+
+  def relationship_duo_avatars(summary, size: nil)
+    relationship_player_avatars([ summary.player_a, summary.player_b ], size:)
+  end
+
+  def relationship_player_avatars(players, size: nil)
+    class_names = [ "relationship-avatar" ]
+    class_names << "relationship-avatar--#{size}" if size.present?
+
+    safe_join(players.map do |player|
+      link_to(
+        safe_join([
+          tag.span(relationship_player_initials(player), class: "relationship-avatar__initials"),
+          tag.span(player.name, class: "relationship-avatar__tooltip", role: "tooltip")
+        ]),
+        player_path(player),
+        class: class_names.join(" "),
+        title: player.name,
+        aria: { label: player.name },
+        data: { turbo_frame: "_top" }
+      )
+    end)
+  end
+
+  def relationship_duo_names(summary)
+    safe_join([
+      player_profile_link(summary.player_a),
+      tag.span("+", class: "relationship-duo-card__plus"),
+      player_profile_link(summary.player_b)
+    ], " ")
+  end
+
+  def relationship_player_names(players)
+    safe_join(players.map { |player| player_profile_link(player) }, tag.span("+", class: "relationship-duo-card__plus"))
+  end
+
+  def relationship_ranking_players_count(combination_ranking)
+    combination_ranking.flat_map(&:players).uniq(&:id).count
+  end
+
+  def relationship_primary_metric(summary, metric)
+    case metric
+    when :shared_count
+      relationship_shared_count_label(summary)
+    when :offense_total
+      t("relationships.labels.goals_assists_together", value: summary.offense_total)
+    else
+      relationship_win_rate_label(summary) || relationship_shared_count_label(summary)
+    end
+  end
+
+  def relationship_secondary_metrics(summary, primary_metric)
+    primary_is_win_rate = primary_metric == :win_rate && relationship_win_rate_label(summary).present?
+    primary_is_shared_count = primary_metric == :shared_count || (primary_metric == :win_rate && !primary_is_win_rate)
+
+    [
+      (relationship_win_rate_label(summary) unless primary_is_win_rate),
+      (relationship_shared_count_label(summary) unless primary_is_shared_count),
+      (t("relationships.labels.goals_assists_together", value: summary.offense_total) if summary.offense_total.positive? && primary_metric != :offense_total),
+      (relationship_record_label(summary) if primary_is_win_rate && summary.match_level?),
+      (relationship_goals_assists_split_label(summary) if primary_metric == :offense_total && summary.offense_total.positive?)
+    ].compact
+  end
+
+  def relationship_shared_count_label(summary)
+    key = summary.match_level? ? "shared_matches" : "shared_match_days"
+    t("relationships.labels.#{key}", count: summary.shared_count)
+  end
+
+  def relationship_win_rate_label(summary)
+    return nil if summary.win_rate.blank?
+
+    t("relationships.labels.win_rate", value: summary.win_rate)
+  end
+
+  def relationship_record_label(summary)
+    t("relationships.labels.record", wins: summary.wins, draws: summary.draws, losses: summary.losses)
+  end
+
+  def relationship_goals_assists_split_label(summary)
+    t("relationships.labels.goals_assists_split", goals: summary.goals, assists: summary.assists)
+  end
+
+  def relationship_table_shared_header(duo_insights)
+    if duo_insights.summaries.any?(&:match_level?)
+      t("relationships.table.shared_matches")
+    else
+      t("relationships.table.shared_match_days")
+    end
+  end
+
   def relationship_graph_layout(players:, edges:, width: 720, height: 480)
     positions = relationship_graph_positions(players:, width:, height:)
     strongest_connection = edges.map(&:shared_match_days_count).max || 1
@@ -53,6 +180,14 @@ module RelationshipsHelper
   end
 
   private
+
+  def relationship_summary_card(key, summary, primary_metric, icon, fallback)
+    { key:, summary:, primary_metric:, icon:, fallback: }
+  end
+
+  def player_profile_link(player)
+    link_to(player.name, player_path(player), data: { turbo_frame: "_top" })
+  end
 
   def relationship_graph_positions(players:, width:, height:)
     return {} if players.empty?

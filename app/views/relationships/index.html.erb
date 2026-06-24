@@ -1,139 +1,227 @@
-<% content_for :title, "#{t("relationships.graph_title")} - #{t("app.name")}" %>
-<% graph_layout = relationship_graph_layout(players: players, edges: edges) %>
-
-<section class="section">
-  <div class="section__header">
-    <p class="eyebrow"><%= t("relationships.title") %></p>
-    <h1><%= t("relationships.graph_title") %></h1>
+<% content_for :title, "#{t("relationships.title")} - #{t("app.name")}" %>
+<section class="relationships-page">
+  <header class="relationships-hero">
+    <p class="eyebrow"><%= t("relationships.eyebrow") %></p>
+    <h1><%= t("relationships.title") %></h1>
     <p><%= t("relationships.graph_intro") %></p>
-  </div>
+  </header>
 
-  <div class="summary-grid">
-    <article class="summary-card">
-      <span class="summary-card__label"><%= t("relationships.public_players") %></span>
-      <strong><%= players.count %></strong>
-    </article>
-    <article class="summary-card">
-      <span class="summary-card__label"><%= t("relationships.visible_connections") %></span>
-      <strong><%= edges.count %></strong>
-    </article>
-    <article class="summary-card">
-      <span class="summary-card__label"><%= t("relationships.strongest_duo") %></span>
-      <% if strongest_edge %>
-        <strong><%= strongest_edge.player_one.name %> + <%= strongest_edge.player_two.name %></strong>
-        <span><%= t("dashboard.labels.shared_play_days", count: strongest_edge.shared_match_days_count) %></span>
-      <% else %>
-        <strong><%= t("common.none") %></strong>
-      <% end %>
-    </article>
-  </div>
-</section>
-
-<section class="section">
-  <div class="section__header">
-    <h2><%= t("relationships.visual_network") %></h2>
-    <p><%= t("relationships.visual_network_intro") %></p>
-  </div>
-
-  <% if graph_layout.nodes.any? %>
-    <div class="relationship-graph-shell">
-      <svg
-        aria-labelledby="relationship-graph-title"
-        class="relationship-graph"
-        role="img"
-        viewBox="0 0 <%= graph_layout.width %> <%= graph_layout.height %>"
-      >
-        <title id="relationship-graph-title"><%= t("relationships.graph_accessible_title") %></title>
-
-        <% graph_layout.edges.each do |edge| %>
-          <line
-            class="relationship-graph__edge"
-            x1="<%= edge.x1 %>"
-            y1="<%= edge.y1 %>"
-            x2="<%= edge.x2 %>"
-            y2="<%= edge.y2 %>"
-            stroke-width="<%= edge.stroke_width %>"
-          >
-            <title><%= "#{edge.player_one.name} i #{edge.player_two.name}: #{t("dashboard.labels.shared_play_days", count: edge.shared_match_days_count)}" %></title>
-          </line>
-        <% end %>
-
-        <% graph_layout.nodes.each do |node| %>
-          <a href="<%= player_path(node.player) %>">
-            <circle
-              class="relationship-graph__node"
-              cx="<%= node.x %>"
-              cy="<%= node.y %>"
-              r="16"
-            >
-              <title><%= "#{node.player.name} (#{node.player.nickname})" %></title>
-            </circle>
-            <text
-              class="relationship-graph__label"
-              text-anchor="middle"
-              x="<%= node.label_x %>"
-              y="<%= node.label_y %>"
-            ><%= node.player.name %></text>
-          </a>
-        <% end %>
-      </svg>
-    </div>
-  <% else %>
-    <p class="empty-state"><%= t("relationships.no_graph_players") %></p>
-  <% end %>
-</section>
-
-<section class="section section--muted">
-  <div class="section__header">
-    <h2><%= t("relationships.strongest_connections") %></h2>
-    <p><%= t("relationships.strongest_connections_intro") %></p>
-  </div>
-
-  <% if edges.any? %>
-    <ol class="relationship-list">
-      <% edges.each do |edge| %>
-        <li class="relationship-list__item">
-          <div>
-            <strong><%= link_to edge.player_one.name, player_path(edge.player_one) %></strong>
-            <span class="relationship-list__connector">&harr;</span>
-            <strong><%= link_to edge.player_two.name, player_path(edge.player_two) %></strong>
+  <div class="relationships-summary">
+    <% relationship_summary_cards(duo_insights).each do |card| %>
+      <% summary = card.fetch(:summary) %>
+      <article class="synergy-summary-card">
+        <span class="synergy-summary-card__watermark" aria-hidden="true">
+          <%= safe_lucide_icon(card.fetch(:icon), fallback: card.fetch(:fallback), class_name: "ui-icon") %>
+        </span>
+        <% if summary.present? && !summary.empty? %>
+          <span class="synergy-summary-card__label"><%= t("relationships.summary.#{card.fetch(:key)}") %></span>
+          <div class="synergy-summary-card__avatars">
+            <%= relationship_duo_avatars(summary) %>
           </div>
-          <span class="status-badge"><%= t("dashboard.labels.shared_play_days", count: edge.shared_match_days_count) %></span>
-        </li>
-      <% end %>
-    </ol>
-  <% else %>
-    <p class="empty-state"><%= t("relationships.no_connections") %></p>
-  <% end %>
-</section>
-
-<section class="section">
-  <div class="section__header">
-    <h2><%= t("relationships.best_teammates") %></h2>
-    <p><%= t("relationships.best_teammates_intro") %></p>
+          <strong class="synergy-summary-card__names"><%= relationship_duo_names(summary) %></strong>
+          <em class="synergy-summary-card__metric"><%= relationship_primary_metric(summary, card.fetch(:primary_metric)) %></em>
+          <div class="synergy-summary-card__chips">
+            <% relationship_secondary_metrics(summary, card.fetch(:primary_metric)).each do |metric| %>
+              <span class="synergy-summary-card__chip"><%= metric %></span>
+            <% end %>
+          </div>
+        <% else %>
+          <span class="synergy-summary-card__label"><%= t("relationships.summary.#{card.fetch(:key)}") %></span>
+          <div class="synergy-summary-card__avatars synergy-summary-card__avatars--empty" aria-hidden="true">
+            <span class="synergy-summary-card__avatar synergy-summary-card__avatar--empty">?</span>
+            <span class="synergy-summary-card__avatar synergy-summary-card__avatar--empty">?</span>
+          </div>
+          <strong class="synergy-summary-card__names synergy-summary-card__names--empty"><%= t("relationships.empty.summary_card") %></strong>
+          <p class="synergy-summary-card__empty-body"><%= t("relationships.empty.summary_card_body") %></p>
+          <div class="synergy-summary-card__chips">
+            <span class="synergy-summary-card__chip synergy-summary-card__chip--muted"><%= t("relationships.empty.not_enough_data") %></span>
+          </div>
+        <% end %>
+      </article>
+    <% end %>
   </div>
 
-  <% if nodes.any? %>
-    <div class="player-grid">
-      <% nodes.each do |node| %>
-        <article class="player-card">
-          <h3><%= link_to node.player.name, player_path(node.player) %></h3>
-          <p class="player-card__meta"><%= node.player.nickname %> &middot; <%= role_label(node.player.role_code) %></p>
-
-          <% if node.top_teammates.any? %>
-            <p><%= t("relationships.best_connection") %></p>
-            <ul class="relationship-node-list">
-              <% node.top_teammates.each do |teammate| %>
-                <li><%= link_to teammate.name, player_path(teammate) %></li>
-              <% end %>
-            </ul>
-          <% else %>
-            <p class="empty-state"><%= t("relationships.no_teammates") %></p>
+  <%= turbo_frame_tag "relationships_results", target: "_top", data: { controller: "preserve-scroll" } do %>
+    <div class="relationships-tabs-row">
+      <nav class="leaderboards-tabs relationships-tabs" aria-label="<%= t("relationships.title") %>">
+        <% relationship_tabs(active_tab).each do |tab| %>
+          <%= link_to relationships_path(tab: tab.fetch(:key), direction:, limit:, metric:, season_id: season&.id, minimum_shared_matches: tab.fetch(:active) ? minimum_shared_matches : tab_minimums.fetch(tab.fetch(:key)), player_filter:), class: "leaderboards-tab #{'leaderboards-tab--active' if tab.fetch(:active)}", aria: ({ current: "page" } if tab.fetch(:active)) do %>
+            <span><%= tab.fetch(:label) %></span>
           <% end %>
-        </article>
-      <% end %>
+        <% end %>
+      </nav>
+
+      <div class="relationships-tabs-meta" aria-label="<%= t("relationships.stats_label") %>">
+        <% if active_tab == "graph" %>
+          <span><%= t("relationships.labels.players_count", count: graph_data.dig(:meta, :players_count)) %></span>
+          <span><%= t("relationships.labels.connections_count", count: graph_data.dig(:meta, :edges_count)) %></span>
+        <% else %>
+          <span><%= t("relationships.labels.players_count", count: relationship_ranking_players_count(combination_ranking)) %></span>
+          <span><%= t("relationships.labels.connections_count", count: combination_ranking.count) %></span>
+        <% end %>
+      </div>
     </div>
-  <% else %>
-    <p class="empty-state"><%= t("relationships.no_players_for_graph") %></p>
+
+    <% if active_tab == "graph" %>
+      <div class="synergy-graph-layout">
+        <section class="synergy-graph-card">
+          <div class="synergy-graph-card__header">
+            <h2><%= t("relationships.graph.title") %></h2>
+            <p><%= t("relationships.graph.subtitle") %></p>
+          </div>
+
+          <% if graph_data.fetch(:meta).fetch(:edges_count).positive? %>
+            <div
+              data-controller="synergy-graph"
+              data-synergy-graph-data-value="<%= json_escape(graph_data.to_json) %>"
+              class="synergy-graph-network"
+            ></div>
+          <% else %>
+            <div class="synergy-graph-empty">
+              <h3><%= t("relationships.graph.no_data_title") %></h3>
+              <p><%= t("relationships.graph.no_data_body") %></p>
+            </div>
+          <% end %>
+        </section>
+
+        <aside class="synergy-graph-side-panel">
+          <%= form_with url: relationships_path, method: :get, local: true, class: "synergy-graph-controls", data: { turbo_frame: "relationships_results" } do |form| %>
+            <%= form.hidden_field :tab, value: "graph" %>
+            <%= form.hidden_field :season_id, value: season&.id if season.present? %>
+
+            <h2><%= t("relationships.graph.controls_title") %></h2>
+
+            <div class="relationships-control">
+              <%= form.label :minimum_shared_matches, t("relationships.graph.minimum_shared_matches") %>
+              <%= form.number_field :minimum_shared_matches, value: minimum_shared_matches, min: 1, step: 1 %>
+            </div>
+
+            <div class="relationships-control">
+              <%= form.label :limit, t("relationships.graph.limit") %>
+              <%= form.select :limit, [ 20, 50, 100 ].map { |value| [ value, value ] }, { selected: limit } %>
+            </div>
+
+            <div class="relationships-control">
+              <%= form.label :metric, t("relationships.graph.metric") %>
+              <%= form.select :metric, [
+                [ t("relationships.graph.metric_shared_matches"), "shared_matches" ],
+                [ t("relationships.graph.metric_win_rate"), "win_rate" ],
+                [ t("relationships.graph.metric_goals_assists"), "goals_assists" ]
+              ], { selected: metric } %>
+            </div>
+
+            <div class="relationships-control">
+              <%= form.label :player_filter, t("relationships.graph.player_filter"), class: "sr-only" %>
+              <%= form.search_field :player_filter, value: player_filter, placeholder: t("relationships.graph.player_filter") %>
+            </div>
+
+            <%= form.submit t("relationships.graph.filter"), class: "dashboard-button relationships-controls__submit" %>
+          <% end %>
+
+          <div class="synergy-graph-legend">
+            <h2><%= t("relationships.graph.legend_title") %></h2>
+            <ul>
+              <li><%= t("relationships.graph.legend_line_width") %></li>
+              <li><span class="synergy-graph-legend__line synergy-graph-legend__line--high"></span><%= t("relationships.graph.legend_high") %></li>
+              <li><span class="synergy-graph-legend__line synergy-graph-legend__line--medium"></span><%= t("relationships.graph.legend_medium") %></li>
+              <li><span class="synergy-graph-legend__line synergy-graph-legend__line--low"></span><%= t("relationships.graph.legend_low") %></li>
+            </ul>
+          </div>
+
+        </aside>
+      </div>
+    <% else %>
+  <%= form_with url: relationships_path, method: :get, local: true, class: "relationships-controls", data: { turbo_frame: "relationships_results" } do |form| %>
+    <%= form.hidden_field :tab, value: active_tab %>
+
+    <div class="relationships-control">
+      <%= form.label :direction, t("relationships.controls.direction") %>
+      <%= form.select :direction, [[ t("relationships.controls.best"), "best" ], [ t("relationships.controls.worst"), "worst" ]], { selected: direction } %>
+    </div>
+
+    <div class="relationships-control">
+      <%= form.label :limit, t("relationships.controls.limit") %>
+      <%= form.select :limit, [[ "20", 20 ], [ "50", 50 ]], { selected: limit } %>
+    </div>
+
+    <div class="relationships-control">
+      <%= form.label :minimum_shared_matches, t("relationships.controls.minimum_shared_matches") %>
+      <%= form.number_field :minimum_shared_matches, value: minimum_shared_matches, min: 1, step: 1 %>
+    </div>
+
+    <div class="relationships-control relationships-control--search">
+      <%= form.label :player_filter, t("relationships.controls.search_player"), class: "sr-only" %>
+      <%= form.search_field :player_filter, value: player_filter, placeholder: t("relationships.controls.search_player") %>
+    </div>
+
+    <%= form.submit t("common.filter"), class: "dashboard-button relationships-controls__submit" %>
+  <% end %>
+
+  <div class="relationships-main">
+    <section class="leaderboards-table-card relationships-table-card">
+      <div class="leaderboards-table-card__header">
+        <div>
+          <h2><%= t("relationships.ranking.title.#{active_tab}") %></h2>
+          <p><%= t("relationships.ranking.description.#{active_tab}") %></p>
+        </div>
+      </div>
+
+      <% if combination_ranking.any? %>
+        <div class="leaderboards-table-wrap">
+          <table class="leaderboards-table relationship-duo-table">
+            <thead>
+              <tr>
+                <th><%= t("relationships.table.position") %></th>
+                <th><%= relationship_combination_label(active_tab) %></th>
+                <th class="is-numeric"><%= t("relationships.table.shared_matches") %></th>
+                <th class="is-numeric"><%= t("relationships.table.wins") %></th>
+                <th class="is-numeric"><%= t("relationships.table.draws") %></th>
+                <th class="is-numeric"><%= t("relationships.table.losses") %></th>
+                <th class="is-numeric"><%= t("relationships.table.win_rate") %></th>
+                <th class="is-numeric"><%= t("relationships.table.goals") %></th>
+                <th class="is-numeric"><%= t("relationships.table.assists") %></th>
+                <th class="is-numeric"><%= t("relationships.table.goals_assists") %></th>
+              </tr>
+            </thead>
+            <tbody>
+              <% combination_ranking.each_with_index do |result, index| %>
+                <tr>
+                  <td><%= leaderboard_rank_badge(index + 1) %></td>
+                  <td>
+                    <div class="relationship-table-duo">
+                      <div class="relationship-table-duo__avatars">
+                        <%= relationship_player_avatars(result.players, size: "sm") %>
+                      </div>
+                      <strong><%= relationship_player_names(result.players) %></strong>
+                    </div>
+                  </td>
+                  <td class="is-numeric"><%= result.shared_matches_count %></td>
+                  <td class="is-numeric"><%= result.wins %></td>
+                  <td class="is-numeric"><%= result.draws %></td>
+                  <td class="is-numeric"><%= result.losses %></td>
+                  <td class="is-numeric"><%= result.win_rate ? t("relationships.table.win_rate_value", value: result.win_rate) : "—" %></td>
+                  <td class="is-numeric"><%= result.goals %></td>
+                  <td class="is-numeric"><%= result.assists %></td>
+                  <td class="is-numeric"><%= result.goals_assists %></td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      <% else %>
+        <div class="relationships-empty relationships-empty--results">
+          <h3><%= t("relationships.empty.results_title") %></h3>
+          <p><%= t("relationships.empty.results_body") %></p>
+        </div>
+      <% end %>
+    </section>
+
+  </div>
+
+  <section class="relationships-helper-card">
+    <h2><%= t("relationships.how_to_read.title") %></h2>
+    <p><%= t("relationships.how_to_read.body") %></p>
+  </section>
+  <% end %>
   <% end %>
 </section>
