@@ -206,9 +206,9 @@
           </div>
         </article>
 
-        <%= render "ranking_tile", id: "top_elo", icon: "trending-up", number: 4, title: t("dashboard.top_elo"), ranked_entries: dashboard.ranked_top_elo, empty_title: t("dashboard.ranking_empty.elo_title"), empty_body: t("dashboard.ranking_empty.elo_body"), cta_label: t("dashboard.cta.full_elo_ranking"), cta_path: root_path(anchor: "leaderboards") %>
-        <%= render "ranking_tile", id: "top_scorers", icon: "target", number: 5, title: t("dashboard.top_scorers"), ranked_entries: dashboard.ranked_top_scorers, empty_title: t("dashboard.ranking_empty.scorers_title"), empty_body: t("dashboard.ranking_empty.scorers_body"), cta_label: t("dashboard.cta.see_all"), cta_path: root_path(anchor: "leaderboards") %>
-        <%= render "ranking_tile", id: "top_assists", icon: "network", number: 6, title: t("dashboard.top_assists"), ranked_entries: dashboard.ranked_top_assists, empty_title: t("dashboard.ranking_empty.assists_title"), empty_body: t("dashboard.ranking_empty.assists_body"), cta_label: t("dashboard.cta.see_all"), cta_path: root_path(anchor: "leaderboards") %>
+        <%= render "ranking_tile", id: "top_elo", icon: "trending-up", number: 4, title: t("dashboard.top_elo"), ranked_entries: dashboard.ranked_top_elo, empty_title: t("dashboard.ranking_empty.elo_title"), empty_body: t("dashboard.ranking_empty.elo_body"), cta_label: t("dashboard.cta.full_elo_ranking"), cta_path: leaderboards_path(tab: "elo") %>
+        <%= render "ranking_tile", id: "top_scorers", icon: "target", number: 5, title: t("dashboard.top_scorers"), ranked_entries: dashboard.ranked_top_scorers, empty_title: t("dashboard.ranking_empty.scorers_title"), empty_body: t("dashboard.ranking_empty.scorers_body"), cta_label: t("dashboard.cta.see_all"), cta_path: leaderboards_path(tab: "goals") %>
+        <%= render "ranking_tile", id: "top_assists", icon: "network", number: 6, title: t("dashboard.top_assists"), ranked_entries: dashboard.ranked_top_assists, empty_title: t("dashboard.ranking_empty.assists_title"), empty_body: t("dashboard.ranking_empty.assists_body"), cta_label: t("dashboard.cta.see_all"), cta_path: leaderboards_path(tab: "assists") %>
 
         <article class="dashboard-tile dashboard-tile--span-5 dashboard-tile--wide" id="mvp_def">
           <%= dashboard_icon("vote", class_name: "dashboard-tile__watermark") %>
@@ -254,7 +254,7 @@
           </div>
 
           <div class="dashboard-tile__footer">
-            <%= link_to t("dashboard.cta.go_to_votes"), root_path(anchor: "leaderboards"), class: "dashboard-link" %>
+            <%= link_to t("dashboard.cta.go_to_votes"), leaderboards_path(tab: "mvp"), class: "dashboard-link" %>
           </div>
         </article>
 

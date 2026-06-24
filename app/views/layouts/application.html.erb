@@ -41,7 +41,10 @@
 
         <div class="site-nav__links">
           <%= link_to t("navigation.dashboard"), root_path(anchor: "dashboard"), class: ("site-nav__link site-nav__link--active" if controller_path == "home"), aria: ({ current: "page" } if controller_path == "home") %>
-          <%= link_to t("navigation.leaderboards"), root_path(anchor: "dashboard"), class: "site-nav__link" %>
+          <%= link_to leaderboards_path, class: "site-nav__link #{'site-nav__link--active' if controller_path == 'leaderboards'}", aria: ({ current: "page" } if controller_path == "leaderboards") do %>
+            <%= safe_lucide_icon("trophy", fallback: "chart-no-axes-combined", class_name: "site-nav__icon") %>
+            <%= t("navigation.leaderboards") %>
+          <% end %>
           <%= link_to t("navigation.relationships"), relationships_path, class: "site-nav__link #{'site-nav__link--active' if controller_path == 'relationships'}", aria: ({ current: "page" } if controller_path == "relationships") %>
           <%= link_to t("navigation.players"), root_path(anchor: "dashboard"), class: "site-nav__link" %>
           <%= link_to t("navigation.join"), new_player_path, class: "site-nav__link #{'site-nav__link--active' if controller_path == 'players' && action_name == 'new'}", aria: ({ current: "page" } if controller_path == "players" && action_name == "new") %>

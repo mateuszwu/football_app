@@ -38,6 +38,7 @@ Rails.application.routes.draw do
     resources :goals, only: %i[create destroy], controller: "match_goals"
   end
   resources :relationships, only: :index
+  resources :leaderboards, only: :index
   resources :players, only: %i[show new create edit update]
   resources :seasons, only: :show
 

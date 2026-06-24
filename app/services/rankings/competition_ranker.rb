@@ -30,6 +30,8 @@ module Rankings
     attr_reader :entries, :value_method
 
     def value_for(entry)
+      return value_method.call(entry) if value_method.respond_to?(:call)
+
       entry.public_send(value_method) || 0
     end
   end

@@ -1,0 +1,111 @@
+<% content_for :title, "#{t("leaderboards.title")} - #{t("app.name")}" %>
+
+<section class="leaderboards-page">
+  <header class="leaderboards-hero">
+    <div>
+      <p class="eyebrow"><%= t("app.tagline") %></p>
+      <h1><%= t("leaderboards.title") %></h1>
+      <p><%= t("leaderboards.subtitle") %></p>
+    </div>
+
+    <% if season.present? %>
+      <%= form_with url: leaderboards_path, method: :get, local: true, class: "leaderboards-season-card" do |form| %>
+        <div class="leaderboards-season-card__header">
+          <%= safe_lucide_icon("calendar-days", fallback: "calendar", class_name: "ui-icon ui-icon--md") %>
+          <span><%= t("leaderboards.season_selector") %></span>
+        </div>
+        <%= form.hidden_field :tab, value: active_tab %>
+        <%= form.label :season_id, t("leaderboards.choose_season"), class: "sr-only" %>
+        <%= form.select :season_id, options_from_collection_for_select(available_seasons, :id, :name, season.id), {}, onchange: "this.form.requestSubmit()" %>
+      <% end %>
+    <% end %>
+  </header>
+
+  <% if season.blank? %>
+    <div class="leaderboards-empty">
+      <h2><%= t("leaderboards.no_seasons_title") %></h2>
+      <p><%= t("leaderboards.no_seasons_body") %></p>
+    </div>
+  <% else %>
+    <div class="leaderboards-summary">
+      <% leaderboard_summary_cards(leaderboards).each do |card| %>
+        <article class="leaderboards-summary-card">
+          <%= safe_lucide_icon(card.fetch(:icon), fallback: card.fetch(:fallback), class_name: "ui-icon ui-icon--lg") %>
+          <span><%= t("leaderboards.summary.#{card.fetch(:key)}") %></span>
+          <% if card.fetch(:player_stat).present? %>
+            <strong><%= link_to card.fetch(:player_stat).player.name, player_path(card.fetch(:player_stat).player) %></strong>
+            <em><%= card.fetch(:value) %></em>
+          <% else %>
+            <strong><%= t("leaderboards.summary.no_leader") %></strong>
+            <em>-</em>
+          <% end %>
+        </article>
+      <% end %>
+    </div>
+
+    <nav class="leaderboards-tabs" aria-label="<%= t("leaderboards.title") %>">
+      <% leaderboard_tabs.each do |tab_key, tab_config| %>
+        <%= link_to leaderboards_path(season_id: season.id, tab: tab_key), class: "leaderboards-tab #{'leaderboards-tab--active' if active_tab == tab_key}", aria: ({ current: "page" } if active_tab == tab_key) do %>
+          <%= safe_lucide_icon(tab_config.fetch(:icon), fallback: tab_config.fetch(:fallback), class_name: "ui-icon ui-icon--sm") %>
+          <span><%= t("leaderboards.tabs.#{tab_key}") %></span>
+        <% end %>
+      <% end %>
+    </nav>
+
+    <% tab_config = leaderboard_tab_config(active_tab) %>
+    <% ranked_entries = leaderboard_ranked_entries(leaderboards, active_tab) %>
+
+    <section class="leaderboards-table-card">
+      <div class="leaderboards-table-card__header">
+        <div>
+          <h2><%= t("leaderboards.table.title.#{active_tab}") %></h2>
+          <p><%= t("leaderboards.table.description.#{active_tab}") %></p>
+        </div>
+      </div>
+
+      <% if ranked_entries.any? %>
+        <div class="leaderboards-table-wrap">
+          <table class="leaderboards-table">
+            <colgroup>
+              <% tab_config.fetch(:columns).zip(tab_config.fetch(:col_widths)).each do |column, width| %>
+                <col class="leaderboards-table__col leaderboards-table__col--<%= column %>" style="width: <%= width %>;">
+              <% end %>
+            </colgroup>
+            <thead>
+              <tr>
+                <% tab_config.fetch(:columns).each do |column| %>
+                  <th scope="col" class="<%= 'is-numeric' if leaderboard_numeric_column?(column) %>"><%= t("leaderboards.table.columns.#{column}") %></th>
+                <% end %>
+              </tr>
+            </thead>
+            <tbody>
+              <% ranked_entries.each do |ranked_entry| %>
+                <% player_stat = ranked_entry.entry %>
+                <tr>
+                  <% tab_config.fetch(:columns).each do |column| %>
+                    <% if column == :position %>
+                      <td><%= leaderboard_rank_badge(leaderboard_cell_value(player_stat, column, ranked_entry)) %></td>
+                    <% elsif column == :player %>
+                      <td>
+                        <div class="leaderboards-player">
+                          <span class="leaderboards-player__avatar"><%= leaderboard_player_initials(player_stat.player) %></span>
+                          <strong><%= link_to leaderboard_cell_value(player_stat, column, ranked_entry), player_path(player_stat.player) %></strong>
+                        </div>
+                      </td>
+                    <% else %>
+                      <td class="<%= 'is-numeric' if leaderboard_numeric_column?(column) %>"><%= leaderboard_cell_value(player_stat, column, ranked_entry) %></td>
+                    <% end %>
+                  <% end %>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      <% else %>
+        <div class="leaderboards-empty">
+          <p><%= t("leaderboards.empty.#{tab_config.fetch(:empty_key)}") %></p>
+        </div>
+      <% end %>
+    </section>
+  <% end %>
+</section>

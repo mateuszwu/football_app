@@ -35,5 +35,16 @@ RSpec.describe Rankings::CompetitionRanker do
       expect(result.map(&:rank)).to eq([ 1, 1 ])
       expect(result.map(&:value)).to eq([ 0, 0 ])
     end
+
+    it "supports calculated values without changing competition ranking rules" do
+      first = instance_double(PlayerSeasonStat, goals: 3, assists: 2)
+      second = instance_double(PlayerSeasonStat, goals: 4, assists: 1)
+      third = instance_double(PlayerSeasonStat, goals: 2, assists: 1)
+
+      result = described_class.call(entries: [ first, second, third ], value_method: ->(entry) { entry.goals + entry.assists })
+
+      expect(result.map(&:rank)).to eq([ 1, 1, 3 ])
+      expect(result.map(&:value)).to eq([ 5, 5, 3 ])
+    end
   end
 end
