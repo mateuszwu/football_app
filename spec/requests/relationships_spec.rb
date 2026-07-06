@@ -34,8 +34,8 @@ RSpec.describe "Relationships" do
         get "/relationships"
 
         expect(response).to have_http_status(:ok)
-        expect(response.body).to include("SYNERGIA ZAWODNIKÓW")
         expect(response.body).to include("<h1>Synergia zawodników</h1>")
+        expect(response.body).not_to include("SYNERGIA ZAWODNIKÓW")
         expect(response.body).not_to include("Mapa synergii")
         expect(response.body).to include("Najlepszy duet ogólnie")
         expect(response.body).to include("Najczęściej razem")
