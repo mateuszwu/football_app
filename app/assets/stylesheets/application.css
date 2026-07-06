@@ -3004,6 +3004,279 @@ a:focus-visible {
   font-size: 1rem;
 }
 
+.players-directory-page {
+  display: grid;
+  gap: 1.25rem;
+  margin: 0 auto;
+  max-width: var(--content-max);
+  padding: 1.5rem 0 2rem;
+  width: 100%;
+}
+
+.players-directory-hero {
+  align-items: start;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+}
+
+.players-directory-hero h1 {
+  color: var(--text-primary);
+  font-size: 2rem;
+  line-height: 2.35rem;
+  margin-bottom: 0.55rem;
+}
+
+.players-directory-hero p:not(.eyebrow) {
+  color: #cbd5e1;
+  max-width: 44rem;
+}
+
+.players-directory-toolbar,
+.players-directory-empty {
+  background: linear-gradient(180deg, rgba(15, 29, 46, 0.96), rgba(9, 18, 31, 0.96));
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 18px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.22);
+}
+
+.players-directory-toolbar {
+  display: grid;
+  gap: 0.85rem;
+  padding: 1rem;
+}
+
+.players-directory-filters {
+  align-items: center;
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: minmax(16rem, 1fr) minmax(10rem, 13rem) minmax(11rem, 15rem) auto auto;
+}
+
+.players-directory-field {
+  align-items: center;
+  background: var(--dark-bg-elevated);
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 12px;
+  color: #94a3b8;
+  display: flex;
+  gap: 0.55rem;
+  min-height: 2.75rem;
+  padding: 0 0.75rem;
+}
+
+.players-directory-field--search {
+  min-width: 0;
+}
+
+.players-directory-field input,
+.players-directory-field select {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 800;
+  min-height: 2.6rem;
+  min-width: 0;
+  outline: 0;
+  width: 100%;
+}
+
+.players-directory-field input::placeholder {
+  color: #64748b;
+}
+
+.players-directory-meta {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.players-directory-meta span {
+  background: rgba(148, 163, 184, 0.08);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 999px;
+  color: #cbd5e1;
+  font-size: 0.78rem;
+  font-weight: 900;
+  padding: 0.35rem 0.62rem;
+}
+
+.players-roster-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.roster-card {
+  background:
+    radial-gradient(circle at top right, rgba(124, 255, 58, 0.08), transparent 38%),
+    linear-gradient(180deg, rgba(15, 29, 46, 0.96), rgba(9, 18, 31, 0.96));
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 18px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.22);
+  display: grid;
+  gap: 1rem;
+  min-height: 19rem;
+  padding: 1rem;
+}
+
+.roster-card__top {
+  align-items: center;
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+}
+
+.roster-card__avatar {
+  align-items: center;
+  background: rgba(124, 255, 58, 0.12);
+  border: 1px solid rgba(124, 255, 58, 0.28);
+  border-radius: 999px;
+  color: var(--text-primary);
+  display: inline-flex;
+  font-size: 0.82rem;
+  font-weight: 950;
+  height: 3rem;
+  justify-content: center;
+  width: 3rem;
+}
+
+.roster-card__identity {
+  min-width: 0;
+}
+
+.roster-card__identity h2 {
+  font-size: 1rem;
+  line-height: 1.25;
+  margin: 0 0 0.15rem;
+  min-width: 0;
+}
+
+.roster-card__identity h2 a {
+  color: var(--text-primary);
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.roster-card__identity h2 a:hover,
+.roster-card__link:hover {
+  color: var(--accent);
+}
+
+.roster-card__identity p {
+  color: #94a3b8;
+  font-size: 0.8rem;
+  font-weight: 800;
+  margin: 0;
+}
+
+.roster-card__role {
+  background: rgba(148, 163, 184, 0.1);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 999px;
+  color: #dbe4f0;
+  font-size: 0.7rem;
+  font-weight: 950;
+  padding: 0.32rem 0.55rem;
+  white-space: nowrap;
+}
+
+.roster-card__main {
+  display: grid;
+  gap: 0.6rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.roster-card__main > div {
+  background: rgba(148, 163, 184, 0.055);
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  border-radius: 14px;
+  display: grid;
+  gap: 0.2rem;
+  min-height: 4.7rem;
+  padding: 0.75rem;
+}
+
+.roster-card__main span,
+.roster-card__stats dt {
+  color: #94a3b8;
+  font-size: 0.68rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.roster-card__main strong {
+  color: var(--accent);
+  font-size: 1.45rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.roster-card__stats {
+  display: grid;
+  gap: 0.55rem;
+  margin: 0;
+}
+
+.roster-card__stats div {
+  align-items: center;
+  display: flex;
+  gap: 0.75rem;
+  justify-content: space-between;
+}
+
+.roster-card__stats dd {
+  color: #dbe4f0;
+  font-size: 0.86rem;
+  font-weight: 900;
+  margin: 0;
+  text-align: right;
+}
+
+.roster-card__footer {
+  align-self: end;
+  border-top: 1px solid rgba(148, 163, 184, 0.12);
+  padding-top: 0.85rem;
+}
+
+.roster-card__link {
+  align-items: center;
+  color: var(--text-primary);
+  display: inline-flex;
+  font-size: 0.84rem;
+  font-weight: 950;
+  gap: 0.4rem;
+  text-decoration: none;
+}
+
+.players-directory-empty {
+  align-items: center;
+  color: #94a3b8;
+  display: grid;
+  gap: 0.55rem;
+  justify-items: start;
+  padding: 1.2rem;
+}
+
+.players-directory-empty h2 {
+  color: var(--text-primary);
+  font-size: 1rem;
+  margin: 0;
+}
+
+.players-directory-empty p {
+  margin: 0;
+}
+
 @media (max-width: 1023px) {
   .site-header,
   .theme-light .site-header {
@@ -3060,9 +3333,23 @@ a:focus-visible {
   }
 
   .leaderboards-hero,
+  .players-directory-hero,
   .leaderboards-summary,
+  .players-roster-grid,
   .relationships-summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .players-directory-hero {
+    display: grid;
+  }
+
+  .players-directory-filters {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .players-directory-field--search {
+    grid-column: 1 / -1;
   }
 
   .relationships-main {
@@ -3163,18 +3450,37 @@ a:focus-visible {
   }
 
   .leaderboards-page,
+  .players-directory-page,
   .relationships-page {
     padding-top: 1rem;
   }
 
   .leaderboards-hero h1,
+  .players-directory-hero h1,
   .relationships-hero h1 {
     font-size: 1.75rem;
     line-height: 2.1rem;
   }
 
   .leaderboards-summary,
+  .players-roster-grid,
   .relationships-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .players-directory-filters {
+    grid-template-columns: 1fr;
+  }
+
+  .players-directory-field--search {
+    grid-column: auto;
+  }
+
+  .players-directory-filters .button {
+    width: 100%;
+  }
+
+  .roster-card__main {
     grid-template-columns: 1fr;
   }
 

@@ -1,0 +1,101 @@
+<% content_for :title, "#{t("players.directory.title")} - #{t("app.name")}" %>
+
+<section class="players-directory-page">
+  <header class="players-directory-hero">
+    <div>
+      <h1><%= t("players.directory.title") %></h1>
+      <p><%= t("players.directory.subtitle") %></p>
+    </div>
+  </header>
+
+  <div class="players-directory-toolbar">
+    <%= form_with url: players_path, method: :get, local: true, class: "players-directory-filters" do |form| %>
+      <div class="players-directory-field players-directory-field--search">
+        <%= form.label :q, t("players.directory.search"), class: "sr-only" %>
+        <%= safe_lucide_icon("search", fallback: "circle", class_name: "ui-icon ui-icon--sm") %>
+        <%= form.search_field :q, value: directory.query, placeholder: t("players.directory.search_placeholder") %>
+      </div>
+
+      <div class="players-directory-field">
+        <%= form.label :role, t("players.directory.role_filter"), class: "sr-only" %>
+        <%= form.select :role, [[ t("players.directory.all_roles"), "" ]] + role_options(Player::ROLE_CODES), selected: directory.role %>
+      </div>
+
+      <div class="players-directory-field">
+        <%= form.label :season_id, t("players.directory.season_filter"), class: "sr-only" %>
+        <%= form.select :season_id, [[ t("players.directory.all_seasons"), "" ]] + directory.available_seasons.map { |season| [ season.name, season.id ] }, selected: directory.selected_season&.id %>
+      </div>
+
+      <%= form.submit t("common.filter"), class: "button button--primary" %>
+      <% if directory.query.present? || directory.role.present? || directory.selected_season.present? %>
+        <%= link_to t("players.directory.clear_filters"), players_path, class: "button button--secondary" %>
+      <% end %>
+    <% end %>
+
+    <div class="players-directory-meta" aria-label="<%= t("players.directory.stats_label") %>">
+      <span><%= t("players.directory.total_players", count: directory.total_players_count) %></span>
+      <span><%= t("players.directory.visible_players", count: directory.filtered_players_count) %></span>
+      <span><%= t("players.directory.roles_count", count: directory.active_roles_count) %></span>
+    </div>
+  </div>
+
+  <% if directory.players.any? %>
+    <div class="players-roster-grid">
+      <% directory.players.each do |card| %>
+        <article class="roster-card">
+          <div class="roster-card__top">
+            <span class="roster-card__avatar" aria-hidden="true"><%= player_directory_initials(card.player) %></span>
+            <div class="roster-card__identity">
+              <h2><%= link_to card.player.name, player_path(card.player, season_id: directory.selected_season&.id) %></h2>
+              <p>@<%= card.player.nickname %></p>
+            </div>
+            <span class="roster-card__role"><%= role_label(card.player.role_code) %></span>
+          </div>
+
+          <div class="roster-card__main">
+            <div>
+              <span><%= t("players.directory.card.elo") %></span>
+              <strong><%= player_directory_elo(card) %></strong>
+            </div>
+            <div>
+              <span><%= t("players.directory.card.matches") %></span>
+              <strong><%= card.matches_count %></strong>
+            </div>
+            <div>
+              <span><%= t("players.directory.card.win_rate") %></span>
+              <strong><%= card.win_rate %>%</strong>
+            </div>
+          </div>
+
+          <dl class="roster-card__stats">
+            <div>
+              <dt><%= t("players.directory.card.record") %></dt>
+              <dd><%= player_directory_record(card) %></dd>
+            </div>
+            <div>
+              <dt><%= t("players.directory.card.goals_assists") %></dt>
+              <dd><%= card.goals %> / <%= card.assists %></dd>
+            </div>
+            <div>
+              <dt><%= t("players.directory.card.last_played") %></dt>
+              <dd><%= player_directory_last_played(card) %></dd>
+            </div>
+          </dl>
+
+          <div class="roster-card__footer">
+            <%= link_to player_path(card.player, season_id: directory.selected_season&.id), class: "roster-card__link" do %>
+              <span><%= t("players.directory.card.open_profile") %></span>
+              <%= safe_lucide_icon("arrow-right", fallback: "chevron-right", class_name: "ui-icon ui-icon--sm") %>
+            <% end %>
+          </div>
+        </article>
+      <% end %>
+    </div>
+  <% else %>
+    <section class="players-directory-empty">
+      <%= safe_lucide_icon("users", fallback: "circle", class_name: "ui-icon ui-icon--lg") %>
+      <h2><%= t("players.directory.empty_title") %></h2>
+      <p><%= t("players.directory.empty_body") %></p>
+    </section>
+  <% end %>
+</section>

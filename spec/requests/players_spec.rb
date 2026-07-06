@@ -29,6 +29,62 @@ RSpec.describe "Players" do
     end
   end
 
+  describe "GET /players" do
+    it "renders a public roster directory with filters and without private phone data" do
+      season = create(:season, name: "Summer 2026")
+      player = create(
+        :player,
+        name: "Adam Nowak",
+        nickname: "adam",
+        phone: "+48111111111",
+        role_code: "DEF",
+        approval_status: "approved",
+        active: true,
+        elo: 1008
+      )
+      hidden_player = create(:player, name: "Hidden Pending", phone: "+48222222222", approval_status: "pending", active: true)
+      create(:player_season_stat, player:, season:, elo: 1040, goals: 2, assists: 1)
+      match_day = create(:match_day, season:, played_on: Date.new(2026, 7, 1), status: "finished")
+      team_setup = create(:team_setup, match_day:)
+      home_team = create(:team, team_setup:, team_type: Team::TEAM_TYPE_MATCH, result: Team::RESULT_WIN)
+      away_team = create(:team, team_setup:, team_type: Team::TEAM_TYPE_MATCH, result: Team::RESULT_LOSS)
+      team_player = create(:team_player, player:, team: home_team)
+      create(:team_player, team: away_team)
+      match = create(:match, match_day:, home_team:, away_team:, home_score: 1, away_score: 0, finished_at: Time.zone.parse("2026-07-01 20:00:00"))
+      create(:match_goal, match:, scoring_team: home_team, scorer_team_player: team_player)
+
+      get "/players", params: { season_id: season.id, role: "DEF", q: "adam" }
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("Zawodnicy")
+      expect(response.body).to include("Szukaj po imieniu albo nicku")
+      expect(response.body).to include("Adam Nowak")
+      expect(response.body).to include("@adam")
+      expect(response.body).to include("Obrońca")
+      expect(response.body).to include("1040")
+      expect(response.body).to include("Profil zawodnika")
+      expect(response.body).to include("/players/#{player.id}")
+      expect(response.body).to include(">Dołącz</a>")
+      expect(response.body).not_to include("KADRA")
+      expect(response.body).not_to include("Dołącz do gry")
+      expect(response.body).not_to include("players-directory-join")
+      expect(response.body).not_to include(hidden_player.name)
+      expect(response.body).not_to include("+48111111111")
+      expect(response.body).not_to include("+48222222222")
+      expect(response.body).not_to include("phone")
+    end
+
+    it "renders an empty roster state when filters have no matches" do
+      create(:player, name: "Adam Nowak", nickname: "adam", approval_status: "approved", active: true)
+
+      get "/players", params: { q: "marek" }
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("Brak zawodników")
+      expect(response.body).to include("Nie znaleziono aktywnych zatwierdzonych zawodników dla tych filtrów.")
+    end
+  end
+
   describe "POST /players" do
     context "when the submission is valid" do
       it "creates a pending player, writes an encrypted edit cookie, and redirects to the edit form" do

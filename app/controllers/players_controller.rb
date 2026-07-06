@@ -1,4 +1,10 @@
 class PlayersController < ApplicationController
+  def index
+    directory = Players::DirectoryQuery.call(params:)
+
+    render :index, locals: { directory: }
+  end
+
   def new
     player = Player.new(role_code: "ANY")
 

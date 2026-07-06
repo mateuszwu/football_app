@@ -46,7 +46,7 @@
             <%= t("navigation.leaderboards") %>
           <% end %>
           <%= link_to t("navigation.relationships"), relationships_path, class: "site-nav__link #{'site-nav__link--active' if controller_path == 'relationships'}", aria: ({ current: "page" } if controller_path == "relationships") %>
-          <%= link_to t("navigation.players"), root_path(anchor: "dashboard"), class: "site-nav__link" %>
+          <%= link_to t("navigation.players"), players_path, class: "site-nav__link #{'site-nav__link--active' if controller_path == 'players' && action_name == 'index'}", aria: ({ current: "page" } if controller_path == "players" && action_name == "index") %>
           <%= link_to t("navigation.join"), new_player_path, class: "site-nav__link #{'site-nav__link--active' if controller_path == 'players' && action_name == 'new'}", aria: ({ current: "page" } if controller_path == "players" && action_name == "new") %>
           <% if admin_signed_in? %>
             <%= link_to t("navigation.match_days"), admin_match_days_path, class: "site-nav__link #{'site-nav__link--active' if controller_path == 'admin/match_days'}", aria: ({ current: "page" } if controller_path == "admin/match_days") %>
