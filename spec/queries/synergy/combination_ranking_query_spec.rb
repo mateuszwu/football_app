@@ -91,6 +91,36 @@ RSpec.describe Synergy::CombinationRankingQuery do
         expect(result.size).to eq(2)
         expect(result).to all(have_attributes(players: include(cezary)))
       end
+
+      it "keeps only combinations containing the selected player id" do
+        season = create(:season)
+        adam = create(:player, name: "Adam Demo", nickname: "adam", approval_status: "approved", active: true)
+        bartek = create(:player, name: "Bartek Demo", nickname: "bartek", approval_status: "approved", active: true)
+        cezary = create(:player, name: "Cezary Demo", nickname: "cezary", approval_status: "approved", active: true)
+        damian = create(:player, name: "Damian Demo", nickname: "damian", approval_status: "approved", active: true)
+
+        match_day = create(:match_day, season:, played_on: Date.new(2026, 7, 10), status: "finished")
+        team_setup = create(:team_setup, match_day:)
+        home_team = create(:team, team_setup:, team_type: Team::TEAM_TYPE_MATCH)
+        away_team = create(:team, team_setup:, team_type: Team::TEAM_TYPE_MATCH)
+        create(:team_player, team: home_team, player: adam)
+        create(:team_player, team: home_team, player: bartek)
+        create(:team_player, team: home_team, player: cezary)
+        create(:team_player, team: away_team, player: damian)
+        create(:match, match_day:, home_team:, away_team:, home_score: 1, away_score: 0, finished_at: Time.current)
+
+        result = described_class.call(
+          season:,
+          combination_size: 2,
+          direction: "best",
+          limit: 20,
+          minimum_shared_matches: 1,
+          player_id: adam.id
+        )
+
+        expect(result.size).to eq(2)
+        expect(result).to all(have_attributes(players: include(adam)))
+      end
     end
 
     context "when worst direction is selected" do

@@ -1,0 +1,14 @@
+<section class="player-profile-card player-profile-synergy-card">
+  <h2><%= title %></h2>
+  <% if result.present? %>
+    <% partner = player_profile_partner(result, player) %>
+    <strong class="player-profile-card__headline"><%= link_to partner.name, player_path(partner) %></strong>
+    <div class="player-profile-metric-list">
+      <span><%= t("players.profile.synergy.shared_matches") %>: <strong><%= result.shared_matches_count %></strong></span>
+      <span><%= t("players.profile.synergy.win_rate") %>: <strong><%= result.win_rate || 0 %>%</strong></span>
+      <span><%= t("players.profile.synergy.goals_assists") %>: <strong><%= result.goals_assists %></strong></span>
+    </div>
+  <% else %>
+    <%= render "players/profile_empty", title: t("players.profile.empty.no_synergy_title"), body: t("players.profile.empty.no_synergy_body") %>
+  <% end %>
+</section>

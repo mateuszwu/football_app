@@ -320,36 +320,54 @@ RSpec.describe "Players" do
         summer_team = create(:team, team_setup: summer_setup, team_type: Team::TEAM_TYPE_MATCH, result: Team::RESULT_WIN)
         summer_opponent = create(:team, team_setup: summer_setup, team_type: Team::TEAM_TYPE_MATCH, result: Team::RESULT_LOSS)
         create(:team_player, player: player, team: spring_team)
-        create(:team_player, player: player, team: summer_team)
+        summer_team_player = create(:team_player, player: player, team: summer_team)
+        summer_assistant = create(:team_player, team: summer_team)
         create(:match, match_day: spring_match_day, home_team: spring_team, away_team: spring_opponent, home_score: 0, away_score: 1, finished_at: Time.zone.parse("2026-05-22 20:00:00"))
-        create(:match, match_day: summer_match_day, home_team: summer_team, away_team: summer_opponent, home_score: 2, away_score: 1, finished_at: Time.zone.parse("2026-05-29 20:00:00"))
+        summer_match = create(:match, match_day: summer_match_day, home_team: summer_team, away_team: summer_opponent, home_score: 2, away_score: 1, finished_at: Time.zone.parse("2026-05-29 20:00:00"))
+        create(:match_goal, match: summer_match, scoring_team: summer_team, scorer_team_player: summer_team_player, assistant_team_player: summer_assistant)
         create(:player_season_stat, player: player, season: spring, elo: 1004, goals: 1, assists: 0, mvp_votes_count: 0, def_votes_count: 2)
         create(:player_season_stat, player: player, season: summer, elo: 1020, goals: 3, assists: 2, mvp_votes_count: 4, def_votes_count: 1)
+        create(
+          :player_rating_change,
+          player:,
+          season: summer,
+          match_day: summer_match_day,
+          match: summer_match,
+          old_elo_score: 1000,
+          elo_delta: 20,
+          new_elo_score: 1020
+        )
 
         get "/players/#{player.id}", params: { season_id: summer.id }
 
         expect(response).to have_http_status(:ok)
         expect(response.body).to include("Adam Nowak")
-        expect(response.body).to include("adam")
+        expect(response.body).to include("@adam")
         expect(response.body).to include("Obrońca")
         expect(response.body).to include("Solid defender")
-        expect(response.body).to include("ELO globalne:")
-        expect(response.body).to include("ELO sezonu Summer 2026:")
+        expect(response.body).to include("Powrót do zawodników")
+        expect(response.body).to include("Podsumowanie")
+        expect(response.body).to include("Statystyki")
+        expect(response.body).to include("Mecze")
+        expect(response.body).to include("Wykresy")
+        expect(response.body).to include("Historia ELO")
+        expect(response.body).to include("Synergia")
+        expect(response.body).to include("MVP / DEF")
         expect(response.body).to include("1020")
         expect(response.body).to include("Mecze")
-        expect(response.body).to include("Bilans")
         expect(response.body).to include("Wygrane")
-        expect(response.body).to include("1-0-0")
+        expect(response.body).to include("1W · 0R · 0P")
         expect(response.body).to include("100%")
-        expect(response.body).to include("3 / 2")
-        expect(response.body).to include("4 / 1")
-        expect(response.body).to include("Historia meczów")
+        expect(response.body).to include("Gole / Asysty")
+        expect(response.body).to include("G+A")
+        expect(response.body).to include("Ostatnie mecze")
+        expect(response.body).to include("Bilans meczów")
+        expect(response.body).to include("Zobacz mecz")
         expect(response.body).to include("2026-05-29")
         expect(response.body).to include("Summer 2026")
         expect(response.body).to include("2:1")
-        expect(response.body).to include("Wygrana")
+        expect(response.body).to include(">W</span>")
         expect(response.body).to include("Sezon")
-        expect(response.body).to include("Filtruj")
         expect(response.body).not_to include("2026-05-22")
         expect(response.body).not_to include("0:1")
         expect(response.body).not_to include("+48111111111")
@@ -364,7 +382,8 @@ RSpec.describe "Players" do
         get "/players/#{player.id}"
 
         expect(response).to have_http_status(:ok)
-        expect(response.body).to include("Brak rozegranych meczów.")
+        expect(response.body).to include("Brak meczów")
+        expect(response.body).to include("Ten zawodnik nie rozegrał jeszcze meczu w wybranym sezonie.")
       end
     end
 

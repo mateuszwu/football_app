@@ -28,18 +28,21 @@ class RelationshipsController < ApplicationController
     metric = normalized_graph_metric
     minimum_shared_matches = normalized_minimum_shared_matches(active_tab)
     player_filter = params[:player_filter].to_s.strip
+    player_id = params[:player_id].presence
     combination_ranking = Synergy::CombinationRankingQuery.call(
       season:,
       combination_size: TAB_SIZES.fetch(active_tab),
       direction:,
       limit:,
       minimum_shared_matches:,
-      player_filter:
+      player_filter:,
+      player_id:
     )
     graph_data = Synergy::GraphDataQuery.call(
       season:,
       minimum_shared_matches:,
       player_filter:,
+      player_id:,
       limit: active_tab == "graph" ? limit : 20,
       metric:
     )
@@ -55,6 +58,7 @@ class RelationshipsController < ApplicationController
       minimum_shared_matches:,
       nodes: graph.nodes,
       player_filter:,
+      player_id:,
       players: graph.players,
       season:,
       tab_minimums: DEFAULT_MINIMUMS,

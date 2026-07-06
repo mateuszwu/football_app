@@ -30,14 +30,15 @@ module Synergy
     MIN_EDGE_WIDTH = 1
     MAX_EDGE_WIDTH = 10
 
-    def self.call(season: nil, minimum_shared_matches: 3, player_filter: nil, limit: 50, metric: "shared_matches")
-      new(season:, minimum_shared_matches:, player_filter:, limit:, metric:).call
+    def self.call(season: nil, minimum_shared_matches: 3, player_filter: nil, player_id: nil, limit: 50, metric: "shared_matches")
+      new(season:, minimum_shared_matches:, player_filter:, player_id:, limit:, metric:).call
     end
 
-    def initialize(season:, minimum_shared_matches:, player_filter:, limit:, metric:)
+    def initialize(season:, minimum_shared_matches:, player_filter:, limit:, metric:, player_id: nil)
       @season = season
       @minimum_shared_matches = [ minimum_shared_matches.to_i, 1 ].max
       @player_filter = player_filter.to_s.strip.downcase
+      @player_id = player_id.to_i if player_id.present?
       @limit = LIMITS.include?(limit.to_i) ? limit.to_i : 50
       @metric = METRICS.include?(metric.to_s) ? metric.to_s : "shared_matches"
       @visible_players = Player.approved.active.index_by(&:id)
@@ -62,11 +63,12 @@ module Synergy
 
     private
 
-    attr_reader :season, :minimum_shared_matches, :player_filter, :limit, :metric, :visible_players
+    attr_reader :season, :minimum_shared_matches, :player_filter, :player_id, :limit, :metric, :visible_players
 
     def ranked_edges
       edges = aggregate_edges.values
         .select { |edge| edge.shared_matches >= minimum_shared_matches }
+        .select { |edge| player_id_matches?(edge) }
         .select { |edge| player_filter_matches?(edge) }
 
       edges.sort_by { |edge| sort_key_for(edge) }.first(limit)
@@ -151,6 +153,12 @@ module Synergy
       edge.players.any? do |player|
         player.name.downcase.include?(player_filter) || player.nickname.to_s.downcase.include?(player_filter)
       end
+    end
+
+    def player_id_matches?(edge)
+      return true if player_id.blank?
+
+      edge.players.any? { |player| player.id == player_id }
     end
 
     def sort_key_for(edge)

@@ -1,77 +1,178 @@
-<% content_for :title, "#{player.name} - Football App" %>
+<% content_for :title, "#{player.name} - #{t("app.name")}" %>
+<% content_for :head do %>
+  <%= javascript_include_tag "/vendor/chart.umd.js", "data-turbo-track": "reload" %>
+<% end %>
 
-<section class="section player-profile">
-  <div class="section__header">
-    <p class="eyebrow"><%= t("players.profile") %></p>
-    <h1><%= player.name %></h1>
-    <p><%= player.nickname %> &middot; <%= role_label(player.role_code) %></p>
-    <p>
-      <%= t("players.global_elo") %>: <strong><%= player.elo %></strong>
-      <% if profile.selected_season.present? %>
-        &middot;
-        <%= t("players.season_elo", season: profile.selected_season.name) %>: <strong><%= profile.season_stat&.elo || "-" %></strong>
+<section class="player-profile-page">
+  <%= link_to players_path(season_id: profile.season&.id), class: "player-profile-back-link" do %>
+    <span aria-hidden="true">←</span>
+    <span><%= t("players.profile.back_to_players") %></span>
+  <% end %>
+
+  <header class="player-profile-header">
+    <div class="player-profile-avatar" aria-hidden="true"><%= player_profile_initials(player) %></div>
+    <div class="player-profile-identity">
+      <h1><%= player.name %></h1>
+      <p>@<%= player.nickname %></p>
+      <% if player.description.present? %>
+        <p class="player-profile-description"><%= player.description %></p>
       <% end %>
-    </p>
-  </div>
-
-  <div class="player-profile__body">
-    <h2><%= t("players.description") %></h2>
-    <p><%= player.description %></p>
-  </div>
-
-  <div class="player-profile__body">
-    <% if profile.available_seasons.any? %>
-      <%= form_with url: player_path(player), method: :get, local: true, class: "admin-form" do |form| %>
-        <div class="form-field">
-          <%= form.label :season_id, t("seasons.season") %>
-          <%= form.select :season_id, options_from_collection_for_select(profile.available_seasons, :id, :name, profile.selected_season&.id) %>
-        </div>
-        <div class="form-actions">
-          <%= form.submit t("common.filter"), class: "button button--secondary" %>
-        </div>
-      <% end %>
-    <% end %>
-  </div>
-
-  <div class="summary-grid">
-    <article class="summary-card">
-      <span class="summary-card__label"><%= t("leaderboards.matches") %></span>
-      <strong><%= profile.matches_count %></strong>
-    </article>
-    <article class="summary-card">
-      <span class="summary-card__label"><%= t("players.record") %></span>
-      <strong><%= [ profile.wins, profile.draws, profile.losses ].join("-") %></strong>
-    </article>
-    <article class="summary-card">
-      <span class="summary-card__label"><%= t("players.win_rate") %></span>
-      <strong><%= profile.win_rate %>%</strong>
-    </article>
-    <article class="summary-card">
-      <span class="summary-card__label"><%= t("players.goals_assists") %></span>
-      <strong><%= "#{profile.season_stat&.goals || 0} / #{profile.season_stat&.assists || 0}" %></strong>
-    </article>
-    <article class="summary-card">
-      <span class="summary-card__label">MVP / DEF</span>
-      <strong><%= "#{profile.season_stat&.mvp_votes_count || 0} / #{profile.season_stat&.def_votes_count || 0}" %></strong>
-    </article>
-  </div>
-
-  <div class="player-profile__body">
-    <h2><%= t("players.match_history") %></h2>
-
-    <% if profile.match_entries.any? %>
-      <ul>
-        <% profile.match_entries.each do |entry| %>
-          <li>
-            <strong><%= entry.match.match_day.played_on %></strong>
-            <span><%= entry.match.match_day.season.name %></span>
-            <span><%= entry.match.home_score %>:<%= entry.match.away_score %></span>
-            <span><%= status_label(entry.team.result) %></span>
-          </li>
+      <div class="player-profile-badges">
+        <span><%= role_label(player.role_code) %></span>
+        <span><%= player.active? ? t("players.profile.active") : t("players.profile.inactive") %></span>
+        <% if profile.season.present? %>
+          <span><%= profile.season.name %></span>
         <% end %>
-      </ul>
-    <% else %>
-      <p><%= t("players.no_matches") %></p>
+      </div>
+    </div>
+    <div class="player-profile-hero-stats">
+      <div>
+        <span><%= t("players.profile.summary.elo") %></span>
+        <strong><%= profile.summary.fetch(:current_elo) || "—" %></strong>
+      </div>
+      <div>
+        <span><%= t("players.profile.summary.matches") %></span>
+        <strong><%= profile.summary.fetch(:matches) %></strong>
+      </div>
+      <div>
+        <span><%= t("players.profile.summary.goals_assists_short") %></span>
+        <strong><%= profile.summary.fetch(:goals) %> / <%= profile.summary.fetch(:assists) %></strong>
+      </div>
+      <div>
+        <span><%= t("players.profile.summary.goals_assists") %></span>
+        <strong><%= profile.summary.fetch(:goals_assists) %></strong>
+      </div>
+    </div>
+  </header>
+
+  <div class="player-profile-toolbar">
+    <% if profile.available_seasons.any? %>
+      <%= form_with url: player_path(player), method: :get, local: true, class: "player-profile-season-form" do |form| %>
+        <%= form.hidden_field :tab, value: profile.active_tab %>
+        <%= form.label :season_id, t("players.profile.season"), class: "sr-only" %>
+        <%= form.select :season_id, options_from_collection_for_select(profile.available_seasons, :id, :name, profile.season&.id), {}, onchange: "this.form.requestSubmit()" %>
+      <% end %>
     <% end %>
   </div>
+
+  <nav class="leaderboards-tabs player-profile-tabs" aria-label="<%= player.name %>">
+    <% player_profile_tabs.each do |tab_key, icon| %>
+      <%= link_to player_profile_tab_path(player, profile, tab_key), class: "leaderboards-tab #{'leaderboards-tab--active' if profile.active_tab == tab_key}", aria: ({ current: "page" } if profile.active_tab == tab_key) do %>
+        <%= safe_lucide_icon(icon, fallback: "circle", class_name: "ui-icon ui-icon--sm") %>
+        <span><%= t("players.profile.tabs.#{tab_key}") %></span>
+      <% end %>
+    <% end %>
+  </nav>
+
+  <% if profile.active_tab == "overview" %>
+    <div class="player-profile-layout">
+      <main class="player-profile-main">
+        <%= render "players/profile_summary_cards", profile: %>
+
+        <div class="player-profile-chart-grid">
+          <section class="player-profile-chart-card">
+            <h2><%= t("players.profile.charts.elo_history") %></h2>
+            <% if profile.chart_data.dig(:elo, :labels).any? %>
+              <div class="player-chart player-chart--mini" data-controller="player-chart" data-player-chart-type-value="line" data-player-chart-data-value="<%= player_profile_chart_data(profile.chart_data.fetch(:elo)) %>"></div>
+            <% else %>
+              <%= render "players/profile_empty", title: t("players.profile.empty.no_elo_title"), body: t("players.profile.empty.no_elo_body") %>
+            <% end %>
+          </section>
+
+          <section class="player-profile-chart-card">
+            <h2><%= t("players.profile.charts.cumulative_goals_assists") %></h2>
+            <% if profile.cumulative.any? %>
+              <div class="player-chart player-chart--mini" data-controller="player-chart" data-player-chart-type-value="multi-line" data-player-chart-data-value="<%= player_profile_chart_data(profile.chart_data.fetch(:cumulative_goals_assists)) %>"></div>
+            <% else %>
+              <%= render "players/profile_empty", title: t("players.profile.empty.no_offense_title"), body: t("players.profile.empty.no_offense_body") %>
+            <% end %>
+          </section>
+        </div>
+
+        <%= render "players/profile_matches_table", player:, profile:, matches: profile.recent_matches, title: t("players.profile.matches.recent"), paginated: false %>
+      </main>
+
+      <aside class="player-profile-sidebar">
+        <section class="player-profile-chart-card">
+          <h2><%= t("players.profile.charts.record") %></h2>
+          <div class="player-chart player-chart--doughnut" data-controller="player-chart" data-player-chart-type-value="doughnut" data-player-chart-data-value="<%= player_profile_chart_data(profile.chart_data.fetch(:record)) %>"></div>
+          <div class="player-profile-metric-list">
+            <span><%= t("players.profile.charts.record") %>: <strong><%= t("players.profile.summary.record", wins: profile.record.fetch(:wins), draws: profile.record.fetch(:draws), losses: profile.record.fetch(:losses)) %></strong></span>
+            <span><%= t("players.profile.summary.win_rate") %>: <strong><%= profile.record.fetch(:win_rate) %>%</strong></span>
+          </div>
+        </section>
+
+        <%= render "players/profile_synergy_card", title: t("players.profile.synergy.best_partner"), result: profile.synergy.fetch(:best_partner), player: %>
+
+        <section class="player-profile-card">
+          <h2><%= t("players.profile.awards.latest") %></h2>
+          <% if profile.summary.fetch(:latest_award).present? %>
+            <% award = profile.summary.fetch(:latest_award) %>
+            <strong class="player-profile-card__headline"><%= award.award_type %></strong>
+            <p><%= l(award.date) %> · <%= award.votes_count %></p>
+          <% else %>
+            <p><%= t("players.profile.awards.empty_title") %></p>
+          <% end %>
+        </section>
+
+        <%= link_to t("players.profile.synergy.full_relationship_graph"), profile.synergy.fetch(:graph_path), class: "dashboard-button" %>
+      </aside>
+    </div>
+  <% elsif profile.active_tab == "stats" %>
+    <div class="player-profile-layout">
+      <main class="player-profile-main">
+        <%= render "players/profile_summary_cards", profile:, extended: true %>
+        <section class="player-profile-card">
+          <h2><%= t("players.profile.stats.effectiveness") %></h2>
+          <div class="player-profile-metric-list">
+            <span><%= t("players.profile.charts.goals_per_match") %>: <strong><%= player_profile_rate(profile.summary.fetch(:goals_per_match)) %></strong></span>
+            <span><%= t("players.profile.charts.assists_per_match") %>: <strong><%= player_profile_rate(profile.summary.fetch(:assists_per_match)) %></strong></span>
+            <span><%= t("players.profile.charts.goals_assists_per_match") %>: <strong><%= player_profile_rate(profile.summary.fetch(:goals_assists_per_match)) %></strong></span>
+            <span><%= t("players.profile.stats.matches_with_goal") %>: <strong><%= profile.summary.fetch(:matches_with_goal) %></strong></span>
+            <span><%= t("players.profile.stats.matches_with_assist") %>: <strong><%= profile.summary.fetch(:matches_with_assist) %></strong></span>
+            <span><%= t("players.profile.stats.matches_with_goals_assists") %>: <strong><%= profile.summary.fetch(:matches_with_goals_assists) %></strong></span>
+          </div>
+        </section>
+      </main>
+      <aside class="player-profile-sidebar">
+        <section class="player-profile-chart-card">
+          <h2><%= t("players.profile.charts.record") %></h2>
+          <div class="player-chart player-chart--doughnut" data-controller="player-chart" data-player-chart-type-value="doughnut" data-player-chart-data-value="<%= player_profile_chart_data(profile.chart_data.fetch(:record)) %>"></div>
+        </section>
+        <section class="player-profile-card">
+          <h2><%= t("players.profile.stats.season_summary") %></h2>
+          <div class="player-profile-metric-list">
+            <span><%= t("players.profile.summary.highest_elo") %>: <strong><%= profile.elo.fetch(:highest) || "—" %></strong></span>
+            <span><%= t("players.profile.summary.lowest_elo") %>: <strong><%= profile.elo.fetch(:lowest) || "—" %></strong></span>
+            <span><%= t("players.profile.summary.last_elo_change") %>: <strong><%= player_profile_signed_delta(profile.elo.fetch(:last_change)) %></strong></span>
+          </div>
+        </section>
+      </aside>
+    </div>
+  <% elsif profile.active_tab == "matches" %>
+    <section class="player-profile-card">
+      <h2><%= t("players.profile.matches.form_last_5") %></h2>
+      <div class="player-profile-form-pills">
+        <% profile.recent_matches.each do |entry| %>
+          <span class="player-profile-match-result player-profile-match-result--<%= entry.result %>"><%= player_profile_result_label(entry.result) %></span>
+        <% end %>
+      </div>
+    </section>
+    <%= render "players/profile_matches_table", player:, profile:, matches: profile.paginated_matches.items, title: t("players.profile.matches.title"), paginated: true %>
+  <% elsif profile.active_tab == "charts" %>
+    <div class="player-profile-chart-grid player-profile-chart-grid--full">
+      <% { cumulative_goals: "stepped-line", cumulative_assists: "stepped-line", cumulative_goals_assists: "multi-line", record: "doughnut" }.each do |key, type| %>
+        <section class="player-profile-chart-card">
+          <h2><%= t("players.profile.charts.#{key}") %></h2>
+          <div class="player-chart" data-controller="player-chart" data-player-chart-type-value="<%= type %>" data-player-chart-data-value="<%= player_profile_chart_data(profile.chart_data.fetch(key)) %>"></div>
+        </section>
+      <% end %>
+    </div>
+  <% elsif profile.active_tab == "elo" %>
+    <%= render "players/profile_elo_tab", player:, profile: %>
+  <% elsif profile.active_tab == "synergy" %>
+    <%= render "players/profile_synergy_tab", player:, profile: %>
+  <% elsif profile.active_tab == "awards" %>
+    <%= render "players/profile_awards_tab", player:, profile: %>
+  <% end %>
 </section>

@@ -26,17 +26,18 @@ module Synergy
     VALID_LIMITS = [ 20, 50 ].freeze
     VALID_COMBINATION_SIZES = (2..5).freeze
 
-    def self.call(season: nil, combination_size: 2, direction: "best", limit: 20, minimum_shared_matches: 3, player_filter: nil)
-      new(season:, combination_size:, direction:, limit:, minimum_shared_matches:, player_filter:).call
+    def self.call(season: nil, combination_size: 2, direction: "best", limit: 20, minimum_shared_matches: 3, player_filter: nil, player_id: nil)
+      new(season:, combination_size:, direction:, limit:, minimum_shared_matches:, player_filter:, player_id:).call
     end
 
-    def initialize(season:, combination_size:, direction:, limit:, minimum_shared_matches:, player_filter:)
+    def initialize(season:, combination_size:, direction:, limit:, minimum_shared_matches:, player_filter:, player_id: nil)
       @season = season
       @combination_size = normalize_combination_size(combination_size)
       @direction = VALID_DIRECTIONS.include?(direction.to_s) ? direction.to_s : "best"
       @limit = VALID_LIMITS.include?(limit.to_i) ? limit.to_i : 20
       @minimum_shared_matches = [ minimum_shared_matches.to_i, 1 ].max
       @player_filter = player_filter.to_s.strip.downcase
+      @player_id = player_id.to_i if player_id.present?
       @visible_players = Player.approved.active.index_by(&:id)
     end
 
@@ -46,11 +47,12 @@ module Synergy
 
     private
 
-    attr_reader :season, :combination_size, :direction, :limit, :minimum_shared_matches, :player_filter, :visible_players
+    attr_reader :season, :combination_size, :direction, :limit, :minimum_shared_matches, :player_filter, :player_id, :visible_players
 
     def ranked_results
       results = aggregate_combinations.values
         .select { |result| result.shared_matches_count >= minimum_shared_matches }
+        .select { |result| player_id_matches?(result) }
         .select { |result| player_filter_matches?(result) }
 
       results.sort_by { |result| sort_key_for(result) }
@@ -145,6 +147,12 @@ module Synergy
       result.players.any? do |player|
         player.name.downcase.include?(player_filter) || player.nickname.to_s.downcase.include?(player_filter)
       end
+    end
+
+    def player_id_matches?(result)
+      return true if player_id.blank?
+
+      result.players.any? { |player| player.id == player_id }
     end
 
     def sort_key_for(result)

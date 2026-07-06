@@ -44,7 +44,7 @@
     <div class="relationships-tabs-row">
       <nav class="leaderboards-tabs relationships-tabs" aria-label="<%= t("relationships.title") %>">
         <% relationship_tabs(active_tab).each do |tab| %>
-          <%= link_to relationships_path(tab: tab.fetch(:key), direction:, limit:, metric:, season_id: season&.id, minimum_shared_matches: tab.fetch(:active) ? minimum_shared_matches : tab_minimums.fetch(tab.fetch(:key)), player_filter:), class: "leaderboards-tab #{'leaderboards-tab--active' if tab.fetch(:active)}", aria: ({ current: "page" } if tab.fetch(:active)) do %>
+          <%= link_to relationships_path(tab: tab.fetch(:key), direction:, limit:, metric:, season_id: season&.id, minimum_shared_matches: tab.fetch(:active) ? minimum_shared_matches : tab_minimums.fetch(tab.fetch(:key)), player_filter:, player_id:), class: "leaderboards-tab #{'leaderboards-tab--active' if tab.fetch(:active)}", aria: ({ current: "page" } if tab.fetch(:active)) do %>
             <span><%= tab.fetch(:label) %></span>
           <% end %>
         <% end %>
@@ -87,6 +87,7 @@
           <%= form_with url: relationships_path, method: :get, local: true, class: "synergy-graph-controls", data: { turbo_frame: "relationships_results" } do |form| %>
             <%= form.hidden_field :tab, value: "graph" %>
             <%= form.hidden_field :season_id, value: season&.id if season.present? %>
+            <%= form.hidden_field :player_id, value: player_id if player_id.present? %>
 
             <h2><%= t("relationships.graph.controls_title") %></h2>
 
@@ -132,6 +133,7 @@
     <% else %>
   <%= form_with url: relationships_path, method: :get, local: true, class: "relationships-controls", data: { turbo_frame: "relationships_results" } do |form| %>
     <%= form.hidden_field :tab, value: active_tab %>
+    <%= form.hidden_field :player_id, value: player_id if player_id.present? %>
 
     <div class="relationships-control">
       <%= form.label :direction, t("relationships.controls.direction") %>

@@ -49,7 +49,8 @@ class PlayersController < ApplicationController
 
   def show
     player = Player.approved.active.find(params[:id])
-    profile = Players::PublicProfileQuery.call(player:, season_id: params[:season_id])
+    season = Season.find_by(id: params[:season_id]) if params[:season_id].present?
+    profile = Players::ProfileStatsQuery.call(player:, season:, tab: params[:tab], page: params[:page], per_page: 20)
 
     render :show, locals: { player:, profile: }
   end

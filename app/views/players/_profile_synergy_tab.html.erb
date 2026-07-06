@@ -1,0 +1,54 @@
+<div class="player-profile-summary-grid">
+  <%= render "players/profile_synergy_card", title: t("players.profile.synergy.best_partner"), result: profile.synergy.fetch(:best_partner), player: %>
+  <%= render "players/profile_synergy_card", title: t("players.profile.synergy.most_played_partner"), result: profile.synergy.fetch(:most_played_partner), player: %>
+  <%= render "players/profile_synergy_card", title: t("players.profile.synergy.best_offensive_partner"), result: profile.synergy.fetch(:best_offensive_partner), player: %>
+  <%= render "players/profile_synergy_card", title: t("players.profile.synergy.worst_record_partner"), result: profile.synergy.fetch(:worst_record_partner), player: %>
+</div>
+
+<section class="player-profile-chart-card">
+  <div class="leaderboards-table-card__header">
+    <div>
+      <h2><%= t("players.profile.synergy.title") %></h2>
+    </div>
+    <%= link_to t("players.profile.synergy.full_relationship_graph"), profile.synergy.fetch(:graph_path), class: "dashboard-button" %>
+  </div>
+  <% if profile.synergy.fetch(:graph_data).dig(:meta, :edges_count).to_i.positive? %>
+    <div data-controller="synergy-graph" data-synergy-graph-data-value="<%= player_profile_chart_data(profile.synergy.fetch(:graph_data)) %>" class="synergy-graph-network player-profile-synergy-graph"></div>
+  <% end %>
+</section>
+
+<section class="player-profile-table-card">
+  <div class="leaderboards-table-wrap">
+    <table class="leaderboards-table player-profile-table">
+      <thead>
+        <tr>
+          <th><%= t("players.profile.synergy.partner") %></th>
+          <th class="is-numeric"><%= t("players.profile.synergy.shared_matches") %></th>
+          <th class="is-numeric"><%= t("players.profile.synergy.wins") %></th>
+          <th class="is-numeric"><%= t("players.profile.synergy.draws") %></th>
+          <th class="is-numeric"><%= t("players.profile.synergy.losses") %></th>
+          <th class="is-numeric"><%= t("players.profile.synergy.win_rate") %></th>
+          <th class="is-numeric"><%= t("players.profile.synergy.goals_together") %></th>
+          <th class="is-numeric"><%= t("players.profile.synergy.assists_together") %></th>
+          <th class="is-numeric"><%= t("players.profile.synergy.goals_assists") %></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% profile.synergy.fetch(:entries).each do |entry| %>
+          <% partner = player_profile_partner(entry, player) %>
+          <tr>
+            <td><%= link_to partner.name, player_path(partner), class: "roster-card__link" %></td>
+            <td class="is-numeric"><%= entry.shared_matches_count %></td>
+            <td class="is-numeric"><%= entry.wins %></td>
+            <td class="is-numeric"><%= entry.draws %></td>
+            <td class="is-numeric"><%= entry.losses %></td>
+            <td class="is-numeric"><%= entry.win_rate || 0 %>%</td>
+            <td class="is-numeric"><%= entry.goals %></td>
+            <td class="is-numeric"><%= entry.assists %></td>
+            <td class="is-numeric"><%= entry.goals_assists %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+</section>

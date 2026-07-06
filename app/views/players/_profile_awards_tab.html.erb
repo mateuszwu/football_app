@@ -1,0 +1,43 @@
+<div class="player-profile-summary-grid">
+  <% { mvp: profile.summary.fetch(:mvp), def: profile.summary.fetch(:def), total: profile.awards.count, latest: profile.summary.fetch(:latest_award)&.award_type || "—" }.each do |key, value| %>
+    <article class="player-profile-stat-card">
+      <span><%= t("players.profile.awards.#{key}") %></span>
+      <strong><%= value %></strong>
+    </article>
+  <% end %>
+</div>
+
+<section class="player-profile-table-card">
+  <div class="leaderboards-table-card__header">
+    <div>
+      <h2><%= t("players.profile.awards.history") %></h2>
+    </div>
+  </div>
+
+  <% if profile.awards.any? %>
+    <div class="leaderboards-table-wrap">
+      <table class="leaderboards-table player-profile-table">
+        <thead>
+          <tr>
+            <th><%= t("players.profile.matches.date") %></th>
+            <th><%= t("players.profile.matches.match_day") %></th>
+            <th><%= t("players.profile.awards.type") %></th>
+            <th class="is-numeric"><%= t("players.profile.awards.votes") %></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% profile.awards.each do |award| %>
+            <tr>
+              <td><%= l(award.date) %></td>
+              <td><%= award.match_day.played_on %></td>
+              <td><span class="player-profile-award-badge player-profile-award-badge--<%= award.award_type.downcase %>"><%= award.award_type %></span></td>
+              <td class="is-numeric"><%= award.votes_count %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <%= render "players/profile_empty", title: t("players.profile.awards.empty_title"), body: t("players.profile.awards.empty_body") %>
+  <% end %>
+</section>

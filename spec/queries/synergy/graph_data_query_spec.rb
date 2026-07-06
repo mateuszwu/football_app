@@ -96,6 +96,39 @@ RSpec.describe Synergy::GraphDataQuery do
           [ "Adam Demo + Marek Demo", "Marek Demo + Bartek Demo" ]
         )
       end
+
+      it "keeps only graph edges connected to the selected player id" do
+        season = create(:season)
+        adam = create(:player, name: "Adam Demo", nickname: "adam", approval_status: "approved", active: true)
+        marek = create(:player, name: "Marek Demo", nickname: "marek", approval_status: "approved", active: true)
+        bartek = create(:player, name: "Bartek Demo", nickname: "bartek", approval_status: "approved", active: true)
+        opponent = create(:player, name: "Opponent Demo", nickname: "opponent", approval_status: "approved", active: true)
+
+        match_day = create(:match_day, season:, played_on: Date.new(2026, 7, 2), status: "finished")
+        team_setup = create(:team_setup, match_day:)
+        home_team = create(:team, team_setup:, team_type: Team::TEAM_TYPE_MATCH)
+        away_team = create(:team, team_setup:, team_type: Team::TEAM_TYPE_MATCH)
+        create(:team_player, team: home_team, player: adam)
+        create(:team_player, team: home_team, player: marek)
+        create(:team_player, team: home_team, player: bartek)
+        create(:team_player, team: away_team, player: opponent)
+        create(:match, match_day:, home_team:, away_team:, home_score: 1, away_score: 0, finished_at: Time.current)
+
+        result = described_class.call(
+          season:,
+          minimum_shared_matches: 1,
+          player_id: adam.id,
+          limit: 20,
+          metric: "shared_matches"
+        )
+
+        expect(result.fetch(:top_connections).map { |connection| connection.fetch(:label) }).to eq(
+          [ "Adam Demo + Bartek Demo", "Adam Demo + Marek Demo" ]
+        )
+        expect(result.fetch(:elements).select { |element| element.fetch(:data).key?(:source) }).to all(
+          satisfy { |edge| edge.fetch(:data).fetch(:source) == "player-#{adam.id}" || edge.fetch(:data).fetch(:target) == "player-#{adam.id}" }
+        )
+      end
     end
 
     context "when no relationships match" do
