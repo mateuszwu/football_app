@@ -1,70 +1,19 @@
-<div class="player-profile-layout">
-  <main class="player-profile-main">
-    <div class="player-profile-summary-grid">
-      <% { current_elo: profile.elo.fetch(:current), highest_elo: profile.elo.fetch(:highest) || "—", lowest_elo: profile.elo.fetch(:lowest) || "—", last_elo_change: player_profile_signed_delta(profile.elo.fetch(:last_change)), ranking_position: profile.elo.fetch(:ranking_position) || "—" }.each do |key, value| %>
-        <article class="player-profile-stat-card">
-          <span><%= t("players.profile.summary.#{key}") %></span>
-          <strong><%= value %></strong>
-        </article>
-      <% end %>
-    </div>
-
-    <section class="player-profile-chart-card player-profile-chart-card--large">
-      <h2><%= t("players.profile.elo.title") %></h2>
-      <% if profile.chart_data.dig(:elo, :labels).any? %>
-        <div class="player-chart player-chart--large" data-controller="player-chart" data-player-chart-type-value="line" data-player-chart-data-value="<%= player_profile_chart_data(profile.chart_data.fetch(:elo)) %>"></div>
-      <% else %>
-        <%= render "players/profile_empty", title: t("players.profile.empty.no_elo_title"), body: t("players.profile.empty.no_elo_body") %>
-      <% end %>
-    </section>
-  </main>
-
-  <aside class="player-profile-sidebar">
-    <section class="player-profile-card">
-      <h2><%= t("players.profile.elo.how_to_read") %></h2>
-      <p><%= t("players.profile.elo.help") %></p>
-    </section>
-  </aside>
-</div>
-
-<section class="player-profile-table-card">
-  <div class="leaderboards-table-card__header">
-    <div>
-      <h2><%= t("players.profile.elo.table_title") %></h2>
-    </div>
+<div class="player-profile-main">
+  <div class="player-profile-summary-grid">
+    <% { current_elo: profile.elo.fetch(:current), highest_elo: profile.elo.fetch(:highest) || "—", lowest_elo: profile.elo.fetch(:lowest) || "—", last_elo_change: player_profile_signed_delta(profile.elo.fetch(:last_change)), ranking_position: profile.elo.fetch(:ranking_position) || "—" }.each do |key, value| %>
+      <article class="player-profile-stat-card">
+        <span><%= t("players.profile.summary.#{key}") %></span>
+        <strong><%= value %></strong>
+      </article>
+    <% end %>
   </div>
-  <% if profile.elo.fetch(:points).any? %>
-    <div class="leaderboards-table-wrap">
-      <table class="leaderboards-table player-profile-table">
-        <thead>
-          <tr>
-            <th><%= t("players.profile.matches.date") %></th>
-            <th><%= t("players.profile.matches.match") %></th>
-            <th><%= t("players.profile.matches.score") %></th>
-            <th><%= t("players.profile.matches.result") %></th>
-            <th class="is-numeric"><%= t("players.profile.elo.elo_before") %></th>
-            <th class="is-numeric"><%= t("players.profile.elo.change") %></th>
-            <th class="is-numeric"><%= t("players.profile.elo.elo_after") %></th>
-            <th><%= t("players.profile.matches.link") %></th>
-          </tr>
-        </thead>
-        <tbody>
-          <% profile.elo.fetch(:points).each do |point| %>
-            <tr>
-              <td><%= point.fetch(:date) %></td>
-              <td><%= point.fetch(:label) %></td>
-              <td><%= point.fetch(:score) || "—" %></td>
-              <td><%= point.fetch(:result) ? player_profile_result_label(point.fetch(:result)) : "—" %></td>
-              <td class="is-numeric"><%= point.fetch(:before) || "—" %></td>
-              <td class="is-numeric"><%= player_profile_signed_delta(point.fetch(:delta)) %></td>
-              <td class="is-numeric"><%= point.fetch(:after) || "—" %></td>
-              <td><%= point.fetch(:path) ? link_to(t("players.profile.matches.view_match"), point.fetch(:path), class: "roster-card__link") : "—" %></td>
-            </tr>
-          <% end %>
-        </tbody>
-      </table>
-    </div>
-  <% else %>
-    <%= render "players/profile_empty", title: t("players.profile.empty.no_elo_title"), body: t("players.profile.empty.no_elo_body") %>
-  <% end %>
-</section>
+
+  <section class="player-profile-chart-card player-profile-chart-card--large">
+    <h2><%= t("players.profile.elo.title") %></h2>
+    <% if profile.chart_data.dig(:elo, :labels).any? %>
+      <div class="player-chart player-chart--large" data-controller="player-chart" data-player-chart-type-value="line" data-player-chart-data-value="<%= player_profile_chart_data(profile.chart_data.fetch(:elo)) %>"></div>
+    <% else %>
+      <%= render "players/profile_empty", title: t("players.profile.empty.no_elo_title"), body: t("players.profile.empty.no_elo_body") %>
+    <% end %>
+  </section>
+</div>

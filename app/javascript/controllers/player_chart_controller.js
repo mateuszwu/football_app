@@ -40,21 +40,26 @@ export default class extends Controller {
         datasets: this.dataValue.datasets || [
           {
             data: this.dataValue.values || [],
-            backgroundColor: ["#22C55E", "#94A3B8", "#F97316"],
+            backgroundColor: ["#22C55E", "#94A3B8", "#EF4444"],
             borderColor: "#0B1728"
           }
         ]
       }
     }
 
-    const datasets = (this.dataValue.datasets || []).map((dataset) => ({
-      borderWidth: 2,
-      pointRadius: 3,
-      pointHoverRadius: 5,
-      fill: false,
-      ...dataset,
-      stepped: this.typeValue === "stepped-line" ? true : dataset.stepped
-    }))
+    const datasets = (this.dataValue.datasets || []).map((dataset) => {
+      const { segmentByDelta, ...chartDataset } = dataset
+
+      return {
+        borderWidth: 2,
+        pointRadius: 3,
+        pointHoverRadius: 5,
+        fill: false,
+        ...chartDataset,
+        segment: segmentByDelta ? { borderColor: (context) => this.segmentColor(context) } : chartDataset.segment,
+        stepped: this.typeValue === "stepped-line" ? true : chartDataset.stepped
+      }
+    })
 
     return {
       labels: this.dataValue.labels || [],
@@ -118,8 +123,18 @@ export default class extends Controller {
       `ELO: ${meta.after || "—"}`,
       `${symbol} ${delta > 0 ? "+" : ""}${delta}`,
       meta.score ? `Wynik: ${meta.score}` : null,
-      meta.result ? `Rezultat: ${meta.result.toUpperCase()}` : null
+      meta.result_label ? `Rezultat: ${meta.result_label}` : null
     ].filter(Boolean)
+  }
+
+  segmentColor(context) {
+    const previous = context.p0?.parsed?.y
+    const current = context.p1?.parsed?.y
+
+    if (current > previous) return "#7CFF3A"
+    if (current < previous) return "#EF4444"
+
+    return "#94A3B8"
   }
 
   mergeOptions(base, extra) {

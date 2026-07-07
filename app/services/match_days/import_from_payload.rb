@@ -5,7 +5,7 @@ module MatchDays
         matches.first
       end
     end
-    ParsedGoal = Struct.new(:team_name, :scorer_name, :assistant_name, keyword_init: true)
+    ParsedGoal = Struct.new(:team_name, :scorer_name, :assistant_name, :own_goal, keyword_init: true)
 
     def self.call(payload:, season:, available_players:)
       new(payload:, season:, available_players:).call
@@ -107,7 +107,8 @@ module MatchDays
       ParsedGoal.new(
         team_name: goal_data[:team].to_s.strip,
         scorer_name: goal_data[:scorer].to_s.strip,
-        assistant_name: goal_data[:assistant].to_s.strip.presence
+        assistant_name: goal_data[:assistant].to_s.strip.presence,
+        own_goal: ActiveModel::Type::Boolean.new.cast(goal_data[:own_goal]) || false
       )
     end
 
@@ -170,11 +171,17 @@ module MatchDays
           next
         end
 
-        unless team[:player_names].any? { |player_name| same_player?(player_name, goal.scorer_name) }
-          errors << "#{goal.scorer_name} is not listed in #{team[:name]} for match #{match_index + 1}"
+        scorer_team = goal.own_goal ? opponent_team_for(match_data, team) : team
+        unless scorer_team[:player_names].any? { |player_name| same_player?(player_name, goal.scorer_name) }
+          errors << "#{goal.scorer_name} is not listed in #{scorer_team[:name]} for match #{match_index + 1}"
         end
 
         next if goal.assistant_name.blank?
+
+        if goal.own_goal
+          errors << "Own goal for #{goal.scorer_name} cannot have an assist"
+          next
+        end
 
         unless team[:player_names].any? { |player_name| same_player?(player_name, goal.assistant_name) }
           errors << "#{goal.assistant_name} is not listed in #{team[:name]} for match #{match_index + 1}"
@@ -240,8 +247,9 @@ module MatchDays
         result = Matches::AddGoal.call(
           match:,
           scoring_team_id: scoring_team.id,
-          scorer_team_player_id: team_player_for(scoring_team, goal.scorer_name).id,
+          scorer_team_player_id: team_player_for(goal.own_goal ? opponent_team_for(match, scoring_team) : scoring_team, goal.scorer_name).id,
           assistant_team_player_id: goal.assistant_name.present? ? team_player_for(scoring_team, goal.assistant_name).id : nil,
+          own_goal: goal.own_goal,
           scored_at: match_started_at(match_data, match_index:) + (goal_index + 1).minutes
         )
 
@@ -303,6 +311,11 @@ module MatchDays
 
     def team_for(match, team_name)
       [ match.home_team, match.away_team ].find { |team| same_name?(team.name, team_name) }
+    end
+
+    def opponent_team_for(match_or_data, team)
+      teams = match_or_data.is_a?(Match) ? [ match_or_data.home_team, match_or_data.away_team ] : match_or_data[:teams]
+      teams.find { |candidate| candidate != team }
     end
 
     def team_player_for(team, player_name)

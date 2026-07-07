@@ -99,6 +99,9 @@
           <div class="player-profile-metric-list">
             <span><%= t("players.profile.charts.record") %>: <strong><%= t("players.profile.summary.record", wins: profile.record.fetch(:wins), draws: profile.record.fetch(:draws), losses: profile.record.fetch(:losses)) %></strong></span>
             <span><%= t("players.profile.summary.win_rate") %>: <strong><%= profile.record.fetch(:win_rate) %>%</strong></span>
+            <span><%= t("players.profile.summary.draw_rate") %>: <strong><%= profile.record.fetch(:draw_rate) %>%</strong></span>
+            <span><%= t("players.profile.summary.loss_rate") %>: <strong><%= profile.record.fetch(:loss_rate) %>%</strong></span>
+            <span><%= t("players.profile.summary.best_win_streak") %>: <strong><%= profile.summary.fetch(:best_win_streak) %></strong></span>
           </div>
         </section>
 
@@ -128,6 +131,8 @@
             <span><%= t("players.profile.charts.goals_per_match") %>: <strong><%= player_profile_rate(profile.summary.fetch(:goals_per_match)) %></strong></span>
             <span><%= t("players.profile.charts.assists_per_match") %>: <strong><%= player_profile_rate(profile.summary.fetch(:assists_per_match)) %></strong></span>
             <span><%= t("players.profile.charts.goals_assists_per_match") %>: <strong><%= player_profile_rate(profile.summary.fetch(:goals_assists_per_match)) %></strong></span>
+            <span><%= t("players.profile.summary.own_goals") %>: <strong><%= profile.summary.fetch(:own_goals) %></strong></span>
+            <span><%= t("players.profile.summary.best_win_streak") %>: <strong><%= profile.summary.fetch(:best_win_streak) %></strong></span>
             <span><%= t("players.profile.stats.matches_with_goal") %>: <strong><%= profile.summary.fetch(:matches_with_goal) %></strong></span>
             <span><%= t("players.profile.stats.matches_with_assist") %>: <strong><%= profile.summary.fetch(:matches_with_assist) %></strong></span>
             <span><%= t("players.profile.stats.matches_with_goals_assists") %>: <strong><%= profile.summary.fetch(:matches_with_goals_assists) %></strong></span>

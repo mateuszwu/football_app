@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_12_114500) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_06_124500) do
   create_table "match_day_players", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.integer "match_day_id", null: false
@@ -61,6 +61,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_12_114500) do
     t.datetime "created_at", null: false
     t.integer "home_score_after", default: 0, null: false
     t.integer "match_id", null: false
+    t.boolean "own_goal", default: false, null: false
     t.datetime "scored_at", null: false
     t.integer "scorer_team_player_id", null: false
     t.integer "scoring_team_id", null: false

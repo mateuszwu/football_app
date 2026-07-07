@@ -103,6 +103,38 @@ RSpec.describe MatchDays::ImportFromPayload do
         expect(first_player.reload).to be_present
         expect(second_player.reload).to be_present
       end
+
+      it "imports an own goal with the scorer from the opponent team" do
+        season = create(:season)
+        first_player = create(:player, nickname: "first", approval_status: "approved", active: true)
+        second_player = create(:player, name: "Second", nickname: "second", phone: "+48999999998", approval_status: "approved", active: true)
+        payload = {
+          played_on: "2026-06-19",
+          teams: [
+            { name: "Team A", players: [ "first" ] },
+            { name: "Team B", players: [ "second" ] }
+          ],
+          goals: [
+            { team: "Team A", scorer: "second", own_goal: true }
+          ]
+        }
+
+        result = described_class.call(
+          payload:,
+          season:,
+          available_players: Player.approved.active.order(:name)
+        )
+
+        goal = result.match.match_goals.first
+
+        expect(result).to be_success
+        expect(result.match.home_score).to eq(1)
+        expect(result.match.away_score).to eq(0)
+        expect(goal).to be_own_goal
+        expect(goal.scoring_team.name).to eq("Team A")
+        expect(goal.scorer).to eq(second_player)
+        expect(first_player.reload).to be_present
+      end
     end
 
     context "when the payload is invalid" do
@@ -164,7 +196,8 @@ RSpec.describe MatchDays::ImportFromPayload do
                 { team: "", scorer: "" },
                 { team: "Missing", scorer: "adam" },
                 { team: "Team B", scorer: "adam", assistant: "ghost" },
-                { team: "Team B", scorer: "jan", assistant: "jan" }
+                { team: "Team B", scorer: "jan", assistant: "jan" },
+                { team: "Team A", scorer: "jan", assistant: "adam", own_goal: true }
               ]
             }
           ]
@@ -183,6 +216,7 @@ RSpec.describe MatchDays::ImportFromPayload do
         expect(result.errors).to include("adam is not listed in Team B for match 1")
         expect(result.errors).to include("ghost is not listed in Team B for match 1")
         expect(result.errors).to include("Assistant cannot be the scorer for jan")
+        expect(result.errors).to include("Own goal for jan cannot have an assist")
         expect(MatchDay.count).to eq(0)
       end
 

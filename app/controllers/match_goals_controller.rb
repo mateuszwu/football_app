@@ -10,7 +10,8 @@ class MatchGoalsController < ApplicationController
       match:,
       scorer_team_player_id: goal_params[:scorer_team_player_id],
       scoring_team_id: goal_params[:scoring_team_id],
-      assistant_team_player_id: goal_params[:assistant_team_player_id].presence
+      assistant_team_player_id: goal_params[:assistant_team_player_id].presence,
+      own_goal: ActiveModel::Type::Boolean.new.cast(goal_params[:own_goal])
     )
 
     if result
@@ -36,6 +37,6 @@ class MatchGoalsController < ApplicationController
   private
 
   def goal_params
-    params.expect(match_goal: [ :scorer_team_player_id, :scoring_team_id, :assistant_team_player_id ])
+    params.expect(match_goal: [ :scorer_team_player_id, :scoring_team_id, :assistant_team_player_id, :own_goal ])
   end
 end

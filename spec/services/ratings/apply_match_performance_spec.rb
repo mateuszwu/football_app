@@ -67,6 +67,25 @@ RSpec.describe Ratings::ApplyMatchPerformance do
       expect(PlayerRatingChange.where(match:).count).to eq(1)
     end
 
+    it "does not award goal or assist performance for own goals" do
+      season = create(:season, goal_points: 1.0, assist_points: 0.8)
+      match_day = create(:match_day, season:, status: "finished")
+      team_setup = create(:team_setup, match_day:)
+      home_team = create(:team, team_setup:, team_type: Team::TEAM_TYPE_MATCH)
+      away_team = create(:team, team_setup:, team_type: Team::TEAM_TYPE_MATCH)
+      scorer = create(:player, global_performance_score: 0.0)
+      scorer_team_player = create(:team_player, team: away_team, player: scorer)
+      create(:team_player, team: home_team, player: create(:player, global_performance_score: 0.0))
+      match = create(:match, match_day:, home_team:, away_team:, home_score: 1, away_score: 0, started_at: Time.zone.now, finished_at: Time.zone.now)
+      create(:match_goal, match:, scoring_team: home_team, scorer_team_player:, own_goal: true, scored_at: Time.zone.now)
+
+      described_class.call(match:, season:)
+
+      expect(PlayerSeasonStat.find_by(player: scorer, season: season)).to be_nil
+      expect(scorer.reload.global_performance_score).to eq(BigDecimal("0.0"))
+      expect(PlayerRatingChange.where(match:)).to be_empty
+    end
+
     it "does not create assist points for unassisted goals" do
       season = create(:season, goal_points: 1.0, assist_points: 0.8)
       match_day = create(:match_day, season:, status: "finished")

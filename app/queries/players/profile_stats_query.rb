@@ -13,6 +13,7 @@ module Players
       :result,
       :goals,
       :assists,
+      :own_goals,
       :elo_before,
       :elo_delta,
       :elo_after,
@@ -106,6 +107,7 @@ module Players
         matches: match_entries.count,
         goals: goals_count,
         assists: assists_count,
+        own_goals: own_goals_count,
         goals_assists: goals_count + assists_count,
         mvp: awards.count { |award| award.award_type == "MVP" },
         def: awards.count { |award| award.award_type == "DEF" },
@@ -113,6 +115,9 @@ module Players
         draws: record.fetch(:draws),
         losses: record.fetch(:losses),
         win_rate: record.fetch(:win_rate),
+        draw_rate: record.fetch(:draw_rate),
+        loss_rate: record.fetch(:loss_rate),
+        best_win_streak:,
         goals_per_match: rate(goals_count),
         assists_per_match: rate(assists_count),
         goals_assists_per_match: rate(goals_count + assists_count),
@@ -137,7 +142,9 @@ module Players
           draws:,
           losses:,
           total:,
-          win_rate: total.zero? ? 0 : ((wins.to_f / total) * 100).round
+          win_rate: percentage(wins, total),
+          draw_rate: percentage(draws, total),
+          loss_rate: percentage(losses, total)
         }
       end
     end
@@ -192,6 +199,7 @@ module Players
           result: result_for(match:, team:),
           goals: goals_for(match),
           assists: assists_for(match),
+          own_goals: own_goals_for(match),
           elo_before: rating_change&.old_elo_score || snapshot&.elo_before,
           elo_delta: rating_change&.elo_delta || snapshot&.elo_delta,
           elo_after: rating_change&.new_elo_score || snapshot&.elo_after,
@@ -244,11 +252,15 @@ module Players
     end
 
     def goals_for(match)
-      match.active_match_goals.count { |goal| goal.scorer_team_player.player_id == player.id }
+      match.active_match_goals.count { |goal| !goal.own_goal? && goal.scorer_team_player.player_id == player.id }
     end
 
     def assists_for(match)
-      match.active_match_goals.count { |goal| goal.assistant_team_player&.player_id == player.id }
+      match.active_match_goals.count { |goal| !goal.own_goal? && goal.assistant_team_player&.player_id == player.id }
+    end
+
+    def own_goals_for(match)
+      match.active_match_goals.count { |goal| goal.own_goal? && goal.scorer_team_player.player_id == player.id }
     end
 
     def rating_changes
@@ -279,10 +291,38 @@ module Players
       @assists_count ||= match_entries.sum(&:assists)
     end
 
+    def own_goals_count
+      @own_goals_count ||= match_entries.sum(&:own_goals)
+    end
+
     def rate(value)
       return 0 if match_entries.empty?
 
       (value.to_f / match_entries.count).round(2)
+    end
+
+    def percentage(value, total)
+      return 0 if total.zero?
+
+      ((value.to_f / total) * 100).round
+    end
+
+    def best_win_streak
+      @best_win_streak ||= begin
+        current_streak = 0
+        best_streak = 0
+
+        match_entries.reverse_each do |entry|
+          if entry.result == Team::RESULT_WIN
+            current_streak += 1
+            best_streak = [ best_streak, current_streak ].max
+          else
+            current_streak = 0
+          end
+        end
+
+        best_streak
+      end
     end
 
     def award_types_for(match_day)
@@ -346,6 +386,8 @@ module Players
           match = change.match
           team = match ? player_team_for(match) : nil
 
+          result = match && team ? result_for(match:, team:) : nil
+
           {
             label: elo_label_for(change),
             date: change.match_day.played_on.to_s,
@@ -354,7 +396,8 @@ module Players
             before: change.old_elo_score,
             delta: change.elo_delta,
             after: change.new_elo_score,
-            result: match && team ? result_for(match:, team:) : nil,
+            result:,
+            result_label: result_label_for(result),
             score: match && team ? score_for(match:, team:) : nil,
             path: match ? Rails.application.routes.url_helpers.match_path(match) : nil
           }
@@ -374,6 +417,7 @@ module Players
             delta: entry.elo_delta,
             after: entry.elo_after,
             result: entry.result,
+            result_label: result_label_for(entry.result),
             score: entry.score,
             path: Rails.application.routes.url_helpers.match_path(entry.match)
           }
@@ -383,6 +427,12 @@ module Players
 
     def elo_label_for(change)
       change.match ? "#{change.match_day.played_on} · ##{change.match.id}" : change.match_day.played_on.to_s
+    end
+
+    def result_label_for(result)
+      return nil if result.blank?
+
+      I18n.t("statuses.#{result}", default: result.to_s)
     end
 
     def synergy
@@ -398,7 +448,13 @@ module Players
           best_offensive_partner: duos.max_by { |duo| [ duo.goals_assists, duo.goals, duo.win_rate.to_i ] },
           worst_record_partner: worst.first,
           graph_data:,
-          graph_path: Rails.application.routes.url_helpers.relationships_path(tab: "graph", season_id: selected_season&.id, player_id: player.id)
+          graph_path: Rails.application.routes.url_helpers.relationships_path(
+            tab: "graph",
+            season_id: selected_season&.id,
+            player_id: player.id,
+            player_filter: player.name,
+            minimum_shared_matches: 1
+          )
         }
       end
     end
@@ -416,7 +472,8 @@ module Players
               pointBackgroundColor: elo_points.map { |point| elo_point_color(point.fetch(:delta)) },
               pointBorderColor: elo_points.map { |point| elo_point_color(point.fetch(:delta)) },
               pointHoverBorderColor: elo_points.map { |point| elo_point_color(point.fetch(:delta)) },
-              tension: 0.32
+              segmentByDelta: true,
+              tension: 0
             }
           ],
           points_meta: elo_points
@@ -427,7 +484,7 @@ module Players
           datasets: [
             {
               data: [ record.fetch(:wins), record.fetch(:draws), record.fetch(:losses) ],
-              backgroundColor: [ "#22C55E", "#94A3B8", "#F97316" ],
+              backgroundColor: [ "#22C55E", "#94A3B8", "#EF4444" ],
               borderColor: "#0B1728"
             }
           ]
@@ -466,7 +523,7 @@ module Players
     def elo_point_color(delta)
       return "#94A3B8" if delta.to_i.zero?
 
-      delta.to_i.positive? ? "#22C55E" : "#F97316"
+      delta.to_i.positive? ? "#22C55E" : "#EF4444"
     end
 
     def paginate(items)

@@ -1,15 +1,16 @@
 module Matches
   class AddGoal
-    def self.call(match:, scorer_team_player_id:, scoring_team_id:, assistant_team_player_id: nil, scored_at: Time.current)
-      new(match:, scorer_team_player_id:, scoring_team_id:, assistant_team_player_id:, scored_at:).call
+    def self.call(match:, scorer_team_player_id:, scoring_team_id:, assistant_team_player_id: nil, scored_at: Time.current, own_goal: false)
+      new(match:, scorer_team_player_id:, scoring_team_id:, assistant_team_player_id:, scored_at:, own_goal:).call
     end
 
-    def initialize(match:, scorer_team_player_id:, scoring_team_id:, assistant_team_player_id:, scored_at:)
+    def initialize(match:, scorer_team_player_id:, scoring_team_id:, assistant_team_player_id:, scored_at:, own_goal:)
       @match = match
       @scorer_team_player_id = scorer_team_player_id
       @scoring_team_id = scoring_team_id
       @assistant_team_player_id = assistant_team_player_id
       @scored_at = scored_at
+      @own_goal = ActiveModel::Type::Boolean.new.cast(own_goal) || false
     end
 
     def call
@@ -20,6 +21,7 @@ module Matches
           scorer_team_player_id:,
           scoring_team_id:,
           assistant_team_player_id:,
+          own_goal:,
           scored_at:,
           home_score_after: next_home_score(goal_scoring_team_id: scoring_team_id),
           away_score_after: next_away_score(goal_scoring_team_id: scoring_team_id)
@@ -35,7 +37,7 @@ module Matches
 
     private
 
-    attr_reader :match, :scored_at, :scorer_team_player_id, :scoring_team_id, :assistant_team_player_id
+    attr_reader :match, :scored_at, :scorer_team_player_id, :scoring_team_id, :assistant_team_player_id, :own_goal
 
     def next_home_score(goal_scoring_team_id:)
       match.home_score + (goal_scoring_team_id.to_i == match.home_team_id ? 1 : 0)

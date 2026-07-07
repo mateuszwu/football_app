@@ -64,7 +64,8 @@ RSpec.describe "Players" do
       expect(response.body).to include("1040")
       expect(response.body).to include("Profil zawodnika")
       expect(response.body).to include("/players/#{player.id}")
-      expect(response.body).to include(">Dołącz</a>")
+      expect(response.body).to include('href="/players/new"')
+      expect(response.body).to include("Dołącz")
       expect(response.body).not_to include("KADRA")
       expect(response.body).not_to include("Dołącz do gry")
       expect(response.body).not_to include("players-directory-join")
@@ -322,9 +323,11 @@ RSpec.describe "Players" do
         create(:team_player, player: player, team: spring_team)
         summer_team_player = create(:team_player, player: player, team: summer_team)
         summer_assistant = create(:team_player, team: summer_team)
+        create(:team_player, team: summer_opponent)
         create(:match, match_day: spring_match_day, home_team: spring_team, away_team: spring_opponent, home_score: 0, away_score: 1, finished_at: Time.zone.parse("2026-05-22 20:00:00"))
         summer_match = create(:match, match_day: summer_match_day, home_team: summer_team, away_team: summer_opponent, home_score: 2, away_score: 1, finished_at: Time.zone.parse("2026-05-29 20:00:00"))
         create(:match_goal, match: summer_match, scoring_team: summer_team, scorer_team_player: summer_team_player, assistant_team_player: summer_assistant)
+        create(:match_goal, match: summer_match, scoring_team: summer_opponent, scorer_team_player: summer_team_player, own_goal: true)
         create(:player_season_stat, player: player, season: spring, elo: 1004, goals: 1, assists: 0, mvp_votes_count: 0, def_votes_count: 2)
         create(:player_season_stat, player: player, season: summer, elo: 1020, goals: 3, assists: 2, mvp_votes_count: 4, def_votes_count: 1)
         create(
@@ -356,8 +359,12 @@ RSpec.describe "Players" do
         expect(response.body).to include("1020")
         expect(response.body).to include("Mecze")
         expect(response.body).to include("Wygrane")
+        expect(response.body).to include("Remisy")
+        expect(response.body).to include("Porażki")
         expect(response.body).to include("1W · 0R · 0P")
         expect(response.body).to include("100%")
+        expect(response.body).to include("Samobóje")
+        expect(response.body).to include("Najlepsza seria wygranych")
         expect(response.body).to include("Gole / Asysty")
         expect(response.body).to include("G+A")
         expect(response.body).to include("Ostatnie mecze")
@@ -372,6 +379,17 @@ RSpec.describe "Players" do
         expect(response.body).not_to include("0:1")
         expect(response.body).not_to include("+48111111111")
         expect(response.body).not_to include("phone")
+      end
+
+      it "renders the ELO tab without the old help card" do
+        player = create(:player, name: "Adam Nowak", approval_status: "approved", active: true)
+
+        get "/players/#{player.id}", params: { tab: "elo" }
+
+        expect(response).to have_http_status(:ok)
+        expect(response.body).to include("Historia ELO")
+        expect(response.body).not_to include("Jak czytać ELO")
+        expect(response.body).not_to include("Historia zmian ELO")
       end
     end
 

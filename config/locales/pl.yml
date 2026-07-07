@@ -5,6 +5,7 @@ pl:
 
   app:
     name: "Football App"
+    subtitle: "Weekendowe granie"
     tagline: "Weekendowe granie"
 
   common:
@@ -209,8 +210,10 @@ pl:
         matches: "Mecze"
         goals: "Gole"
         assists: "Asysty"
+        own_goals: "Samobóje"
         goals_assists: "G+A"
         goals_assists_short: "Gole / Asysty"
+        best_win_streak: "Najlepsza seria wygranych"
         mvp: "MVP"
         def: "DEF"
         wins: "Wygrane"
@@ -218,6 +221,8 @@ pl:
         losses: "Porażki"
         record: "%{wins}W · %{draws}R · %{losses}P"
         win_rate: "Win rate"
+        draw_rate: "Remisy"
+        loss_rate: "Porażki"
         highest_elo: "Najwyższe ELO"
         lowest_elo: "Najniższe ELO"
         last_elo_change: "Ostatnia zmiana"
@@ -241,7 +246,7 @@ pl:
         title: "Wszystkie mecze"
         recent: "Ostatnie mecze"
         form_last_5: "Forma z ostatnich 5 meczów"
-        summary: "%{matches} meczów · %{goals} goli · %{assists} asyst · %{goals_assists} G+A"
+        summary: "%{matches} meczów · %{goals} goli · %{assists} asyst · %{own_goals} samobóje · %{goals_assists} G+A"
         date: "Data"
         match_day: "Dzień grania"
         match: "Mecz"
@@ -250,6 +255,7 @@ pl:
         result: "Rezultat"
         goals: "Gole"
         assists: "Asysty"
+        own_goals: "Samobóje"
         elo_change: "ELO +/-"
         badges: "Odznaki"
         link: "Link"
@@ -678,6 +684,7 @@ pl:
     home: "Gospodarze"
     away: "Goście"
     goal: "GOL"
+    own_goal_short: "OG"
     assist: "asysta"
     timer: "Czas meczu"
     draw_finished: "Mecz zakończył się remisem."

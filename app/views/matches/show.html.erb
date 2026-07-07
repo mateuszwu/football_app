@@ -31,7 +31,7 @@
         <ul class="live-match__team-goals">
           <% home_goals.each do |goal| %>
             <li>
-              <span class="goal-marker"><%= t("matches.goal") %></span> <%= goal.scorer.nickname.presence || goal.scorer.name %>
+              <span class="goal-marker"><%= goal.own_goal? ? t("matches.own_goal_short") : t("matches.goal") %></span> <%= goal.scorer.nickname.presence || goal.scorer.name %>
               <% details = [] %>
               <% if match.started_at.present? %>
                 <% details << "#{match.elapsed_seconds(goal.scored_at) / 60}'" %>
@@ -89,7 +89,7 @@
         <ul class="live-match__team-goals">
           <% away_goals.each do |goal| %>
             <li>
-              <span class="goal-marker"><%= t("matches.goal") %></span> <%= goal.scorer.nickname.presence || goal.scorer.name %>
+              <span class="goal-marker"><%= goal.own_goal? ? t("matches.own_goal_short") : t("matches.goal") %></span> <%= goal.scorer.nickname.presence || goal.scorer.name %>
               <% details = [] %>
               <% if match.started_at.present? %>
                 <% details << "#{match.elapsed_seconds(goal.scored_at) / 60}'" %>
@@ -150,7 +150,7 @@
       <ol class="live-match__event-list">
         <% recent_goals.each do |goal| %>
           <li class="live-match__event">
-            <span class="live-match__event-icon"><%= t("matches.goal") %></span>
+            <span class="live-match__event-icon"><%= goal.own_goal? ? t("matches.own_goal_short") : t("matches.goal") %></span>
             <span class="live-match__event-body">
               <strong><%= goal.scorer.nickname.presence || goal.scorer.name %></strong>
               <% if goal.assistant.present? %>
@@ -230,13 +230,18 @@
                 <%= form.hidden_field :scoring_team_id, value: team.id %>
 
                 <label class="form-field">
-                  <span>Scorer</span>
-                  <%= form.select :scorer_team_player_id, options_from_collection_for_select(team.team_players.includes(:player).order(:player_name), :id, :player_name), {}, required: true %>
+                  <span>Scorer / own-goal player</span>
+                  <%= form.select :scorer_team_player_id, options_from_collection_for_select(match.teams.includes(team_players: :player).flat_map(&:team_players).sort_by(&:player_name), :id, :player_name), {}, required: true %>
                 </label>
 
                 <label class="form-field">
                   <span>Assistant (optional)</span>
                   <%= form.select :assistant_team_player_id, options_from_collection_for_select(team.team_players.includes(:player).order(:player_name), :id, :player_name), { include_blank: "No assist" } %>
+                </label>
+
+                <label class="form-field form-field--checkbox">
+                  <%= form.check_box :own_goal %>
+                  <span>Own goal for <%= team.name %></span>
                 </label>
 
                 <%= form.submit "Add goal for #{team.name}", class: "button button--primary" %>

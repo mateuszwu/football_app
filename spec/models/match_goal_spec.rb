@@ -34,6 +34,17 @@ RSpec.describe MatchGoal do
       end
     end
 
+    context "when the goal is an own goal by an opponent" do
+      it "is valid" do
+        match = create(:match)
+        scorer_team_player = create(:team_player, team: match.away_team, player: create(:player))
+
+        goal = build(:match_goal, match:, scoring_team: match.home_team, scorer_team_player:, own_goal: true)
+
+        expect(goal).to be_valid
+      end
+    end
+
     context "when assistant is the scorer" do
       it "is invalid" do
         match = create(:match)
@@ -84,6 +95,51 @@ RSpec.describe MatchGoal do
 
         expect(goal).not_to be_valid
         expect(goal.errors[:scoring_team]).to include("must be a playing team")
+      end
+    end
+
+    context "when an own goal scorer belongs to the scoring team" do
+      it "is invalid" do
+        match = create(:match)
+        scorer_team_player = create(:team_player, team: match.home_team, player: create(:player))
+
+        goal = build(:match_goal, match:, scoring_team: match.home_team, scorer_team_player:, own_goal: true)
+
+        expect(goal).not_to be_valid
+        expect(goal.errors[:scorer_team_player]).to include("must belong to the opponent for an own goal")
+      end
+    end
+
+    context "when an own goal scorer is not playing in the match" do
+      it "is invalid" do
+        match = create(:match)
+        other_team = create(:team, team_setup: match.home_team.team_setup, match:, team_type: Team::TEAM_TYPE_MATCH, playing: true)
+        scorer_team_player = create(:team_player, team: other_team, player: create(:player))
+
+        goal = build(:match_goal, match:, scoring_team: match.home_team, scorer_team_player:, own_goal: true)
+
+        expect(goal).not_to be_valid
+        expect(goal.errors[:scorer_team_player]).to include("must belong to the opponent for an own goal")
+      end
+    end
+
+    context "when an own goal has an assistant" do
+      it "is invalid" do
+        match = create(:match)
+        scorer_team_player = create(:team_player, team: match.away_team, player: create(:player))
+        assistant_team_player = create(:team_player, team: match.home_team, player: create(:player))
+
+        goal = build(
+          :match_goal,
+          match:,
+          scoring_team: match.home_team,
+          scorer_team_player:,
+          assistant_team_player:,
+          own_goal: true
+        )
+
+        expect(goal).not_to be_valid
+        expect(goal.errors[:assistant_team_player]).to include("cannot be present for an own goal")
       end
     end
   end
