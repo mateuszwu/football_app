@@ -3,7 +3,7 @@ require "rails_helper"
 RSpec.describe "Matches" do
   describe "GET /matches/:id" do
     context "when the match has teams and players" do
-      it "renders the live match screen without phone data" do
+      it "renders the match summary without phone data or live-screen copy" do
         travel_to Time.zone.parse("2026-06-19 19:49:30") do
           season = create(:season, name: "Summer 2026")
           match_day = create(:match_day, season: season, played_on: Date.new(2026, 6, 19), status: "in_progress")
@@ -27,24 +27,24 @@ RSpec.describe "Matches" do
           get "/matches/#{match.id}"
 
           expect(response).to have_http_status(:ok)
-          expect(response.body).to include("Mecz live")
+          expect(response.body).to include("MECZ")
           expect(response.body).to include("Team A vs Team B")
           expect(response.body).to include("Summer 2026")
           expect(response.body).to include("2026-06-19")
-          expect(response.body).to include("Gospodarze")
-          expect(response.body).to include("Goście")
+          expect(response.body).not_to include("Gospodarze")
+          expect(response.body).not_to include("Goście")
           expect(response.body).to include("2")
           expect(response.body).to include("1")
           expect(response.body).to include("W trakcie")
-          expect(response.body).to include("Rozpoczęto o 19:15")
+          expect(response.body).to include("Start")
+          expect(response.body).to include("19:15")
           expect(response.body).to include("Czas meczu")
           expect(response.body).to include("34:30")
-          expect(response.body).to include("Team A skład")
-          expect(response.body).to include("Team B skład")
+          expect(response.body).to include("Składy i wkład zawodników")
           expect(response.body).to include("Adam Nowak")
-          expect(response.body).to include("adam")
           expect(response.body).to include("Marek Kowalski")
-          expect(response.body).to include("marek")
+          expect(response.body).not_to include("Mecz live")
+          expect(response.body).not_to include("Ostatnie wydarzenia")
           expect(response.body).not_to include("+48111111111")
           expect(response.body).not_to include("+48222222222")
           expect(response.body).not_to include("phone")
@@ -81,11 +81,12 @@ RSpec.describe "Matches" do
         get "/matches/#{match.id}"
 
         expect(response).to have_http_status(:ok)
-        expect(response.body).to include("adam")
-        expect(response.body).to include("(12&#39;)")
+        expect(response.body).to include("Adam Nowak")
+        expect(response.body).to include("13&#39;")
+        expect(response.body).to include("1 : 0")
       end
 
-      it "renders the recent events list with goals in reverse chronological order" do
+      it "renders the chronological timeline with assists and score progression" do
         season = create(:season, name: "Summer 2026")
         match_day = create(:match_day, season: season, played_on: Date.new(2026, 6, 19), status: "in_progress")
         team_setup = create(:team_setup, match_day: match_day)
@@ -125,10 +126,53 @@ RSpec.describe "Matches" do
         get "/matches/#{match.id}"
 
         expect(response).to have_http_status(:ok)
-        expect(response.body).to include("Ostatnie wydarzenia")
+        expect(response.body).to include("Przebieg meczu")
         expect(response.body).to include("Team A")
-        expect(response.body).to include("adam")
-        expect(response.body).to include("jan")
+        expect(response.body).to include("Adam Nowak")
+        expect(response.body).to include("asysta: Jan Kowalski")
+        expect(response.body).to include("0:0 → 1:0 → 2:0")
+        expect(response.body).to include("2 : 0")
+        expect(response.body).not_to include("Ostatnie wydarzenia")
+      end
+
+      it "renders own goals as match summary data" do
+        season = create(:season, name: "Summer 2026")
+        match_day = create(:match_day, season: season, played_on: Date.new(2026, 6, 19), status: "finished")
+        team_setup = create(:team_setup, match_day: match_day)
+        home_team = create(:team, team_setup: team_setup, name: "Team A", team_type: "match")
+        away_team = create(:team, team_setup: team_setup, name: "Team B", team_type: "match")
+        away_player = create(:player, name: "Marek Kowalski", nickname: "marek", phone: "+48222222222")
+        create(:team_player, team: home_team, player: create(:player, name: "Adam Nowak", nickname: "adam"))
+        away_team_player = create(:team_player, team: away_team, player: away_player)
+        match = create(
+          :match,
+          match_day: match_day,
+          home_team: home_team,
+          away_team: away_team,
+          home_score: 1,
+          away_score: 0,
+          started_at: Time.zone.parse("2026-06-19 19:15:00"),
+          finished_at: Time.zone.parse("2026-06-19 19:45:00")
+        )
+        create(
+          :match_goal,
+          match: match,
+          scoring_team: home_team,
+          scorer_team_player: away_team_player,
+          own_goal: true,
+          scored_at: Time.zone.parse("2026-06-19 19:27:00"),
+          home_score_after: 1,
+          away_score_after: 0
+        )
+
+        get "/matches/#{match.id}"
+
+        expect(response).to have_http_status(:ok)
+        expect(response.body).to include("Samobóje")
+        expect(response.body).to include("samobój: Marek Kowalski")
+        expect(response.body).to include("SAMOBÓJ")
+        expect(response.body).to include("dla: Team A")
+        expect(response.body).not_to include("+48222222222")
       end
 
       it "shows admin goal forms only for admins" do
@@ -171,7 +215,7 @@ RSpec.describe "Matches" do
 
         expect(response).to have_http_status(:ok)
         expect(response.body).to include("Nierozpoczęty")
-        expect(response.body).to include("Mecz jeszcze się nie rozpoczął.")
+        expect(response.body).to include("Brak zdarzeń bramkowych w tym meczu.")
         expect(response.body).to include("Czas meczu")
         expect(response.body).to include("00:00")
         expect(response.body).to include("Brak przypisanych zawodników.")

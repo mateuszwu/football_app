@@ -6,12 +6,14 @@ class MatchesController < ApplicationController
       .includes(
         match_day: :season,
         home_team: :players,
-        away_team: :players
+        away_team: :players,
+        match_goals: [ :scoring_team, { scorer_team_player: :player, assistant_team_player: :player } ]
       )
       .find(params[:id])
+    summary = Matches::SummaryQuery.call(match:)
     lineup_editor_state = Matches::LineupEditorState.call(match:)
 
-    render :show, locals: { match:, lineup_editor_state: }
+    render :show, locals: { match:, summary:, lineup_editor_state: }
   end
 
   def start

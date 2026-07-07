@@ -1,0 +1,17 @@
+<% if events.any? %>
+  <ul class="match-team-goals">
+    <% events.each do |event| %>
+      <li>
+        <span class="match-team-goals__time"><%= match_report_minute(event.fetch(:occurred_at_seconds)) %></span>
+        <div>
+          <strong><%= event.fetch(:own_goal) ? t("matches.show.own_goal_by", player: event.fetch(:scorer).name) : event.fetch(:scorer).name %></strong>
+          <% if event.fetch(:assister).present? %>
+            <small><%= t("matches.show.timeline.assist", player: event.fetch(:assister).name) %></small>
+          <% end %>
+        </div>
+      </li>
+    <% end %>
+  </ul>
+<% else %>
+  <p class="match-team-goals__empty"><%= t("matches.show.no_team_goals") %></p>
+<% end %>
