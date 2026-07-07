@@ -149,7 +149,7 @@ RSpec.describe Synergy::GraphDataQuery do
       it "normalizes unsupported limit and metric values" do
         result = described_class.call(season: nil, limit: 999, metric: "missing")
 
-        expect(result.fetch(:meta)).to include(limit: 50, metric: "shared_matches")
+        expect(result.fetch(:meta)).to include(minimum_shared_matches: 1, limit: 50, metric: "shared_matches")
       end
     end
 

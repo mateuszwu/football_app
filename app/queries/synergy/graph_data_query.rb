@@ -30,7 +30,7 @@ module Synergy
     MIN_EDGE_WIDTH = 1
     MAX_EDGE_WIDTH = 10
 
-    def self.call(season: nil, minimum_shared_matches: 3, player_filter: nil, player_id: nil, limit: 50, metric: "shared_matches")
+    def self.call(season: nil, minimum_shared_matches: 1, player_filter: nil, player_id: nil, limit: 50, metric: "shared_matches")
       new(season:, minimum_shared_matches:, player_filter:, player_id:, limit:, metric:).call
     end
 

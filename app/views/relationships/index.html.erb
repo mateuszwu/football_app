@@ -112,7 +112,7 @@
 
             <div class="relationships-control">
               <%= form.label :player_filter, t("relationships.graph.player_filter"), class: "sr-only" %>
-              <%= form.search_field :player_filter, value: player_filter, placeholder: t("relationships.graph.player_filter") %>
+              <%= form.search_field :player_filter, value: graph_player_filter, placeholder: t("relationships.graph.player_filter") %>
             </div>
 
             <%= form.submit t("relationships.graph.filter"), class: "dashboard-button relationships-controls__submit" %>

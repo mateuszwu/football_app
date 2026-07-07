@@ -195,6 +195,26 @@ RSpec.describe "Relationships" do
         expect(response.body).not_to include("+48222222222")
         expect(response.body).not_to include("phone")
       end
+
+      it "prefills graph filters from the selected player link" do
+        adam = create(:player, name: "Adam Nowak", nickname: "adam", phone: "+48111111111", approval_status: "approved", active: true)
+        season = create(:season)
+
+        get "/relationships", params: {
+          tab: "graph",
+          season_id: season.id,
+          player_id: adam.id
+        }
+
+        expect(response).to have_http_status(:ok)
+        expect(response.body).to include("Filtry grafu")
+        expect(response.body).to include("name=\"player_id\"")
+        expect(response.body).to include("value=\"#{adam.id}\"")
+        expect(response.body).to include("value=\"Adam Nowak\"")
+        expect(response.body).to include("value=\"1\" min=\"1\"")
+        expect(response.body).not_to include("+48111111111")
+        expect(response.body).not_to include("phone")
+      end
     end
 
     context "when no public relationship data exists" do

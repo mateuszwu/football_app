@@ -11,7 +11,7 @@ class RelationshipsController < ApplicationController
     "trios" => 3,
     "fours" => 2,
     "fives" => 2,
-    "graph" => 3
+    "graph" => 1
   }.freeze
   DIRECTIONS = %w[best worst].freeze
   LIMITS = [ 20, 50 ].freeze
@@ -29,6 +29,8 @@ class RelationshipsController < ApplicationController
     minimum_shared_matches = normalized_minimum_shared_matches(active_tab)
     player_filter = params[:player_filter].to_s.strip
     player_id = params[:player_id].presence
+    selected_player = Player.approved.active.find_by(id: player_id) if player_id.present?
+    graph_player_filter = player_filter.presence || selected_player&.name.to_s
     combination_ranking = Synergy::CombinationRankingQuery.call(
       season:,
       combination_size: TAB_SIZES.fetch(active_tab),
@@ -53,6 +55,7 @@ class RelationshipsController < ApplicationController
       direction:,
       edges: graph.edges.first(30),
       graph_data:,
+      graph_player_filter:,
       limit:,
       metric:,
       minimum_shared_matches:,

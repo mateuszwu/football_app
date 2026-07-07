@@ -150,7 +150,7 @@ export default class extends Controller {
       {
         selector: "edge[color_group = 'low']",
         style: {
-          "line-color": "#F97316"
+          "line-color": "#EF4444"
         }
       },
       {
