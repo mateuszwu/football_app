@@ -1,0 +1,301 @@
+<% content_for :title, "#{t("statistics.index.title")} - #{t("app.name")}" %>
+<% content_for :head do %>
+  <%= javascript_include_tag "/vendor/chart.umd.js", "data-turbo-track": "reload" %>
+<% end %>
+
+<section class="stats-page">
+  <header class="stats-header">
+    <div>
+      <h1><%= t("statistics.index.title") %></h1>
+      <p><%= t("statistics.index.subtitle") %></p>
+    </div>
+
+    <% if season.present? %>
+      <%= form_with url: statistics_path, method: :get, local: true, class: "leaderboards-season-card stats-season-card" do |form| %>
+        <div class="leaderboards-season-card__header">
+          <%= safe_lucide_icon("calendar-days", fallback: "calendar", class_name: "ui-icon ui-icon--md") %>
+          <span><%= t("statistics.index.season") %></span>
+        </div>
+        <%= form.hidden_field :tab, value: active_tab %>
+        <%= form.label :season_id, t("statistics.index.season"), class: "sr-only" %>
+        <%= form.select :season_id, options_from_collection_for_select(available_seasons, :id, :name, season.id), {}, onchange: "this.form.requestSubmit()" %>
+      <% end %>
+    <% end %>
+  </header>
+
+  <% if season.blank? %>
+    <section class="stats-empty-state">
+      <h2><%= t("leaderboards.no_seasons_title") %></h2>
+      <p><%= t("leaderboards.no_seasons_body") %></p>
+    </section>
+  <% else %>
+    <div class="stats-top-grid">
+      <% {
+        fastest_goal: "zap",
+        latest_first_goal: "clock",
+        shortest_match: "timer",
+        longest_match: "timer-reset"
+      }.each do |card_key, icon| %>
+        <% card = insights.fetch(:top_cards).fetch(card_key) %>
+        <article class="stats-insight-card">
+          <span class="stats-insight-card__watermark" aria-hidden="true"><%= safe_lucide_icon(icon, fallback: "activity", class_name: "ui-icon") %></span>
+          <span class="stats-insight-card__label"><%= t("statistics.index.cards.#{card_key}") %></span>
+          <strong class="stats-metric"><%= statistics_card_value(card) %></strong>
+          <span class="stats-insight-card__subject"><%= statistics_card_subject(card) %></span>
+          <% if statistics_card_detail(card).present? %>
+            <span class="stats-insight-card__detail"><%= statistics_card_detail(card) %></span>
+          <% end %>
+          <% if card&.fetch(:path).present? %>
+            <%= link_to t("statistics.index.table.view_match"), card.fetch(:path), class: "stats-card-link" %>
+          <% end %>
+        </article>
+      <% end %>
+    </div>
+
+    <nav class="leaderboards-tabs stats-tabs" aria-label="<%= t("statistics.index.title") %>">
+      <% statistics_tabs.each do |tab_key| %>
+        <%= link_to statistics_path(season_id: season.id, tab: tab_key), class: "leaderboards-tab #{'leaderboards-tab--active' if active_tab == tab_key}", aria: ({ current: "page" } if active_tab == tab_key) do %>
+          <span><%= t("statistics.index.tabs.#{tab_key}") %></span>
+        <% end %>
+      <% end %>
+    </nav>
+
+    <div class="stats-layout">
+      <main class="stats-main">
+        <% if active_tab == "tempo" %>
+          <section class="stats-card-grid stats-card-grid--three">
+            <% {
+              average_match_duration: insights.dig(:tempo, :average_match_duration),
+              average_first_goal_time: insights.dig(:tempo, :average_time_to_first_goal),
+              average_time_between_goals: insights.dig(:tempo, :average_time_between_goals)
+            }.each do |key, value| %>
+              <article class="stats-small-card">
+                <span><%= t("statistics.index.cards.#{key}") %></span>
+                <strong><%= statistics_format_duration(value) %></strong>
+              </article>
+            <% end %>
+          </section>
+
+          <% if insights.dig(:chart_data, :match_durations, :labels).any? %>
+            <section class="stats-chart-card">
+              <div class="leaderboards-table-card__header">
+                <div>
+                  <h2><%= t("statistics.index.tempo.title") %></h2>
+                  <p><%= t("statistics.index.tempo.match_day") %></p>
+                </div>
+              </div>
+              <div class="stats-chart" data-controller="stats-chart" data-stats-chart-type-value="bar" data-stats-chart-data-value="<%= statistics_chart_data(insights.dig(:chart_data, :match_durations)) %>"></div>
+            </section>
+          <% else %>
+            <%= render "statistics/empty", title: t("statistics.index.empty.no_completed_matches_title"), body: t("statistics.index.empty.no_completed_matches_body") %>
+          <% end %>
+
+          <section class="leaderboards-table-card stats-table-card">
+            <div class="leaderboards-table-card__header">
+              <div>
+                <h2><%= t("statistics.index.tempo.records_title") %></h2>
+              </div>
+            </div>
+            <%= render "statistics/records_table", rows: insights.dig(:tempo, :records) %>
+          </section>
+        <% elsif active_tab == "first_goal" %>
+          <section class="stats-card-grid stats-card-grid--two">
+            <article class="stats-small-card">
+              <span><%= t("statistics.index.first_goal.win_after_first_goal") %></span>
+              <strong><%= statistics_format_percentage(insights.dig(:first_goal, :first_goal_win_rate)) %></strong>
+            </article>
+            <article class="stats-small-card">
+              <span><%= t("statistics.index.first_goal.lost_after_first_goal") %></span>
+              <strong><%= statistics_format_percentage(insights.dig(:first_goal, :no_win_after_first_goal_rate)) %></strong>
+            </article>
+          </section>
+
+          <% if insights.dig(:first_goal, :player_rows).any? %>
+            <section class="leaderboards-table-card stats-table-card">
+              <div class="leaderboards-table-card__header">
+                <div><h2><%= t("statistics.index.first_goal.title") %></h2></div>
+              </div>
+              <div class="leaderboards-table-wrap">
+                <table class="leaderboards-table stats-records-table">
+                  <thead>
+                    <tr>
+                      <th><%= t("statistics.index.first_goal.player") %></th>
+                      <th class="is-numeric"><%= t("statistics.index.first_goal.first_goals") %></th>
+                      <th class="is-numeric"><%= t("statistics.index.first_goal.matches") %></th>
+                      <th class="is-numeric"><%= t("statistics.index.first_goal.first_goal_rate") %></th>
+                      <th class="is-numeric"><%= t("statistics.index.first_goal.win_rate_after_first_goal") %></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <% insights.dig(:first_goal, :player_rows).each do |row| %>
+                      <tr>
+                        <td><%= link_to row.fetch(:player).name, player_path(row.fetch(:player)), class: "stats-player-link" %></td>
+                        <td class="is-numeric"><%= row.fetch(:first_goals) %></td>
+                        <td class="is-numeric"><%= row.fetch(:matches) %></td>
+                        <td class="is-numeric"><%= statistics_format_percentage(row.fetch(:first_goal_rate)) %></td>
+                        <td class="is-numeric"><%= statistics_format_percentage(row.fetch(:win_rate_after_first_goal)) %></td>
+                      </tr>
+                    <% end %>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          <% else %>
+            <%= render "statistics/empty", title: t("statistics.index.empty.no_first_goal_title"), body: t("statistics.index.empty.no_first_goal_body") %>
+          <% end %>
+        <% elsif active_tab == "comebacks" %>
+          <section class="stats-card-grid stats-card-grid--two">
+            <article class="stats-small-card">
+              <span><%= t("statistics.index.comebacks.first_goal_conceded") %></span>
+              <strong><%= statistics_format_percentage(insights.dig(:comebacks, :wins_after_conceding_first_goal_rate)) %></strong>
+            </article>
+            <article class="stats-small-card">
+              <span><%= t("statistics.index.comebacks.lead_four_zero") %></span>
+              <strong><%= statistics_format_percentage(insights.dig(:comebacks, :lead_four_zero_hold_rate)) %></strong>
+            </article>
+          </section>
+          <section class="leaderboards-table-card stats-table-card">
+            <div class="leaderboards-table-card__header">
+              <div><h2><%= t("statistics.index.comebacks.title") %></h2></div>
+            </div>
+            <div class="leaderboards-table-wrap">
+              <table class="leaderboards-table stats-records-table">
+                <thead>
+                  <tr>
+                    <th><%= t("statistics.index.comebacks.deficit") %></th>
+                    <th class="is-numeric"><%= t("statistics.index.comebacks.situations") %></th>
+                    <th class="is-numeric"><%= t("statistics.index.comebacks.comeback_wins") %></th>
+                    <th class="is-numeric"><%= t("statistics.index.comebacks.comeback_rate") %></th>
+                    <th><%= t("statistics.index.comebacks.best_example") %></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <% insights.dig(:comebacks, :threshold_rows).each do |row| %>
+                    <tr>
+                      <td><%= row.fetch(:deficit) %></td>
+                      <td class="is-numeric"><%= row.fetch(:situations) %></td>
+                      <td class="is-numeric"><%= row.fetch(:comeback_wins) %></td>
+                      <td class="is-numeric"><%= statistics_format_percentage(row.fetch(:comeback_rate)) %></td>
+                      <td><%= row.fetch(:best_example)&.fetch(:subject) || "-" %></td>
+                    </tr>
+                  <% end %>
+                </tbody>
+              </table>
+            </div>
+          </section>
+        <% elsif active_tab == "score_states" %>
+          <% if insights.dig(:score_states, :rows).any? %>
+            <section class="leaderboards-table-card stats-table-card">
+              <div class="leaderboards-table-card__header">
+                <div><h2><%= t("statistics.index.score_states.title") %></h2></div>
+              </div>
+              <div class="leaderboards-table-wrap">
+                <table class="leaderboards-table stats-records-table">
+                  <thead>
+                    <tr>
+                      <th><%= t("statistics.index.score_states.state") %></th>
+                      <th class="is-numeric"><%= t("statistics.index.score_states.occurrences") %></th>
+                      <th class="is-numeric"><%= t("statistics.index.score_states.leader_wins") %></th>
+                      <th class="is-numeric"><%= t("statistics.index.score_states.hold_rate") %></th>
+                      <th class="is-numeric"><%= t("statistics.index.score_states.comeback_count") %></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <% insights.dig(:score_states, :rows).each do |row| %>
+                      <tr>
+                        <td>
+                          <%= row.fetch(:state) %>
+                          <% if row.fetch(:small_sample) %>
+                            <span class="stats-badge"><%= t("statistics.index.score_states.small_sample") %></span>
+                          <% end %>
+                        </td>
+                        <td class="is-numeric"><%= row.fetch(:occurrences) %></td>
+                        <td class="is-numeric"><%= row.fetch(:leader_wins) %></td>
+                        <td class="is-numeric"><%= statistics_format_percentage(row.fetch(:hold_rate)) %></td>
+                        <td class="is-numeric"><%= row.fetch(:comeback_count) %></td>
+                      </tr>
+                    <% end %>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          <% else %>
+            <%= render "statistics/empty", title: t("statistics.index.empty.no_timeline_title"), body: t("statistics.index.empty.no_timeline_body") %>
+          <% end %>
+        <% elsif active_tab == "records" %>
+          <section class="leaderboards-table-card stats-table-card">
+            <div class="leaderboards-table-card__header">
+              <div><h2><%= t("statistics.index.records.title") %></h2></div>
+            </div>
+            <%= render "statistics/records_table", rows: insights.dig(:records, :rows) %>
+          </section>
+        <% elsif active_tab == "clutch" %>
+          <% if insights.fetch(:clutch_players).any? %>
+            <section class="leaderboards-table-card stats-table-card">
+              <div class="leaderboards-table-card__header">
+                <div><h2><%= t("statistics.index.clutch.title") %></h2></div>
+              </div>
+              <div class="leaderboards-table-wrap">
+                <table class="leaderboards-table stats-records-table">
+                  <thead>
+                    <tr>
+                      <th><%= t("statistics.index.clutch.player") %></th>
+                      <th class="is-numeric"><%= t("statistics.index.clutch.opening_goals") %></th>
+                      <th class="is-numeric"><%= t("statistics.index.clutch.closing_goals") %></th>
+                      <th class="is-numeric"><%= t("statistics.index.clutch.go_ahead_goals") %></th>
+                      <th class="is-numeric"><%= t("statistics.index.clutch.equalizer_goals") %></th>
+                      <th class="is-numeric"><%= t("statistics.index.clutch.goals_when_tied") %></th>
+                      <th class="is-numeric"><%= t("statistics.index.clutch.comeback_contribution") %></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <% insights.fetch(:clutch_players).each do |row| %>
+                      <tr>
+                        <td><%= link_to row.fetch(:player).name, player_path(row.fetch(:player)), class: "stats-player-link" %></td>
+                        <td class="is-numeric"><%= row.fetch(:opening_goals) %></td>
+                        <td class="is-numeric"><%= row.fetch(:closing_goals) %></td>
+                        <td class="is-numeric"><%= row.fetch(:go_ahead_goals) %></td>
+                        <td class="is-numeric"><%= row.fetch(:equalizer_goals) %></td>
+                        <td class="is-numeric"><%= row.fetch(:goals_when_tied) %></td>
+                        <td class="is-numeric"><%= row.fetch(:comeback_contribution) %></td>
+                      </tr>
+                    <% end %>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          <% else %>
+            <%= render "statistics/empty", title: t("statistics.index.empty.no_timeline_title"), body: t("statistics.index.empty.no_timeline_body") %>
+          <% end %>
+        <% end %>
+      </main>
+
+      <aside class="stats-sidebar">
+        <% sidebar = insights.fetch(:sidebar) %>
+        <article class="stats-sidebar-card">
+          <span><%= t("statistics.index.cards.most_interesting_match") %></span>
+          <strong><%= sidebar.dig(:most_interesting_match, :subject) || "-" %></strong>
+          <p><%= sidebar.dig(:most_interesting_match, :detail) %></p>
+        </article>
+        <article class="stats-sidebar-card">
+          <span><%= t("statistics.index.cards.biggest_comeback") %></span>
+          <strong><%= sidebar.dig(:biggest_comeback, :value) || "-" %></strong>
+          <p><%= sidebar.dig(:biggest_comeback, :subject) %></p>
+        </article>
+        <article class="stats-sidebar-card">
+          <span><%= t("statistics.index.cards.most_common_scenario") %></span>
+          <strong><%= sidebar.dig(:most_common_scenario, :state) || "-" %></strong>
+          <% if sidebar.dig(:most_common_scenario, :hold_rate).present? %>
+            <p><%= statistics_format_percentage(sidebar.dig(:most_common_scenario, :hold_rate)) %></p>
+          <% end %>
+        </article>
+        <article class="stats-sidebar-card">
+          <span><%= t("statistics.index.quick_preview") %></span>
+          <p><%= t("statistics.index.comebacks.first_goal_conceded") %>: <strong><%= statistics_format_percentage(sidebar.dig(:quick, :wins_after_conceding_first)) %></strong></p>
+          <p><%= t("statistics.index.comebacks.lead_four_zero") %>: <strong><%= statistics_format_percentage(sidebar.dig(:quick, :lead_four_zero_hold)) %></strong></p>
+          <p><%= t("statistics.index.comeback_matches") %>: <strong><%= sidebar.dig(:quick, :comeback_matches_count) %></strong></p>
+        </article>
+      </aside>
+    </div>
+  <% end %>
+</section>

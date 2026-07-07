@@ -1,0 +1,34 @@
+<% rows ||= [] %>
+
+<% if rows.any? %>
+  <div class="leaderboards-table-wrap">
+    <table class="leaderboards-table stats-records-table">
+      <thead>
+        <tr>
+          <th><%= t("statistics.index.records.record") %></th>
+          <th><%= t("statistics.index.records.match_or_player") %></th>
+          <th><%= t("statistics.index.records.value") %></th>
+          <th><%= t("statistics.index.table.link") %></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% rows.each do |row| %>
+          <tr>
+            <td><%= t("statistics.index.records.#{row.fetch(:key)}") %></td>
+            <td><%= statistics_row_value(row.fetch(:subject)) %></td>
+            <td><%= statistics_row_value(row.fetch(:value)) %></td>
+            <td>
+              <% if row.fetch(:path).present? %>
+                <%= link_to t("statistics.index.table.view_match"), row.fetch(:path), class: "stats-card-link" %>
+              <% else %>
+                -
+              <% end %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+<% else %>
+  <%= render "statistics/empty", title: t("statistics.index.empty.no_timeline_title"), body: t("statistics.index.empty.no_timeline_body") %>
+<% end %>

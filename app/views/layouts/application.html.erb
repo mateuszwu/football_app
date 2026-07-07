@@ -61,6 +61,10 @@
             <%= safe_lucide_icon("network", fallback: "share-2", class_name: "site-nav__icon") %>
             <%= t("navigation.relationships") %>
           <% end %>
+          <%= link_to statistics_path, class: "site-nav__link #{'site-nav__link--active' if controller_path == 'statistics'}", aria: ({ current: "page" } if controller_path == "statistics") do %>
+            <%= safe_lucide_icon("activity", fallback: "chart-bar", class_name: "site-nav__icon") %>
+            <%= t("navigation.statistics") %>
+          <% end %>
           <%= link_to players_path, class: "site-nav__link #{'site-nav__link--active' if controller_path == 'players' && action_name == 'index'}", aria: ({ current: "page" } if controller_path == "players" && action_name == "index") do %>
             <%= safe_lucide_icon("users", fallback: "user-round", class_name: "site-nav__icon") %>
             <%= t("navigation.players") %>

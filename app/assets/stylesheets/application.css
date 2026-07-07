@@ -1344,6 +1344,212 @@ a:focus-visible {
   justify-self: start;
 }
 
+.stats-page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  margin: 0 auto;
+  max-width: var(--content-max);
+  padding: 1.5rem 0 2rem;
+  width: 100%;
+}
+
+.stats-header {
+  align-items: start;
+  display: grid;
+  gap: 20px;
+  grid-template-columns: minmax(0, 1fr) minmax(17rem, 0.28fr);
+}
+
+.stats-header h1 {
+  color: var(--text-primary);
+  font-size: 2rem;
+  line-height: 2.35rem;
+  margin: 0 0 0.55rem;
+}
+
+.stats-header p {
+  color: #cbd5e1;
+  margin: 0;
+  max-width: 48rem;
+}
+
+.stats-top-grid,
+.stats-card-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.stats-top-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.stats-card-grid--three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.stats-card-grid--two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.stats-insight-card,
+.stats-small-card,
+.stats-chart-card,
+.stats-sidebar-card,
+.stats-empty-state {
+  background:
+    radial-gradient(circle at top right, rgba(124, 255, 58, 0.08), transparent 42%),
+    linear-gradient(180deg, rgba(15, 23, 42, 0.96) 0%, rgba(10, 19, 36, 0.98) 100%);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 18px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.22);
+}
+
+.stats-insight-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 190px;
+  overflow: hidden;
+  padding: 18px;
+  position: relative;
+}
+
+.stats-insight-card__watermark {
+  color: var(--accent);
+  height: 78px;
+  opacity: 0.06;
+  pointer-events: none;
+  position: absolute;
+  right: 18px;
+  top: 18px;
+  width: 78px;
+  z-index: 0;
+}
+
+.stats-insight-card__watermark svg {
+  display: block;
+  height: 100%;
+  width: 100%;
+}
+
+.stats-insight-card > *:not(.stats-insight-card__watermark) {
+  position: relative;
+  z-index: 1;
+}
+
+.stats-insight-card__label,
+.stats-small-card span,
+.stats-sidebar-card span {
+  color: #94a3b8;
+  font-size: 0.76rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.stats-metric,
+.stats-small-card strong,
+.stats-sidebar-card strong {
+  color: var(--accent);
+  display: block;
+  font-size: 1.65rem;
+  font-weight: 950;
+  line-height: 1.05;
+}
+
+.stats-insight-card__subject {
+  color: var(--text-primary);
+  font-weight: 900;
+}
+
+.stats-insight-card__detail,
+.stats-sidebar-card p,
+.stats-empty-state p {
+  color: #94a3b8;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.stats-card-link,
+.stats-player-link {
+  color: var(--accent);
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.stats-card-link:hover,
+.stats-player-link:hover {
+  color: #b8ff8a;
+}
+
+.stats-tabs {
+  max-width: 100%;
+}
+
+.stats-tabs .leaderboards-tab {
+  justify-content: center;
+}
+
+.stats-layout {
+  align-items: start;
+  display: grid;
+  gap: 20px;
+  grid-template-columns: minmax(0, 1fr) 360px;
+}
+
+.stats-main,
+.stats-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+
+.stats-small-card,
+.stats-sidebar-card,
+.stats-empty-state {
+  padding: 18px 20px;
+}
+
+.stats-chart-card,
+.stats-table-card {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.stats-chart {
+  height: 340px;
+  padding: 18px;
+}
+
+.stats-records-table {
+  min-width: 54rem;
+}
+
+.stats-records-table th,
+.stats-records-table td {
+  padding-bottom: 14px;
+  padding-top: 14px;
+}
+
+.stats-badge {
+  background: rgba(148, 163, 184, 0.12);
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 999px;
+  color: #cbd5e1;
+  display: inline-flex;
+  font-size: 0.72rem;
+  font-weight: 900;
+  margin-left: 8px;
+  padding: 4px 8px;
+}
+
+.stats-empty-state h2 {
+  color: var(--text-primary);
+  font-size: 1.1rem;
+  margin: 0 0 0.4rem;
+}
+
 .relationships-graph-placeholder {
   align-items: center;
   background:
@@ -3724,12 +3930,20 @@ a:focus-visible {
 
   .leaderboards-hero,
   .players-directory-hero,
+  .stats-header,
   .leaderboards-summary,
   .players-roster-grid,
+  .stats-top-grid,
+  .stats-card-grid--three,
   .relationships-summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .stats-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .stats-page,
   .relationships-page {
     --page-section-gap: 22px;
     --page-block-gap: 18px;
@@ -3846,7 +4060,7 @@ a:focus-visible {
   .public-layout .site-nav__links {
     display: grid;
     flex: 1 1 auto;
-    grid-template-columns: repeat(6, minmax(3.6rem, 1fr));
+    grid-template-columns: repeat(7, minmax(3.6rem, 1fr));
     overflow-x: auto;
     padding: 0;
   }
@@ -3875,6 +4089,7 @@ a:focus-visible {
 
   .leaderboards-page,
   .players-directory-page,
+  .stats-page,
   .relationships-page {
     --page-section-gap: 20px;
     --page-block-gap: 16px;
@@ -3884,6 +4099,7 @@ a:focus-visible {
 
   .leaderboards-hero h1,
   .players-directory-hero h1,
+  .stats-header h1,
   .relationships-hero h1 {
     font-size: 1.75rem;
     line-height: 2.1rem;
@@ -3891,6 +4107,10 @@ a:focus-visible {
 
   .leaderboards-summary,
   .players-roster-grid,
+  .stats-header,
+  .stats-top-grid,
+  .stats-card-grid--three,
+  .stats-card-grid--two,
   .relationships-summary {
     grid-template-columns: 1fr;
   }
