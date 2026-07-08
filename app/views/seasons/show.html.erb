@@ -1,152 +1,170 @@
 <% content_for :title, "#{season.name} - #{t("app.name")}" %>
 
-<section class="section season-stats">
-  <div class="section__header">
-    <p class="eyebrow"><%= t("seasons.public_stats") %></p>
-    <h1><%= season.name %></h1>
-    <p>
-      <%= season.starts_on %>
-      -
-      <%= season.ends_on || t("common.no_end_date") %>
-    </p>
-  </div>
-
-  <%= form_with url: season_path(season), method: :get, local: true, class: "admin-form" do |form| %>
-    <div class="form-field">
-      <%= form.label :season_id, t("seasons.season") %>
-      <%= form.select :season_id, options_from_collection_for_select(available_seasons, :id, :name, season.id) %>
+<section class="season-page">
+  <header class="season-header">
+    <div>
+      <%= link_to t("seasons.show.back"), root_path, class: "season-back-link" %>
+      <p class="season-eyebrow"><%= t("seasons.show.label") %></p>
+      <div class="season-title-row">
+        <h1><%= season.name %></h1>
+        <span class="season-status"><%= status_label(season.status) %></span>
+      </div>
+      <p><%= t("seasons.show.date_range", start_date: season.starts_on, end_date: season.ends_on || t("common.no_end_date")) %></p>
     </div>
-    <div class="form-actions">
-      <%= form.submit t("common.filter"), class: "button button--secondary" %>
-    </div>
-  <% end %>
 
-  <div class="summary-grid">
-    <article class="summary-card">
-      <span class="summary-card__label"><%= t("dashboard.labels.match_days") %></span>
-      <strong><%= season.match_days_count %></strong>
-    </article>
-    <article class="summary-card">
-      <span class="summary-card__label"><%= t("dashboard.labels.players") %></span>
-      <strong><%= season.unique_players_count %></strong>
-    </article>
-    <article class="summary-card">
-      <span class="summary-card__label"><%= t("dashboard.labels.appearances") %></span>
-      <strong><%= season.player_appearances_count %></strong>
-    </article>
-  </div>
+    <%= link_to t("seasons.show.cta.leaderboards_button"), leaderboards_path(season_id: season.id), class: "button button--primary" %>
+  </header>
 
-  <div class="player-profile__body">
-    <h2><%= t("seasons.elo_ranking") %></h2>
-
-    <% if leaderboards.elo_ranking.any? %>
-      <ul class="leaderboard-list">
-        <% leaderboards.ranked_elo.each do |ranked_stat| %>
-          <% player_stat = ranked_stat.entry %>
-          <li>
-            <span class="leaderboard-rank"><%= ranked_stat.rank %></span>
-            <strong><%= link_to player_stat.player.name, player_path(player_stat.player) %></strong>
-            <span><%= player_stat.player.nickname %></span>
-            <span><%= ranked_entry_display_value(ranked_stat) %> Elo</span>
-          </li>
-        <% end %>
-      </ul>
-    <% else %>
-      <p class="empty-state"><%= t("seasons.no_elo") %></p>
+  <section class="season-summary-grid" aria-label="<%= t("seasons.show.summary.title") %>">
+    <% summary = season_report.summary %>
+    <% [
+      [ "calendar-days", t("seasons.show.summary.match_days"), summary.match_days_count, t("seasons.show.summary.played") ],
+      [ "list-check", t("seasons.show.summary.matches"), summary.matches_count, t("seasons.show.summary.finished") ],
+      [ "users", t("seasons.show.summary.players"), summary.players_count, t("seasons.show.summary.unique") ],
+      [ "target", t("seasons.show.summary.goals"), summary.goals_count, t("seasons.show.summary.total") ],
+      [ "timer", t("seasons.show.summary.duration"), season_total_duration(summary.total_duration_seconds), t("seasons.show.summary.total") ],
+      [ "user-round-check", t("seasons.show.summary.average_players"), season_average_players(summary.average_players_per_match_day), t("seasons.show.summary.per_match_day") ]
+    ].each do |icon, label, value, helper_text| %>
+      <article class="season-summary-card">
+        <span class="season-summary-card__icon"><%= safe_lucide_icon(icon, fallback: "circle", class_name: "ui-icon ui-icon--sm") %></span>
+        <span class="season-summary-card__label"><%= label %></span>
+        <strong class="season-summary-card__value"><%= value %></strong>
+        <small class="season-summary-card__helper"><%= helper_text %></small>
+      </article>
     <% end %>
-  </div>
+  </section>
 
-  <div class="player-profile__body">
-    <h2><%= t("seasons.top_scorers") %></h2>
+  <div class="season-layout">
+    <main class="season-main">
+      <section class="season-match-days-section">
+        <div class="season-section-header">
+          <div>
+            <h2><%= t("seasons.show.match_days.title") %></h2>
+            <p><%= t("seasons.show.match_days.subtitle") %></p>
+          </div>
 
-    <% if leaderboards.top_scorers.any? %>
-      <ul class="leaderboard-list">
-        <% leaderboards.ranked_top_scorers.each do |ranked_stat| %>
-          <% player_stat = ranked_stat.entry %>
-          <li>
-            <span class="leaderboard-rank"><%= ranked_stat.rank %></span>
-            <strong><%= player_stat.player.name %></strong>
-            <span><%= t("dashboard.labels.goals_count", count: ranked_entry_display_value(ranked_stat).to_i) %></span>
-          </li>
+          <div class="season-sort-control">
+            <span><%= t("seasons.show.match_days.sort") %></span>
+            <%= link_to t("seasons.show.match_days.newest_first"), season_path(season, sort: "desc"), class: ("is-active" if season_report.sort_direction == "desc") %>
+            <%= link_to t("seasons.show.match_days.oldest_first"), season_path(season, sort: "asc"), class: ("is-active" if season_report.sort_direction == "asc") %>
+          </div>
+        </div>
+
+        <% if season_report.match_days.any? %>
+          <div class="season-match-day-list">
+            <% season_report.match_days.each do |match_day| %>
+              <article class="season-match-day-card">
+                <div class="season-match-day-date">
+                  <strong class="season-match-day-date__day"><%= match_day.date.day %></strong>
+                  <span class="season-match-day-date__month"><%= l(match_day.date, format: :month_abbr).upcase %></span>
+                  <small class="season-match-day-date__year"><%= match_day.date.year %></small>
+                  <em class="season-match-day-status"><%= status_label(match_day.status) %></em>
+                </div>
+
+                <div class="season-match-day-content">
+                  <div class="season-match-day-metrics">
+                    <% [
+                      [ "list-check", match_day.matches_count, t("seasons.show.match_days.matches") ],
+                      [ "users", match_day.players_count, t("seasons.show.match_days.players") ],
+                      [ "shield", match_day.teams_count, t("seasons.show.match_days.teams") ],
+                      [ "target", match_day.goals_count, t("seasons.show.match_days.goals") ]
+                    ].each do |icon, value, label| %>
+                      <div class="season-match-day-metric">
+                        <span class="season-match-day-metric__icon"><%= safe_lucide_icon(icon, fallback: "circle", class_name: "ui-icon ui-icon--sm") %></span>
+                        <strong class="season-match-day-metric__value"><%= value %></strong>
+                        <span class="season-match-day-metric__label"><%= label %></span>
+                      </div>
+                    <% end %>
+                  </div>
+
+                  <div class="season-match-day-footer">
+                    <% if match_day.team_names.any? %>
+                      <div class="season-match-day-teams">
+                        <% visible_team_names = match_day.team_names.first(4) %>
+                        <% visible_team_names.each do |team_name| %>
+                          <span class="season-team-chip"><%= team_name %></span>
+                        <% end %>
+                        <% if match_day.team_names.size > visible_team_names.size %>
+                          <span class="season-team-chip"><%= t("seasons.show.match_days.more_teams", count: match_day.team_names.size - visible_team_names.size) %></span>
+                        <% end %>
+                      </div>
+                    <% end %>
+
+                    <% if match_day.total_duration_seconds.to_i.positive? %>
+                      <div class="season-duration-pill">
+                        <span class="season-duration-pill__icon"><%= safe_lucide_icon("timer", fallback: "circle", class_name: "ui-icon ui-icon--sm") %></span>
+                        <span><%= t("seasons.show.match_days.duration_pill", value: season_total_duration(match_day.total_duration_seconds)) %></span>
+                      </div>
+                    <% end %>
+                  </div>
+                </div>
+
+                <div class="season-match-day-cta">
+                  <%= link_to t("seasons.show.match_days.view"), match_day_path(match_day.match_day), class: "season-match-day-button" %>
+                </div>
+              </article>
+            <% end %>
+          </div>
+        <% else %>
+          <article class="season-empty-card">
+            <h3><%= t("seasons.show.empty.no_match_days_title") %></h3>
+            <p><%= t("seasons.show.empty.no_match_days_body") %></p>
+          </article>
         <% end %>
-      </ul>
-    <% else %>
-      <p class="empty-state"><%= t("seasons.no_scorers") %></p>
-    <% end %>
-  </div>
+      </section>
+    </main>
 
-  <div class="player-profile__body">
-    <h2><%= t("seasons.top_assists") %></h2>
+    <aside class="season-sidebar">
+      <section class="season-sidebar-card season-summary-card--compact">
+        <% sidebar = season_report.sidebar %>
+        <h2><%= t("seasons.show.sidebar.season_summary") %></h2>
+        <dl>
+          <div>
+            <dt><%= t("seasons.show.sidebar.first_match_day") %></dt>
+            <dd><%= season_summary_date(sidebar.first_match_day_date) %></dd>
+          </div>
+          <div>
+            <dt><%= t("seasons.show.sidebar.last_match_day") %></dt>
+            <dd><%= season_summary_date(sidebar.last_match_day_date) %></dd>
+          </div>
+          <div>
+            <dt><%= t("seasons.show.sidebar.total_matches") %></dt>
+            <dd><%= summary.matches_count %></dd>
+          </div>
+          <div>
+            <dt><%= t("seasons.show.sidebar.total_goals") %></dt>
+            <dd><%= summary.goals_count %></dd>
+          </div>
+          <div>
+            <dt><%= t("seasons.show.sidebar.total_assists") %></dt>
+            <dd><%= summary.assists_count %></dd>
+          </div>
+          <div>
+            <dt><%= t("seasons.show.sidebar.own_goals") %></dt>
+            <dd><%= summary.own_goals_count %></dd>
+          </div>
+          <div>
+            <dt><%= t("seasons.show.sidebar.average_match_time") %></dt>
+            <dd><%= season_summary_duration(sidebar.average_match_duration_seconds) %></dd>
+          </div>
+        </dl>
+      </section>
 
-    <% if leaderboards.top_assistants.any? %>
-      <ul class="leaderboard-list">
-        <% leaderboards.ranked_top_assistants.each do |ranked_stat| %>
-          <% player_stat = ranked_stat.entry %>
-          <li>
-            <span class="leaderboard-rank"><%= ranked_stat.rank %></span>
-            <strong><%= player_stat.player.name %></strong>
-            <span><%= t("dashboard.labels.assists_count", count: ranked_entry_display_value(ranked_stat).to_i) %></span>
-          </li>
-        <% end %>
-      </ul>
-    <% else %>
-      <p class="empty-state"><%= t("seasons.no_assists") %></p>
-    <% end %>
-  </div>
-
-  <div class="player-profile__body">
-    <h2><%= t("seasons.top_mvp") %></h2>
-
-    <% if leaderboards.top_mvp.any? %>
-      <ul class="leaderboard-list">
-        <% leaderboards.ranked_top_mvp.each do |ranked_stat| %>
-          <% player_stat = ranked_stat.entry %>
-          <li>
-            <span class="leaderboard-rank"><%= ranked_stat.rank %></span>
-            <strong><%= player_stat.player.name %></strong>
-            <span><%= ranked_entry_display_value(ranked_stat) %> MVP</span>
-          </li>
-        <% end %>
-      </ul>
-    <% else %>
-      <p class="empty-state"><%= t("seasons.no_mvp_votes") %></p>
-    <% end %>
-  </div>
-
-  <div class="player-profile__body">
-    <h2><%= t("seasons.top_def") %></h2>
-
-    <% if leaderboards.top_def.any? %>
-      <ul class="leaderboard-list">
-        <% leaderboards.ranked_top_def.each do |ranked_stat| %>
-          <% player_stat = ranked_stat.entry %>
-          <li>
-            <span class="leaderboard-rank"><%= ranked_stat.rank %></span>
-            <strong><%= player_stat.player.name %></strong>
-            <span><%= ranked_entry_display_value(ranked_stat) %> DEF</span>
-          </li>
-        <% end %>
-      </ul>
-    <% else %>
-      <p class="empty-state"><%= t("seasons.no_def_votes") %></p>
-    <% end %>
-  </div>
-
-  <div class="player-profile__body">
-    <h2><%= t("seasons.recent_match_days") %></h2>
-
-    <% if recent_match_days.any? %>
-      <ul>
-        <% recent_match_days.each do |match_day| %>
-          <li>
-            <strong><%= match_day.played_on %></strong>
-            <span><%= status_label(match_day.status) %></span>
-            <span><%= t("dashboard.labels.players") %>: <%= match_day.players.size %></span>
-          </li>
-        <% end %>
-      </ul>
-    <% else %>
-      <p class="empty-state"><%= t("seasons.no_match_days") %></p>
-    <% end %>
+      <% if season_report.sidebar.most_active_players.any? %>
+        <section class="season-sidebar-card">
+          <h2><%= t("seasons.show.sidebar.most_active_players") %></h2>
+          <div class="season-active-player-list">
+            <% season_report.sidebar.most_active_players.each_with_index do |row, index| %>
+              <div class="season-active-player">
+                <span><%= index + 1 %></span>
+                <strong><%= link_to row.player.name, player_path(row.player), class: "match-player-link" %></strong>
+                <small><%= t("seasons.show.active_players.matches_count", count: row.matches_count) %></small>
+              </div>
+            <% end %>
+          </div>
+          <%= link_to t("seasons.show.active_players.all_players"), players_path(season_id: season.id), class: "season-sidebar-footer-link" %>
+        </section>
+      <% end %>
+    </aside>
   </div>
 </section>

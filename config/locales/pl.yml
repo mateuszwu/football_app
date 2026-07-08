@@ -1,7 +1,22 @@
 pl:
   date:
+    abbr_month_names:
+      -
+      - sty
+      - lut
+      - mar
+      - kwi
+      - maj
+      - cze
+      - lip
+      - sie
+      - wrz
+      - paź
+      - lis
+      - gru
     formats:
       short: "%d.%m.%Y"
+      month_abbr: "%b"
 
   app:
     name: "Football App"
@@ -735,6 +750,90 @@ pl:
     no_def_votes: "Brak głosów DEF w tym sezonie."
     no_match_days: "Brak dni grania w tym sezonie."
     no_seasons: "Brak sezonów do wyświetlenia."
+    show:
+      label: "SEZON"
+      back: "← Powrót"
+      date_range: "%{start_date} – %{end_date}"
+      summary:
+        title: "Sezon w skrócie"
+        match_days: "Dni grania"
+        matches: "Mecze"
+        players: "Zawodnicy"
+        goals: "Gole"
+        assists: "Asysty"
+        own_goals: "Samobóje"
+        duration: "Czas gry"
+        average_players: "Śr. zaw./dzień"
+        played: "rozegrane"
+        finished: "zakończonych"
+        unique: "unikalnych"
+        total: "łącznie"
+        per_match_day: "na dzień grania"
+        first_match_day: "Pierwszy dzień grania"
+        last_match_day: "Ostatni dzień grania"
+        matches_count: "Łączna liczba meczów"
+        goals_count: "Łączna liczba goli"
+        assists_count: "Łączna liczba asyst"
+        own_goals_count: "Samobóje"
+        average_match_duration: "Średni czas meczu"
+        duration_minutes: "%{count} min"
+      match_days:
+        title: "Dni grania"
+        subtitle: "Przegląd wszystkich rozegranych dni grania w tym sezonie."
+        sort: "Sortuj"
+        newest_first: "od najnowszych"
+        oldest_first: "od najstarszych"
+        view: "Zobacz dzień"
+        matches: "mecze"
+        players: "zawodników"
+        teams: "drużyny"
+        goals: "goli"
+        assists: "asyst"
+        own_goals: "samobójów"
+        duration: "gry"
+        duration_pill: "%{value} gry"
+        highlights: "Najważniejsze wyróżnienia dnia"
+        top_scorer: "Najlepszy strzelec dnia"
+        top_assistant: "Najlepszy asystent dnia"
+        scorer: "Strzelec"
+        more_teams:
+          one: "+%{count} drużyna"
+          few: "+%{count} drużyny"
+          many: "+%{count} drużyn"
+          other: "+%{count} drużyn"
+        mvp: "MVP"
+        def: "DEF"
+      sidebar:
+        season_summary: "Sezon w skrócie"
+        first_match_day: "Pierwszy dzień grania"
+        last_match_day: "Ostatni dzień grania"
+        total_matches: "Łączna liczba meczów"
+        total_goals: "Łączna liczba goli"
+        total_assists: "Łączna liczba asyst"
+        own_goals: "Samobóje"
+        average_match_time: "Średni czas meczu"
+        most_active_players: "Najaktywniejsi zawodnicy"
+        next: "Co dalej?"
+      cta:
+        leaderboards_title: "Rankingi sezonu"
+        leaderboards_body: "ELO, gole, asysty, G+A, MVP, DEF i bilans."
+        leaderboards_button: "Zobacz rankingi"
+        statistics_title: "Statystyki sezonu"
+        statistics_body: "Ciekawostki, trendy i podsumowania."
+        statistics_button: "Zobacz statystyki"
+        players_title: "Zawodnicy sezonu"
+        players_body: "Statystyki i rozwój zawodników."
+        players_button: "Zobacz zawodników"
+      active_players:
+        matches_count:
+          one: "%{count} mecz"
+          few: "%{count} mecze"
+          many: "%{count} meczów"
+          other: "%{count} meczów"
+        all_players: "Zobacz wszystkich zawodników"
+      empty:
+        no_match_days_title: "Brak dni grania"
+        no_match_days_body: "Ten sezon nie ma jeszcze dodanych dni grania."
 
   admin:
     title: "Admin"
