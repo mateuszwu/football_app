@@ -1,0 +1,38 @@
+<section class="match-day-card">
+  <div class="match-day-card__header">
+    <div>
+      <h2><%= t("match_days.show.players_title") %></h2>
+      <p><%= t("match_days.show.players_subtitle") %></p>
+    </div>
+  </div>
+
+  <% if report.players_table.any? %>
+    <div class="match-day-player-table">
+      <div class="match-day-player-table__head">
+        <span><%= t("match_days.show.players_table.player") %></span>
+        <span><%= t("match_days.show.players_table.matches") %></span>
+        <span>G</span>
+        <span>A</span>
+        <span>G+A</span>
+      </div>
+
+      <% report.players_table.first(8).each do |row| %>
+        <div class="match-day-player-table__row">
+          <strong><%= match_day_player_link(row.player, class_name: "match-player-link") %></strong>
+          <span><%= row.matches_played %></span>
+          <span><%= row.goals %></span>
+          <span><%= row.assists %></span>
+          <span><%= row.goals_assists %></span>
+        </div>
+      <% end %>
+    </div>
+
+    <% if report.players_table.size > 8 %>
+      <p class="match-day-player-table__footer">
+        <%= t("match_days.show.players_table.more", count: report.players_table.size) %>
+      </p>
+    <% end %>
+  <% else %>
+    <p class="empty-state"><%= t("match_days.show.empty.players") %></p>
+  <% end %>
+</section>

@@ -1,0 +1,40 @@
+<% content_for :title, "#{t("match_days.show.title")} #{match_day_date(report.match_day.played_on)} - #{t("app.name")}" %>
+
+<section class="match-day-page">
+  <%= render "match_days/header", report: %>
+  <%= render "match_days/summary_cards", report: %>
+
+  <div class="match-day-layout">
+    <main class="match-day-main">
+      <section class="match-day-card">
+        <div class="match-day-card__header">
+          <div>
+            <h2><%= t("match_days.show.matches_title") %></h2>
+            <p><%= t("match_days.show.matches_subtitle") %></p>
+          </div>
+        </div>
+
+        <% if report.matches.any? %>
+          <div class="match-day-matches">
+            <% report.matches.each do |match_row| %>
+              <%= render "match_days/match_card", match_row: %>
+            <% end %>
+          </div>
+        <% else %>
+          <p class="empty-state"><%= t("match_days.show.empty.matches") %></p>
+        <% end %>
+      </section>
+    </main>
+
+    <aside class="match-day-sidebar">
+      <%= render "match_days/leaders_sidebar", report: %>
+      <%= render "match_days/players_table", report: %>
+
+      <section class="match-day-card match-day-season-cta">
+        <h2><%= t("match_days.show.other_days.title") %></h2>
+        <p><%= t("match_days.show.other_days.body") %></p>
+        <%= link_to t("match_days.show.other_days.button"), season_path(report.season), class: "button button--secondary" %>
+      </section>
+    </aside>
+  </div>
+</section>

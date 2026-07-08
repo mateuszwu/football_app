@@ -274,6 +274,8 @@ RSpec.describe "Matches" do
         expect(response.body).to include("Zakończony")
         expect(response.body).to include("Czas meczu")
         expect(response.body).to include("47:10")
+        expect(response.body).to include("Zobacz mecze dnia")
+        expect(response.body).to include("/match_days/#{match.match_day_id}")
       end
 
       it "shows admin correction controls for signed-in admins" do

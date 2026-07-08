@@ -275,7 +275,7 @@
           <h2><%= t("matches.show.match_day_cta.title") %></h2>
           <p><%= t("matches.show.match_day_cta.subtitle", date: summary.match_day.played_on) %></p>
         </div>
-        <%= link_to t("matches.show.match_day_cta.button"), season_path(summary.season), class: "button button--primary" %>
+        <%= link_to t("matches.show.match_day_cta.button"), match_day_path(summary.match_day), class: "button button--primary" %>
       </section>
     </aside>
   </div>

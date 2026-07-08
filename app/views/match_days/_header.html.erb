@@ -1,0 +1,16 @@
+<header class="match-day-header">
+  <div>
+    <%= link_to t("match_days.show.back"), request.referer.presence || season_path(report.season), class: "match-day-back-link" %>
+    <p class="match-day-eyebrow"><%= t("match_days.show.eyebrow") %></p>
+    <h1><%= t("match_days.show.heading", date: match_day_date(report.match_day.played_on)) %></h1>
+    <p>
+      <%= report.season.name %>
+      ·
+      <%= t("match_days.show.matches_count", count: report.summary.fetch(:matches_count)) %>
+      ·
+      <%= t("match_days.show.players_count", count: report.summary.fetch(:players_count)) %>
+    </p>
+  </div>
+
+  <span class="match-day-status"><%= status_label(report.match_day.status) %></span>
+</header>

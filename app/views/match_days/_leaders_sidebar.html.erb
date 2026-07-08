@@ -1,0 +1,28 @@
+<section class="match-day-card">
+  <div class="match-day-card__header">
+    <div>
+      <h2><%= t("match_days.show.leaders_title") %></h2>
+      <p><%= t("match_days.show.leaders_subtitle") %></p>
+    </div>
+  </div>
+
+  <% leader_rows = report.leaders.values.compact %>
+  <% if leader_rows.any? %>
+    <div class="match-day-leaders">
+      <% leader_rows.each do |leader| %>
+        <div class="match-day-leader-row">
+          <span><%= leader.label %></span>
+          <strong><%= match_day_player_link(leader.player, class_name: "match-player-link") %></strong>
+          <small>
+            <%= leader.value %>
+            <% if leader.details.present? %>
+              · <%= leader.details %>
+            <% end %>
+          </small>
+        </div>
+      <% end %>
+    </div>
+  <% else %>
+    <p class="empty-state"><%= t("match_days.show.empty.leaders") %></p>
+  <% end %>
+</section>

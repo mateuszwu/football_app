@@ -1,0 +1,46 @@
+<article class="match-day-match-card">
+  <header class="match-day-match-card__top">
+    <div>
+      <strong><%= match_row.label %></strong>
+      <span><%= match_day_time_range(match_row) %></span>
+    </div>
+    <span class="match-day-status match-day-status--small"><%= t("statuses.finished") %></span>
+  </header>
+
+  <div class="match-day-match-card__score">
+    <div class="match-day-team-block">
+      <span class="match-day-team-chip"></span>
+      <strong><%= match_row.home_team.name %></strong>
+    </div>
+
+    <div class="match-day-score-block">
+      <strong><%= match_row.home_score %> : <%= match_row.away_score %></strong>
+      <span><%= match_row.result_label %></span>
+    </div>
+
+    <div class="match-day-team-block match-day-team-block--right">
+      <strong><%= match_row.away_team.name %></strong>
+      <span class="match-day-team-chip match-day-team-chip--away"></span>
+    </div>
+  </div>
+
+  <div class="match-day-match-card__bottom">
+    <% if match_row.events.any? %>
+      <ol class="match-day-event-list">
+        <% match_row.events.each do |event| %>
+          <li>
+            <span><%= match_report_minute(event.minute_seconds) %></span>
+            <p>
+              <%= match_day_event_text(event) %>
+              <small><%= match_report_compact_score(event.score_after) %></small>
+            </p>
+          </li>
+        <% end %>
+      </ol>
+    <% else %>
+      <p class="empty-state"><%= t("match_days.show.empty.events") %></p>
+    <% end %>
+
+    <%= link_to t("match_days.show.view_match"), match_path(match_row.match), class: "button button--secondary" %>
+  </div>
+</article>

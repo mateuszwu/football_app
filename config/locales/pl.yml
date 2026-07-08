@@ -620,6 +620,81 @@ pl:
     no_match_days: "Brak dni grania do wyświetlenia."
     save: "Zapisz"
     back: "Wróć"
+    show:
+      title: "Dzień grania"
+      back: "← Powrót"
+      eyebrow: "DZIEŃ GRANIA"
+      heading: "Dzień grania · %{date}"
+      matches_count:
+        one: "%{count} mecz"
+        few: "%{count} mecze"
+        many: "%{count} meczów"
+        other: "%{count} meczu"
+      players_count:
+        one: "%{count} zawodnik"
+        few: "%{count} zawodników"
+        many: "%{count} zawodników"
+        other: "%{count} zawodnika"
+      summary_title: "Podsumowanie dnia"
+      summary:
+        matches: "Mecze"
+        goals: "Gole"
+        assists: "Asysty"
+        players: "Zawodnicy"
+        own_goals: "Samobóje"
+        play_time: "Czas gry"
+      matches_title: "Mecze dnia"
+      matches_subtitle: "Wszystkie mecze rozegrane w tym dniu grania."
+      match_label: "Mecz #%{number}"
+      view_match: "Zobacz mecz"
+      result:
+        win: "Wygrana %{team}"
+        draw: "Remis"
+      match_card:
+        goal: "%{player}"
+        goal_with_assist: "%{player}, as. %{assistant}"
+        own_goal: "%{player}, sam."
+      leaders_title: "Liderzy dnia"
+      leaders_subtitle: "Najważniejsze indywidualne wyniki z tego dnia."
+      leaders:
+        top_scorer: "Najlepszy strzelec"
+        top_assistant: "Najlepszy asystent"
+        top_ga: "Najwięcej G+A"
+        mvp: "MVP"
+        def: "DEF"
+      leader_values:
+        goals_count:
+          one: "%{count} gol"
+          few: "%{count} gole"
+          many: "%{count} goli"
+          other: "%{count} gola"
+        assists_count:
+          one: "%{count} asysta"
+          few: "%{count} asysty"
+          many: "%{count} asyst"
+          other: "%{count} asysty"
+        goals_assists_count: "%{count} G+A"
+        goals_assists_split: "%{goals}G + %{assists}A"
+        votes_count:
+          one: "%{count} głos"
+          few: "%{count} głosy"
+          many: "%{count} głosów"
+          other: "%{count} głosu"
+      players_title: "Zawodnicy tego dnia"
+      players_subtitle: "Wkład zawodników w meczach rozegranych tego dnia."
+      players_table:
+        player: "Zawodnik"
+        matches: "Mecze"
+        more: "Zobacz wszystkich (%{count})"
+      other_days:
+        title: "Zobacz inne dni grania"
+        body: "Przeglądaj mecze z pozostałych dni sezonu."
+        button: "Zobacz dni grania"
+      empty:
+        matches: "Brak zakończonych meczów dla tego dnia."
+        events: "Brak zdarzeń bramkowych w tym meczu."
+        leaders: "Brak danych o liderach dnia."
+        players: "Brak zawodników do wyświetlenia."
 
   seasons:
     title: "Sezony"
@@ -774,7 +849,7 @@ pl:
       match_day_cta:
         title: "Zobacz wszystkie mecze dnia"
         subtitle: "Przejdź do dnia grania %{date}"
-        button: "Przejdź do sezonu"
+        button: "Zobacz mecze dnia"
 
   statistics:
     nav: "Statystyki"

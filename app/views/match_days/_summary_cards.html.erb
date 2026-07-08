@@ -1,0 +1,18 @@
+<section class="match-day-summary-grid" aria-label="<%= t("match_days.show.summary_title") %>">
+  <% [
+    [ "list-check", t("match_days.show.summary.matches"), report.summary.fetch(:matches_count) ],
+    [ "target", t("match_days.show.summary.goals"), report.summary.fetch(:goals_count) ],
+    [ "handshake", t("match_days.show.summary.assists"), report.summary.fetch(:assists_count) ],
+    [ "users", t("match_days.show.summary.players"), report.summary.fetch(:players_count) ],
+    [ "shield-alert", t("match_days.show.summary.own_goals"), report.summary.fetch(:own_goals_count) ],
+    [ "timer", t("match_days.show.summary.play_time"), match_day_total_duration(report.summary.fetch(:total_duration_seconds)) ]
+  ].each do |icon, label, value| %>
+    <article class="match-day-summary-card">
+      <span class="match-day-summary-card__icon"><%= safe_lucide_icon(icon, fallback: "circle", class_name: "ui-icon ui-icon--sm") %></span>
+      <div>
+        <span><%= label %></span>
+        <strong><%= value %></strong>
+      </div>
+    </article>
+  <% end %>
+</section>
