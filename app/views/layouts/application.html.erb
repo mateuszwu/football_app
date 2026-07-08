@@ -28,7 +28,9 @@
 
   <%
     body_class =
-      if controller_path.start_with?("admin/")
+      if controller_path == "admin/sessions"
+        "theme-dark public-layout"
+      elsif controller_path.start_with?("admin/")
         "theme-light admin-layout"
       elsif controller_name == "matches" && action_name == "show"
         "theme-dark live-layout"
