@@ -3,7 +3,11 @@ Rails.application.routes.draw do
     get "login", to: "sessions#new", as: :login
     resource :session, only: %i[create destroy]
     resources :match_days, only: %i[index new create edit update]
-    resources :seasons, except: :show
+    resources :seasons, except: :show do
+      member do
+        post :recalculate_elo
+      end
+    end
     resources :players, only: %i[index edit update] do
       member do
         patch :approve

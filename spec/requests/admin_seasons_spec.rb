@@ -49,6 +49,7 @@ RSpec.describe "Admin seasons" do
           expect(response.body).to include("6")
           expect(response.body).to include("1.0")
           expect(response.body).to include("0.8")
+          expect(response.body).to include("Przelicz ELO")
         ensure
           if original_admin_password.nil?
             ENV.delete("FOOTBALL_APP_ADMIN_PASSWORD")
@@ -364,6 +365,44 @@ RSpec.describe "Admin seasons" do
           expect(response).to have_http_status(:unprocessable_content)
           expect(response.body).to include("Name can&#39;t be blank")
           expect(season.reload.name).to eq("Spring 2026")
+        ensure
+          if original_admin_password.nil?
+            ENV.delete("FOOTBALL_APP_ADMIN_PASSWORD")
+          else
+            ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = original_admin_password
+          end
+        end
+      end
+    end
+  end
+
+  describe "POST /admin/seasons/:id/recalculate_elo" do
+    context "when the visitor is not signed in as admin" do
+      it "does not recalculate season ELO" do
+        season = create(:season)
+        allow(Ratings::RecalculateSeasonElo).to receive(:call)
+
+        post "/admin/seasons/#{season.id}/recalculate_elo"
+
+        expect(response).to redirect_to(root_path)
+        expect(Ratings::RecalculateSeasonElo).not_to have_received(:call)
+      end
+    end
+
+    context "when the visitor is signed in as admin" do
+      it "recalculates ELO for the selected season" do
+        begin
+          original_admin_password = ENV["FOOTBALL_APP_ADMIN_PASSWORD"]
+          ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = "secret-password"
+          season = create(:season, name: "Spring 2026")
+          allow(Ratings::RecalculateSeasonElo).to receive(:call)
+
+          post "/admin/session", params: { password: "secret-password" }
+          post "/admin/seasons/#{season.id}/recalculate_elo"
+
+          expect(response).to redirect_to(admin_seasons_path)
+          expect(flash[:notice]).to eq("Przeliczono ELO dla sezonu Spring 2026.")
+          expect(Ratings::RecalculateSeasonElo).to have_received(:call).with(season: season)
         ensure
           if original_admin_password.nil?
             ENV.delete("FOOTBALL_APP_ADMIN_PASSWORD")

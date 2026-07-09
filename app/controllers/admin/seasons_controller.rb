@@ -52,6 +52,14 @@ module Admin
       redirect_to admin_seasons_path, notice: "Season deleted"
     end
 
+    def recalculate_elo
+      season = Season.find(params[:id])
+
+      Ratings::RecalculateSeasonElo.call(season:)
+
+      redirect_to admin_seasons_path, notice: t("seasons.elo_recalculated", season: season.name)
+    end
+
     private
 
     def season_params

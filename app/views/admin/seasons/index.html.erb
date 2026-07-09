@@ -46,6 +46,10 @@
               <td><%= season.assist_points %></td>
               <td class="admin-table__actions">
                 <%= link_to t("admin.edit"), edit_admin_season_path(season) %>
+                <%= button_to t("seasons.recalculate_elo"),
+                              recalculate_elo_admin_season_path(season),
+                              method: :post,
+                              class: "link-button" %>
                 <%= button_to t("admin.delete"), admin_season_path(season), method: :delete, class: "link-button" %>
               </td>
             </tr>

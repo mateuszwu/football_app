@@ -793,6 +793,8 @@ pl:
     no_def_votes: "Brak głosów DEF w tym sezonie."
     no_match_days: "Brak dni grania w tym sezonie."
     no_seasons: "Brak sezonów do wyświetlenia."
+    recalculate_elo: "Przelicz ELO"
+    elo_recalculated: "Przeliczono ELO dla sezonu %{season}."
     show:
       label: "SEZON"
       back: "← Powrót"
