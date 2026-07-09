@@ -445,7 +445,7 @@ module Players
           entries: duos,
           best_partner: duos.first,
           most_played_partner: duos.max_by { |duo| [ duo.shared_matches_count, duo.win_rate.to_i, duo.goals_assists ] },
-          best_offensive_partner: duos.max_by { |duo| [ duo.goals_assists, duo.goals, duo.win_rate.to_i ] },
+          best_offensive_partner: duos.max_by { |duo| [ duo.mutual_assists, duo.goals_assists, duo.goals, duo.win_rate.to_i ] },
           worst_record_partner: worst.first,
           graph_data:,
           graph_path: Rails.application.routes.url_helpers.relationships_path(

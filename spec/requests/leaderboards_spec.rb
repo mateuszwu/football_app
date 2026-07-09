@@ -51,6 +51,13 @@ RSpec.describe "Leaderboards" do
         expect(response.body).to include("leaderboards-table__col--role")
         expect(response.body).to include("leaderboards-table__col--matches")
         expect(response.body).not_to include("leaderboards-table__col-metric")
+        expect(response.body).to include("leaderboard-player-cell")
+        expect(response.body).to include(
+          "player-identity-pill player-identity-pill--sm player-identity-pill--default"
+        )
+        expect(response.body).to include("player-identity-pill__icon")
+        expect(response.body).to include("player-identity-pill__name")
+        expect(response.body).not_to include("leaderboards-player__avatar")
         expect(response.body.scan(/leaderboards-rank__number">(\d+)</).flatten).to include("1", "1", "3")
         expect(response.body).to include("leaderboards-rank--gold")
         expect(response.body).to include("leaderboards-rank--bronze")
@@ -86,6 +93,74 @@ RSpec.describe "Leaderboards" do
         expect(response).to have_http_status(:ok)
         expect(response.body.scan("<col ").size).to eq(5)
         expect(response.body).to include("Głosy MVP")
+      end
+
+      it "renders player identity pills on every ranking tab" do
+        season = create(:season, status: Season::STATUS_ACTIVE)
+        player = create(
+          :player,
+          name: "Adam Demo",
+          phone: "+48111222333",
+          approval_status: "approved",
+          active: true,
+          profile_icon: "sun",
+          profile_color_key: "gold",
+          profile_color_hex: "#FACC15"
+        )
+        create(
+          :player_season_stat,
+          season:,
+          player:,
+          elo: 1020,
+          goals: 2,
+          assists: 2,
+          mvp_votes_count: 1,
+          def_votes_count: 1
+        )
+
+        %w[elo goals assists goals_assists mvp def record].each do |tab|
+          get leaderboards_path, params: { season_id: season.id, tab: }
+
+          expect(response).to have_http_status(:ok)
+          expect(response.body).to include(
+            "player-identity-pill player-identity-pill--sm player-identity-pill--default"
+          )
+          expect(response.body).to include("lucide-sun")
+          expect(response.body).to include("Adam Demo")
+          expect(response.body).not_to include("+48111222333")
+        end
+      end
+
+      it "renders no data for MVP and DEF when all vote counts are zero" do
+        season = create(:season, name: "Summer 2026", status: Season::STATUS_ACTIVE)
+        player = create(:player, name: "Kuba Bratek", nickname: "kuba", approval_status: "approved", active: true)
+        create(:player_season_stat, season:, player:, elo: 1000, mvp_votes_count: 0, def_votes_count: 0)
+
+        get leaderboards_path, params: { season_id: season.id }
+
+        expect(response).to have_http_status(:ok)
+        expect(response.body).to include("MVP sezonu")
+        expect(response.body).to include("Najlepszy DEF")
+        season_mvp_card = response.body[/<article class="leaderboards-summary-card">(?:(?!<\/article>).)*MVP sezonu.*?<\/article>/m]
+        best_def_card = response.body[/<article class="leaderboards-summary-card">(?:(?!<\/article>).)*Najlepszy DEF.*?<\/article>/m]
+        expect(season_mvp_card).to include("Brak danych")
+        expect(season_mvp_card).not_to include("Kuba Bratek")
+        expect(best_def_card).to include("Brak danych")
+        expect(best_def_card).not_to include("Kuba Bratek")
+
+        get leaderboards_path, params: { season_id: season.id, tab: "mvp" }
+
+        expect(response).to have_http_status(:ok)
+        expect(response.body).to include("Brak głosów MVP w tym sezonie.")
+        mvp_table_card = response.body[/<section class="leaderboards-table-card">.*?<\/section>/m]
+        expect(mvp_table_card).not_to include("Kuba Bratek")
+
+        get leaderboards_path, params: { season_id: season.id, tab: "def" }
+
+        expect(response).to have_http_status(:ok)
+        expect(response.body).to include("Brak głosów DEF w tym sezonie.")
+        def_table_card = response.body[/<section class="leaderboards-table-card">.*?<\/section>/m]
+        expect(def_table_card).not_to include("Kuba Bratek")
       end
     end
 

@@ -31,6 +31,21 @@ module StatisticsHelper
     value.presence || "-"
   end
 
+  def statistics_match_meta(match)
+    return "-" if match.blank?
+
+    tag.span(class: "statistics-card-meta") do
+      safe_join(
+        [
+          match.match_day.played_on.to_s,
+          tag.span("·", class: "statistics-card-meta__separator"),
+          link_to("##{match.id}", match_path(match), class: "statistics-match-link")
+        ],
+        " "
+      )
+    end
+  end
+
   def statistics_chart_data(data)
     json_escape(data.to_json)
   end

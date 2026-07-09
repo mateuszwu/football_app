@@ -97,6 +97,38 @@ RSpec.describe Team do
         expect(team.errors[:result]).to include("is not included in the list")
       end
     end
+
+    context "when captain is missing" do
+      it "is valid" do
+        team = create(:team, captain: nil)
+
+        expect(team).to be_valid
+      end
+    end
+
+    context "when captain belongs to the roster" do
+      it "is valid" do
+        team = create(:team)
+        player = create(:player)
+        create(:team_player, team:, player:)
+
+        team.captain = player
+
+        expect(team).to be_valid
+      end
+    end
+
+    context "when captain does not belong to the roster" do
+      it "is invalid" do
+        team = create(:team)
+        player = create(:player)
+
+        team.captain = player
+
+        expect(team).not_to be_valid
+        expect(team.errors[:captain_id]).to include("musi nalezec do tej druzyny")
+      end
+    end
   end
 
   describe "associations" do

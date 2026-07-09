@@ -49,5 +49,16 @@ RSpec.describe Seasons::PublicLeaderboardQuery do
       expect(result.ranked_record.last.entry.losses_count).to eq(1)
       expect(result.ranked_record.first.entry.goal_difference_value).to eq(2)
     end
+
+    it "does not rank MVP or DEF leaders without votes" do
+      season = create(:season)
+      player = create(:player, name: "Kuba Bratek", approval_status: "approved", active: true)
+      create(:player_season_stat, season:, player:, mvp_votes_count: 0, def_votes_count: 0)
+
+      result = described_class.call(season:)
+
+      expect(result.ranked_top_mvp).to eq([])
+      expect(result.ranked_top_def).to eq([])
+    end
   end
 end

@@ -1,0 +1,19 @@
+<% pill_size = local_assigns.fetch(:size, :sm) %>
+<% pill_variant = local_assigns.fetch(:variant, :default) %>
+<% show_name = local_assigns.fetch(:show_name, true) %>
+<% max_width = local_assigns[:max_width] %>
+<% pill_styles = [ "--player-color: #{player.profile_color}" ] %>
+<% pill_styles << "max-width: #{max_width}" if max_width.present? %>
+<%= link_to player_path(player),
+  class: "player-identity-pill player-identity-pill--#{pill_size} player-identity-pill--#{pill_variant}",
+  style: pill_styles.join("; "),
+  title: player.name,
+  aria: { label: player.name },
+  data: { turbo_frame: "_top" } do %>
+  <span class="player-identity-pill__icon" aria-hidden="true">
+    <%= safe_lucide_icon(player.profile_icon_name, fallback: PlayerIdentity::DEFAULT_ICON, class_name: "ui-icon") %>
+  </span>
+  <% if show_name %>
+    <span class="player-identity-pill__name"><%= player.name %></span>
+  <% end %>
+<% end %>

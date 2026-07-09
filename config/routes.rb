@@ -14,6 +14,8 @@ Rails.application.routes.draw do
 
   namespace :api do
     resources :match_imports, only: :create
+    resources :players, only: :create
+    resources :seasons, only: :create
 
     resources :match_days, only: [] do
       member do

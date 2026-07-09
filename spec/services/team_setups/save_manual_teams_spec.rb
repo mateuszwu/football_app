@@ -51,6 +51,23 @@ RSpec.describe TeamSetups::SaveManualTeams do
         expect(match_day.teams.find_by!(name: "Team B")).to be_playing
         expect(match_day.teams.find_by!(name: "Waiting")).not_to be_playing
       end
+
+      it "assigns a captain from the team roster" do
+        match_day = create(:match_day)
+        captain = create(:player)
+        teammate = create(:player, name: "Teammate", nickname: "teammate", phone: "+48999999998")
+
+        result = described_class.call(
+          match_day:,
+          selected_player_ids: [ captain.id, teammate.id ],
+          teams_data: [
+            { name: "Team A", player_ids: [ captain.id, teammate.id ], captain_id: captain.id }
+          ]
+        )
+
+        expect(result).to be(true)
+        expect(match_day.teams.find_by!(name: "Team A").captain).to eq(captain)
+      end
     end
 
     context "when no manual teams are assigned" do

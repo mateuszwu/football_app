@@ -10,6 +10,7 @@ module Relationships
       :losses,
       :goals,
       :assists,
+      :mutual_assists,
       keyword_init: true
     ) do
       def empty?
@@ -32,6 +33,10 @@ module Relationships
 
       def offense_total
         goals.to_i + assists.to_i
+      end
+
+      def direct_offense_total
+        mutual_assists.to_i * 2
       end
 
       def duet_score
@@ -85,6 +90,7 @@ module Relationships
     def build_summary(duo)
       shared_matches = shared_matches_for(duo)
       goals, assists = offensive_totals_for(duo:, shared_matches:)
+      mutual_assists = mutual_assists_for(duo:, shared_matches:)
       wins, draws, losses = record_for(shared_matches)
 
       Summary.new(
@@ -96,7 +102,8 @@ module Relationships
         draws:,
         losses:,
         goals:,
-        assists:
+        assists:,
+        mutual_assists:
       )
     end
 
@@ -123,7 +130,7 @@ module Relationships
     def best_offensive_duo(summaries, match_level_available:)
       summaries
         .select { |summary| eligible_for_offensive_duo?(summary, match_level_available:) }
-        .sort_by { |summary| [ -summary.offense_total, -summary.goals.to_i, -summary.win_rate.to_i, -play_count_for(summary, match_level_available:), summary.player_a.name, summary.player_b.name ] }
+        .sort_by { |summary| [ -summary.direct_offense_total, -summary.mutual_assists.to_i, -summary.offense_total, -summary.win_rate.to_i, -play_count_for(summary, match_level_available:), summary.player_a.name, summary.player_b.name ] }
         .first
     end
 
@@ -154,7 +161,7 @@ module Relationships
     end
 
     def eligible_for_offensive_duo?(summary, match_level_available:)
-      return false unless summary.offense_total.positive?
+      return false unless summary.direct_offense_total.positive?
 
       return summary.shared_matches_count >= 3 if summary.match_level?
       return false if match_level_available
@@ -237,6 +244,24 @@ module Relationships
         .count
 
       [ goals, assists ]
+    end
+
+    def mutual_assists_for(duo:, shared_matches:)
+      match_ids = shared_matches.map { |match, _team| match.id }
+      return 0 if match_ids.empty?
+
+      player_ids = [ duo.player_one.id, duo.player_two.id ]
+
+      MatchGoal
+        .active
+        .includes(:scorer_team_player, :assistant_team_player)
+        .where(match_id: match_ids)
+        .to_a
+        .count do |goal|
+          goal.assistant_team_player.present? &&
+            player_ids.include?(goal.scorer_team_player.player_id) &&
+            player_ids.include?(goal.assistant_team_player.player_id)
+        end
     end
   end
 end

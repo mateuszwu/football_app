@@ -23,15 +23,15 @@ module Api
         :played_on,
         :started_at,
         :finished_at,
-        original_teams: [ :name, { players: [] } ],
-        teams: [ :name, { players: [] } ],
-        goals: %i[team scorer assistant],
+        original_teams: [ :name, :captain, { players: [] } ],
+        teams: [ :name, :captain, { players: [] } ],
+        goals: %i[team scorer assistant scored_at own_goal],
         matches: [
           :started_at,
           :finished_at,
           {
-            teams: [ :name, { players: [] } ],
-            goals: %i[team scorer assistant]
+            teams: [ :name, :captain, { players: [] } ],
+            goals: %i[team scorer assistant scored_at own_goal]
           }
         ]
       ).to_h

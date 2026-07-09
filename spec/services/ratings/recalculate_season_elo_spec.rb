@@ -190,5 +190,49 @@ RSpec.describe Ratings::RecalculateSeasonElo do
       expect(first_match.reload.elo_processed_at).to be_present
       expect(second_match.reload.elo_processed_at).to be_present
     end
+
+    it "preserves goals, assists, votes, and performance statistics" do
+      season = create(:season, initial_elo: 1000, elo_k_value: 16.0)
+      match_day = create(:match_day, season:, status: "finished", played_on: Date.new(2026, 6, 7))
+      team_setup = create(:team_setup, match_day:)
+      home_team = create(:team, team_setup:, team_type: Team::TEAM_TYPE_MATCH)
+      away_team = create(:team, team_setup:, team_type: Team::TEAM_TYPE_MATCH)
+      home_player = create(:player)
+      away_player = create(:player)
+      create(:team_player, team: home_team, player: home_player)
+      create(:team_player, team: away_team, player: away_player)
+      create(
+        :match,
+        match_day:,
+        home_team:,
+        away_team:,
+        home_score: 1,
+        away_score: 0,
+        started_at: Time.zone.parse("2026-06-07 18:00:00"),
+        finished_at: Time.zone.parse("2026-06-07 18:50:00")
+      )
+      create(
+        :player_season_stat,
+        season:,
+        player: home_player,
+        goals: 3,
+        assists: 2,
+        mvp_votes_count: 4,
+        def_votes_count: 1,
+        performance_score: 5.5
+      )
+
+      described_class.call(season:)
+
+      recalculated_stat = PlayerSeasonStat.find_by!(season:, player: home_player)
+
+      expect(recalculated_stat.attributes.symbolize_keys).to include(
+        goals: 3,
+        assists: 2,
+        mvp_votes_count: 4,
+        def_votes_count: 1,
+        performance_score: BigDecimal("5.5")
+      )
+    end
   end
 end

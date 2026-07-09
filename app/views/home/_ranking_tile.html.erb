@@ -10,13 +10,10 @@
       <ol class="ranking-preview">
         <% ranked_entries.each do |ranked_entry| %>
           <% entry = ranked_entry.entry %>
-          <% initials = entry.player.name.split.map { |part| part.first }.join.first(2).upcase %>
           <li class="ranking-preview__row">
             <span class="ranking-preview__rank"><%= ranked_entry.rank %></span>
-            <span class="ranking-preview__avatar"><%= initials %></span>
             <span class="ranking-preview__player">
-              <strong><%= link_to entry.player.name, player_path(entry.player) %></strong>
-              <small><%= role_label(entry.player.role_code) %></small>
+              <%= render "shared/player_identity_pill", player: entry.player, size: :xs, variant: :compact %>
             </span>
             <strong class="ranking-preview__value"><%= ranked_entry_display_value(ranked_entry) %></strong>
           </li>

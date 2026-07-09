@@ -154,9 +154,9 @@ module Stats
     def records
       {
         rows: [
-          record_row("most_goals_match", match_card(completed_timelines.max_by { |timeline| timeline.summary.fetch(:final_score).values.sum }, value: ->(timeline) { timeline.summary.fetch(:final_score).values.sum.to_s })),
+          record_row("most_goals_match", most_goals_by_player_in_match_card),
           record_row("closest_match", match_card(completed_timelines.select { |timeline| final_goal_difference(timeline) == 1 }.max_by { |timeline| [ timeline.summary.fetch(:duration_seconds).to_i, timeline.summary.fetch(:equalizers_count) ] })),
-          record_row("biggest_domination", match_card(completed_timelines.max_by { |timeline| final_goal_difference(timeline) })),
+          record_row("biggest_domination", biggest_domination_card),
           record_row("most_lead_changes", match_card(completed_timelines.max_by { |timeline| timeline.summary.fetch(:lead_changes_count) }, value: ->(timeline) { timeline.summary.fetch(:lead_changes_count).to_s })),
           record_row("most_equalizers", match_card(completed_timelines.max_by { |timeline| timeline.summary.fetch(:equalizers_count) }, value: ->(timeline) { timeline.summary.fetch(:equalizers_count).to_s })),
           record_row("longest_goal_gap", longest_goal_gap_card),
@@ -192,7 +192,6 @@ module Stats
       {
         most_interesting_match: interesting_match_card,
         biggest_comeback: comebacks.fetch(:biggest_comeback),
-        most_common_scenario: score_states.fetch(:most_common),
         quick: {
           wins_after_conceding_first: comebacks.fetch(:wins_after_conceding_first_goal_rate),
           lead_four_zero_hold: comebacks.fetch(:lead_four_zero_hold_rate),
@@ -365,6 +364,51 @@ module Stats
       match_card(timeline, value: ->(candidate) { "#{candidate.summary.dig(:longest_scoring_run, :goals_count)} goli" })
     end
 
+    def most_goals_by_player_in_match_card
+      row = completed_timelines.flat_map do |timeline|
+        timeline.events
+          .reject { |event| event.fetch(:event).own_goal? }
+          .group_by { |event| event.fetch(:scorer) }
+          .map do |player, events|
+            {
+              player:,
+              match: timeline.match,
+              goals_count: events.count
+            }
+          end
+      end.max_by { |candidate| [ candidate.fetch(:goals_count), -candidate.fetch(:match).id ] }
+      return nil if row.blank?
+
+      {
+        value: I18n.t("statistics.index.records.goals_count", count: row.fetch(:goals_count)),
+        subject: row.fetch(:player).name,
+        detail: match_label_for(row.fetch(:match)),
+        match: row.fetch(:match),
+        path: Rails.application.routes.url_helpers.match_path(row.fetch(:match))
+      }
+    end
+
+    def biggest_domination_card
+      timeline = completed_timelines.max_by do |candidate|
+        [
+          final_goal_difference(candidate),
+          -winner_goals_against(candidate),
+          -(candidate.summary.fetch(:duration_seconds).to_i),
+          -candidate.match.id
+        ]
+      end
+      return nil if timeline.blank?
+
+      {
+        value: "+#{final_goal_difference(timeline)} / #{final_score_for(timeline)}",
+        subject: match_label_for(timeline.match),
+        detail: match_detail_for(timeline.match),
+        match: timeline.match,
+        path: Rails.application.routes.url_helpers.match_path(timeline.match),
+        seconds: timeline.summary.fetch(:duration_seconds)
+      }
+    end
+
     def interesting_match_card
       timeline = completed_timelines.max_by do |candidate|
         candidate.summary.fetch(:biggest_deficit_overcome_by_winner).to_i * 5 +
@@ -381,7 +425,9 @@ module Stats
       {
         key:,
         subject: card&.fetch(:subject),
+        detail: card&.fetch(:detail),
         value: card&.fetch(:value),
+        match: card&.fetch(:match),
         path: card&.fetch(:path)
       }
     end
@@ -406,6 +452,12 @@ module Stats
     def final_goal_difference(timeline)
       score = timeline.summary.fetch(:final_score)
       (score.fetch(:team_a) - score.fetch(:team_b)).abs
+    end
+
+    def winner_goals_against(timeline)
+      score = timeline.summary.fetch(:final_score)
+
+      [ score.fetch(:team_a), score.fetch(:team_b) ].min
     end
 
     def final_score_for(timeline)

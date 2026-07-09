@@ -22,6 +22,12 @@ module MatchesHelper
     "#{(seconds.to_i / 60) + 1}'"
   end
 
+  def match_report_minute_label(seconds)
+    return "—" if seconds.blank?
+
+    t("matches.show.timeline.minute", minute: (seconds.to_i / 60) + 1)
+  end
+
   def match_report_score(score_hash)
     "#{score_hash.fetch(:team_a)} : #{score_hash.fetch(:team_b)}"
   end
@@ -40,6 +46,29 @@ module MatchesHelper
     player.name.to_s.split.first(2).map { |part| part.first.to_s.upcase }.join.presence || "?"
   end
 
+  def match_player_identity_avatar(player)
+    player_identity_badge(player, size: :sm)
+  end
+
+  def match_team_captain(team)
+    team.captain
+  end
+
+  def match_team_captain_mark(team)
+    captain = match_team_captain(team)
+    return fallback_team_mark if captain.blank?
+
+    tag.span(
+      class: "match-team-captain",
+      style: "--captain-color: #{captain.profile_color}",
+      title: captain.name
+    ) do
+      player_identity_badge(captain, size: :sm, label: captain.name) +
+        tag.span(t("matches.captain"), class: "match-team-captain__label") +
+        tag.span(captain.name, class: "match-team-captain__name")
+    end
+  end
+
   def match_report_votes_count(count)
     noun = if count == 1
       "głos"
@@ -50,5 +79,18 @@ module MatchesHelper
     end
 
     "#{count} #{noun}"
+  end
+
+  def match_player_identity_color(player)
+    color = player.profile_color
+    return color if color.to_s.match?(/\A#[0-9a-fA-F]{6}\z/)
+
+    PlayerIdentity.hex_for(PlayerIdentity::DEFAULT_COLOR_KEY)
+  end
+
+  def fallback_team_mark
+    tag.span(class: "match-team-mark") do
+      safe_lucide_icon("shield", fallback: "circle", class_name: "ui-icon")
+    end
   end
 end

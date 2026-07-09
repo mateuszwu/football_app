@@ -10,7 +10,7 @@
   <% end %>
 
   <header class="player-profile-header">
-    <div class="player-profile-avatar" aria-hidden="true"><%= player_profile_initials(player) %></div>
+    <%= player_identity_badge(player, size: :lg) %>
     <div class="player-profile-identity">
       <h1><%= player.name %></h1>
       <p>@<%= player.nickname %></p>

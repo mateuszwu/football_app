@@ -25,7 +25,7 @@ RSpec.describe Synergy::CombinationRankingQuery do
           away_team = create(:team, team_setup:, team_type: Team::TEAM_TYPE_MATCH)
           adam_team_player = create(:team_player, team: home_team, player: adam)
           bartek_team_player = create(:team_player, team: home_team, player: bartek)
-          create(:team_player, team: home_team, player: cezary)
+          cezary_team_player = create(:team_player, team: home_team, player: cezary)
           create(:team_player, team: away_team, player: damian)
           match = create(
             :match,
@@ -37,25 +37,32 @@ RSpec.describe Synergy::CombinationRankingQuery do
             finished_at: index.days.ago
           )
           create(:match_goal, match:, scoring_team: home_team, scorer_team_player: adam_team_player, assistant_team_player: bartek_team_player)
+          create(:match_goal, match:, scoring_team: home_team, scorer_team_player: cezary_team_player, assistant_team_player: adam_team_player)
         end
 
         result = described_class.call(
           season:,
-          combination_size: 3,
+          combination_size: 2,
           direction: "best",
           limit: 20,
           minimum_shared_matches: 3,
           player_filter: nil
         )
 
-        expect(result.size).to eq(1)
-        expect(result.first.players).to contain_exactly(adam, bartek, cezary)
-        expect(result.first.shared_matches_count).to eq(3)
-        expect(result.first.wins).to eq(3)
-        expect(result.first.win_rate).to eq(100)
-        expect(result.first.goals).to eq(3)
-        expect(result.first.assists).to eq(3)
-        expect(result.first.goals_assists).to eq(6)
+        adam_and_bartek = result.find { |entry| entry.players.sort_by(&:id) == [ adam, bartek ].sort_by(&:id) }
+        adam_and_cezary = result.find { |entry| entry.players.sort_by(&:id) == [ adam, cezary ].sort_by(&:id) }
+
+        expect(result.size).to eq(3)
+        expect(adam_and_bartek.shared_matches_count).to eq(3)
+        expect(adam_and_bartek.wins).to eq(3)
+        expect(adam_and_bartek.win_rate).to eq(100)
+        expect(adam_and_bartek.goals).to eq(3)
+        expect(adam_and_bartek.assists).to eq(6)
+        expect(adam_and_bartek.goals_assists).to eq(9)
+        expect(adam_and_bartek.mutual_assists).to eq(3)
+        expect(adam_and_cezary.goals).to eq(6)
+        expect(adam_and_cezary.assists).to eq(3)
+        expect(adam_and_cezary.mutual_assists).to eq(3)
       end
     end
 

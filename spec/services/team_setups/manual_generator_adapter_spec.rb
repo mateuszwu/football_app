@@ -36,5 +36,35 @@ RSpec.describe TeamSetups::ManualGeneratorAdapter do
         )
       end
     end
+
+    context "when a team captain is assigned" do
+      it "keeps the captain when the player belongs to the team" do
+        result = described_class.call(
+          teams_data: [
+            { name: "Team A", player_ids: [ "1", "2" ], captain_id: "2" }
+          ]
+        )
+
+        expect(result).to eq(
+          [
+            { name: "Team A", team_type: "baseline", player_ids: [ 1, 2 ], captain_id: 2 }
+          ]
+        )
+      end
+
+      it "omits the captain when the player does not belong to the team" do
+        result = described_class.call(
+          teams_data: [
+            { name: "Team A", player_ids: [ "1", "2" ], captain_id: "3" }
+          ]
+        )
+
+        expect(result).to eq(
+          [
+            { name: "Team A", team_type: "baseline", player_ids: [ 1, 2 ] }
+          ]
+        )
+      end
+    end
   end
 end

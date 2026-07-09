@@ -5,7 +5,7 @@ module MatchDays
         matches.first
       end
     end
-    ParsedGoal = Struct.new(:team_name, :scorer_name, :assistant_name, :own_goal, keyword_init: true)
+    ParsedGoal = Struct.new(:team_name, :scorer_name, :assistant_name, :scored_at, :own_goal, keyword_init: true)
 
     def self.call(payload:, season:, available_players:)
       new(payload:, season:, available_players:).call
@@ -98,7 +98,8 @@ module MatchDays
       team_data = team.to_h.symbolize_keys
       {
         name: team_data[:name].to_s.strip,
-        player_names: Array(team_data[:players]).map { |player_name| player_name.to_s.strip }.reject(&:blank?)
+        player_names: Array(team_data[:players]).map { |player_name| player_name.to_s.strip }.reject(&:blank?),
+        captain_name: team_data[:captain].to_s.strip.presence
       }
     end
 
@@ -108,6 +109,7 @@ module MatchDays
         team_name: goal_data[:team].to_s.strip,
         scorer_name: goal_data[:scorer].to_s.strip,
         assistant_name: goal_data[:assistant].to_s.strip.presence,
+        scored_at: goal_data[:scored_at],
         own_goal: ActiveModel::Type::Boolean.new.cast(goal_data[:own_goal]) || false
       )
     end
@@ -143,6 +145,10 @@ module MatchDays
     def validate_team(team, label:)
       errors << "#{label} name is required" if team[:name].blank?
       errors << "#{team[:name].presence || label} needs at least one player" if team[:player_names].empty?
+      return if team[:captain_name].blank?
+      return if team[:player_names].any? { |player_name| same_player?(player_name, team[:captain_name]) }
+
+      errors << "#{team[:captain_name]} must be listed in #{team[:name].presence || label} as a player"
     end
 
     def validate_match_players_are_in_original_teams(match_data, match_index:)
@@ -224,6 +230,7 @@ module MatchDays
         player = player_for(player_name)
         team.team_players.create!(player:, position:)
       end
+      team.update!(captain: player_for(team_data[:captain_name])) if team_data[:captain_name].present?
 
       team
     end
@@ -250,7 +257,7 @@ module MatchDays
           scorer_team_player_id: team_player_for(goal.own_goal ? opponent_team_for(match, scoring_team) : scoring_team, goal.scorer_name).id,
           assistant_team_player_id: goal.assistant_name.present? ? team_player_for(scoring_team, goal.assistant_name).id : nil,
           own_goal: goal.own_goal,
-          scored_at: match_started_at(match_data, match_index:) + (goal_index + 1).minutes
+          scored_at: goal_scored_at(goal, match_data:, match_index:, goal_index:)
         )
 
         next if result
@@ -275,7 +282,8 @@ module MatchDays
         teams_data: original_teams_data.map do |team|
           {
             name: team[:name],
-            player_ids: team[:player_names].map { |player_name| player_for(player_name).id }
+            player_ids: team[:player_names].map { |player_name| player_for(player_name).id },
+            captain_id: player_for(team[:captain_name])&.id
           }
         end
       }
@@ -288,7 +296,10 @@ module MatchDays
     def imported_player_names
       (
         original_player_names +
-        matches_data.flat_map { |match_data| match_data[:teams].flat_map { |team| team[:player_names] } }
+        original_teams_data.filter_map { |team| team[:captain_name] } +
+        matches_data.flat_map do |match_data|
+          match_data[:teams].flat_map { |team| team[:player_names] + [ team[:captain_name] ].compact }
+        end
       ).uniq
     end
 
@@ -335,6 +346,10 @@ module MatchDays
 
     def match_finished_at(match_data)
       parse_time(match_data[:finished_at])
+    end
+
+    def goal_scored_at(goal, match_data:, match_index:, goal_index:)
+      parse_time(goal.scored_at) || match_started_at(match_data, match_index:) + (goal_index + 1).minutes
     end
 
     def parse_time(value)

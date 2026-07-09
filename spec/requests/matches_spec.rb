@@ -11,9 +11,11 @@ RSpec.describe "Matches" do
           home_team = create(:team, team_setup: team_setup, name: "Team A", team_type: "match")
           away_team = create(:team, team_setup: team_setup, name: "Team B", team_type: "match")
           home_player = create(:player, name: "Adam Nowak", nickname: "adam", phone: "+48111111111")
+          home_player.update_columns(profile_icon: "sun", profile_color_key: "red_dark", profile_color_hex: "#B91C1C")
           away_player = create(:player, name: "Marek Kowalski", nickname: "marek", phone: "+48222222222")
-          create(:team_player, team: home_team, player: home_player)
+          create(:team_player, team: home_team, player: home_player, position: 1)
           create(:team_player, team: away_team, player: away_player)
+          home_team.update!(captain: home_player)
           match = create(
             :match,
             match_day: match_day,
@@ -27,6 +29,9 @@ RSpec.describe "Matches" do
           get "/matches/#{match.id}"
 
           expect(response).to have_http_status(:ok)
+          expect(response.body).to include('<body class="theme-dark public-layout">')
+          expect(response.body).to include("Football App")
+          expect(response.body).to include("Weekendowe granie")
           expect(response.body).to include("MECZ")
           expect(response.body).to include("Team A vs Team B")
           expect(response.body).to include("Summer 2026")
@@ -41,8 +46,13 @@ RSpec.describe "Matches" do
           expect(response.body).to include("Czas meczu")
           expect(response.body).to include("34:30")
           expect(response.body).to include("Składy i wkład zawodników")
+          expect(response.body).to include(">SAM</span>")
+          expect(response.body).not_to include(">SG</span>")
           expect(response.body).to include("Adam Nowak")
           expect(response.body).to include("Marek Kowalski")
+          expect(response.body).to include("lucide-sun")
+          expect(response.body).to include("--captain-color: #B91C1C")
+          expect(response.body).to include("Kapitan")
           expect(response.body).not_to include("Mecz live")
           expect(response.body).not_to include("Ostatnie wydarzenia")
           expect(response.body).not_to include("+48111111111")
@@ -129,6 +139,8 @@ RSpec.describe "Matches" do
         expect(response.body).to include("Przebieg meczu")
         expect(response.body).to include("Team A")
         expect(response.body).to include("Adam Nowak")
+        expect(response.body).to include("13. minuta")
+        expect(response.body).to include("26. minuta")
         expect(response.body).to include("asysta: Jan Kowalski")
         expect(response.body).to include("0:0 → 1:0 → 2:0")
         expect(response.body).to include("2 : 0")
@@ -512,9 +524,9 @@ RSpec.describe "Matches" do
         patch "/matches/#{match.id}/update_lineup", params: {
           match: {
             teams_data: [
-              { id: home_team.id, name: "Team A", player_ids: [ second_player.id.to_s ] },
-              { id: away_team.id, name: "Team B", player_ids: [ first_player.id.to_s ] },
-              { name: "Waiting", player_ids: [ third_player.id.to_s ] }
+              { id: home_team.id, name: "Team A", player_ids: [ second_player.id.to_s ], captain_id: second_player.id.to_s },
+              { id: away_team.id, name: "Team B", player_ids: [ first_player.id.to_s ], captain_id: third_player.id.to_s },
+              { name: "Waiting", player_ids: [ third_player.id.to_s ], captain_id: third_player.id.to_s }
             ]
           }
         }
@@ -524,6 +536,9 @@ RSpec.describe "Matches" do
         expect(match.reload.home_team.players).to contain_exactly(second_player)
         expect(match.away_team.players).to contain_exactly(first_player)
         expect(match.teams.find_by!(name: "Waiting").players).to contain_exactly(third_player)
+        expect(match.home_team.captain).to eq(second_player)
+        expect(match.away_team.captain).to be_nil
+        expect(match.teams.find_by!(name: "Waiting").captain).to eq(third_player)
       ensure
         if original_admin_password.nil?
           ENV.delete("FOOTBALL_APP_ADMIN_PASSWORD")

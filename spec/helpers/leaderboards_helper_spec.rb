@@ -130,14 +130,6 @@ RSpec.describe LeaderboardsHelper do
     end
   end
 
-  describe "#leaderboard_player_initials" do
-    it "returns two uppercase initials" do
-      player = build_stubbed(:player, name: "Adam Nowak")
-
-      expect(helper.leaderboard_player_initials(player)).to eq("AN")
-    end
-  end
-
   describe "#leaderboard_rank_badge" do
     it "renders medal colors for podium ranks" do
       gold = helper.leaderboard_rank_badge(1)

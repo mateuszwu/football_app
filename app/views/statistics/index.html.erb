@@ -280,20 +280,30 @@
         <article class="stats-sidebar-card">
           <span><%= t("statistics.index.cards.biggest_comeback") %></span>
           <strong><%= sidebar.dig(:biggest_comeback, :value) || "-" %></strong>
-          <p><%= sidebar.dig(:biggest_comeback, :subject) %></p>
+          <p>
+            <% if sidebar.dig(:biggest_comeback, :match).present? %>
+              <%= statistics_match_meta(sidebar.dig(:biggest_comeback, :match)) %>
+            <% else %>
+              <%= sidebar.dig(:biggest_comeback, :subject) %>
+            <% end %>
+          </p>
         </article>
-        <article class="stats-sidebar-card">
-          <span><%= t("statistics.index.cards.most_common_scenario") %></span>
-          <strong><%= sidebar.dig(:most_common_scenario, :state) || "-" %></strong>
-          <% if sidebar.dig(:most_common_scenario, :hold_rate).present? %>
-            <p><%= statistics_format_percentage(sidebar.dig(:most_common_scenario, :hold_rate)) %></p>
-          <% end %>
-        </article>
-        <article class="stats-sidebar-card">
-          <span><%= t("statistics.index.quick_preview") %></span>
-          <p><%= t("statistics.index.comebacks.first_goal_conceded") %>: <strong><%= statistics_format_percentage(sidebar.dig(:quick, :wins_after_conceding_first)) %></strong></p>
-          <p><%= t("statistics.index.comebacks.lead_four_zero") %>: <strong><%= statistics_format_percentage(sidebar.dig(:quick, :lead_four_zero_hold)) %></strong></p>
-          <p><%= t("statistics.index.comeback_matches") %>: <strong><%= sidebar.dig(:quick, :comeback_matches_count) %></strong></p>
+        <article class="stats-sidebar-card statistics-quick-card">
+          <h3 class="statistics-quick-card__title"><%= t("statistics.index.quick_preview") %></h3>
+          <div class="statistics-quick-list">
+            <div class="statistics-quick-row">
+              <div class="statistics-quick-value"><%= statistics_format_percentage(sidebar.dig(:quick, :wins_after_conceding_first)) %></div>
+              <div class="statistics-quick-label"><%= t("statistics.index.comebacks.first_goal_conceded") %></div>
+            </div>
+            <div class="statistics-quick-row">
+              <div class="statistics-quick-value"><%= statistics_format_percentage(sidebar.dig(:quick, :lead_four_zero_hold)) %></div>
+              <div class="statistics-quick-label"><%= t("statistics.index.comebacks.lead_four_zero") %></div>
+            </div>
+            <div class="statistics-quick-row">
+              <div class="statistics-quick-value"><%= sidebar.dig(:quick, :comeback_matches_count) %></div>
+              <div class="statistics-quick-label"><%= t("statistics.index.comeback_matches") %></div>
+            </div>
+          </div>
         </article>
       </aside>
     </div>

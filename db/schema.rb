@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_06_124500) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_09_150000) do
   create_table "match_day_players", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.integer "match_day_id", null: false
@@ -104,20 +104,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_06_124500) do
     t.datetime "created_at", null: false
     t.integer "elo_delta"
     t.decimal "elo_k_value", precision: 6, scale: 2
-    t.integer "match_id"
     t.integer "match_day_id", null: false
+    t.integer "match_id"
     t.integer "new_elo_score"
     t.integer "old_elo_score"
-    t.integer "player_id", null: false
     t.decimal "performance_delta", precision: 8, scale: 2
     t.decimal "player_advantage_elo", precision: 6, scale: 2
+    t.integer "player_id", null: false
     t.string "rating_scope", null: false
     t.string "reason", null: false
     t.integer "season_id", null: false
     t.string "source_type", null: false
     t.datetime "updated_at", null: false
-    t.index ["match_id"], name: "index_player_rating_changes_on_match_id"
     t.index ["match_day_id"], name: "index_player_rating_changes_on_match_day_id"
+    t.index ["match_id"], name: "index_player_rating_changes_on_match_id"
     t.index ["player_id"], name: "index_player_rating_changes_on_player_id"
     t.index ["season_id"], name: "index_player_rating_changes_on_season_id"
   end
@@ -129,8 +129,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_06_124500) do
     t.integer "elo"
     t.integer "goals", default: 0, null: false
     t.integer "mvp_votes_count", default: 0, null: false
-    t.integer "player_id", null: false
     t.decimal "performance_score", precision: 8, scale: 2, default: "0.0", null: false
+    t.integer "player_id", null: false
     t.integer "season_id", null: false
     t.datetime "updated_at", null: false
     t.index ["player_id", "season_id"], name: "index_player_season_stats_on_player_id_and_season_id", unique: true
@@ -148,7 +148,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_06_124500) do
     t.decimal "global_performance_score", precision: 8, scale: 2, default: "0.0", null: false
     t.string "name", null: false
     t.string "nickname", null: false
-    t.string "phone", null: false
+    t.string "phone"
+    t.string "profile_color_hex"
+    t.string "profile_color_key"
+    t.string "profile_icon"
     t.datetime "rejected_at"
     t.string "role_code", default: "ANY", null: false
     t.datetime "updated_at", null: false
@@ -156,6 +159,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_06_124500) do
     t.index ["approval_status"], name: "index_players_on_approval_status"
     t.index ["nickname"], name: "index_players_on_nickname", unique: true
     t.index ["phone"], name: "index_players_on_phone", unique: true
+    t.index ["profile_color_key", "profile_icon"], name: "index_players_on_profile_color_key_and_profile_icon"
+    t.index ["profile_color_key"], name: "index_players_on_profile_color_key"
+    t.index ["profile_icon"], name: "index_players_on_profile_icon"
     t.index ["role_code"], name: "index_players_on_role_code"
   end
 
@@ -214,6 +220,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_06_124500) do
   end
 
   create_table "teams", force: :cascade do |t|
+    t.integer "captain_id"
     t.datetime "created_at", null: false
     t.integer "elo_after"
     t.integer "elo_before"
@@ -229,6 +236,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_06_124500) do
     t.integer "team_setup_id", null: false
     t.string "team_type", null: false
     t.datetime "updated_at", null: false
+    t.index ["captain_id"], name: "index_teams_on_captain_id"
     t.index ["match_id"], name: "index_teams_on_match_id"
     t.index ["source_team_id"], name: "index_teams_on_source_team_id"
     t.index ["team_setup_id"], name: "index_teams_on_team_setup_id"
@@ -251,8 +259,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_06_124500) do
   add_foreign_key "matches", "team_setups"
   add_foreign_key "matches", "teams", column: "away_team_id"
   add_foreign_key "matches", "teams", column: "home_team_id"
-  add_foreign_key "player_rating_changes", "matches"
   add_foreign_key "player_rating_changes", "match_days"
+  add_foreign_key "player_rating_changes", "matches"
   add_foreign_key "player_rating_changes", "players"
   add_foreign_key "player_rating_changes", "seasons"
   add_foreign_key "player_season_stats", "players"
@@ -261,6 +269,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_06_124500) do
   add_foreign_key "team_players", "teams"
   add_foreign_key "team_setups", "match_days"
   add_foreign_key "teams", "matches"
+  add_foreign_key "teams", "players", column: "captain_id"
   add_foreign_key "teams", "team_setups"
   add_foreign_key "teams", "teams", column: "source_team_id"
 end

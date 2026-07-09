@@ -60,6 +60,7 @@ module Teams
         {
           id: team_data[:id].presence&.to_i,
           name:,
+          captain_id: normalize_captain_id(team_data[:captain_id], player_ids),
           player_ids:
         }
       end
@@ -115,12 +116,19 @@ module Teams
         player = Player.find(player_id)
         team.team_players.create!(player:, position: player_index + 1)
       end
+      team.update!(captain_id: team_data[:captain_id]) if team_data[:captain_id].present?
 
       team
     end
 
     def normalize_ids(ids)
       Array(ids).reject(&:blank?).map(&:to_i).uniq
+    end
+
+    def normalize_captain_id(captain_id, player_ids)
+      captain_id = captain_id.presence&.to_i
+
+      player_ids.include?(captain_id) ? captain_id : nil
     end
   end
 end

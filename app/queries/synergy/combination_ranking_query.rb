@@ -8,6 +8,7 @@ module Synergy
       :losses,
       :goals,
       :assists,
+      :mutual_assists,
       :goal_difference,
       keyword_init: true
     ) do
@@ -76,6 +77,7 @@ module Synergy
         result.shared_matches_count += 1
         result.goals += goals_for_combo(match:, team:, player_ids:)
         result.assists += assists_for_combo(match:, team:, player_ids:)
+        result.mutual_assists += mutual_assists_for_combo(match:, team:, player_ids:)
         result.goal_difference += goal_difference_for(match:, team:)
         update_record(result:, match:, team:)
       end
@@ -107,6 +109,7 @@ module Synergy
         losses: 0,
         goals: 0,
         assists: 0,
+        mutual_assists: 0,
         goal_difference: 0
       )
     end
@@ -130,6 +133,15 @@ module Synergy
     def assists_for_combo(match:, team:, player_ids:)
       match.active_match_goals.count do |goal|
         goal.scoring_team_id == team.id && goal.assistant_team_player.present? && player_ids.include?(goal.assistant_team_player.player_id)
+      end
+    end
+
+    def mutual_assists_for_combo(match:, team:, player_ids:)
+      match.active_match_goals.count do |goal|
+        goal.scoring_team_id == team.id &&
+          goal.assistant_team_player.present? &&
+          player_ids.include?(goal.scorer_team_player.player_id) &&
+          player_ids.include?(goal.assistant_team_player.player_id)
       end
     end
 

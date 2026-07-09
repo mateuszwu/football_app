@@ -38,6 +38,7 @@ module TeamSetups
               elo_delta: team_player.elo_delta
             )
           end
+          match_team.update!(captain_id: previous_team.captain_id) if previous_team.captain_id.present?
         end
       end
 

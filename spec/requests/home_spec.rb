@@ -149,7 +149,8 @@ RSpec.describe "Home page" do
         expect(day_balance_tile).to include("Bilans dnia")
         expect(day_balance_tile).not_to include("teamy")
         expect(response.body).to include("Zobacz wszystkie mecze dnia")
-        expect(response.body).to include(match_path(match))
+        expect(day_balance_tile).to include(match_day_path(match_day))
+        expect(day_balance_tile).not_to include(match_path(match))
         expect(response.body).to include("1040")
         expect(response.body).to include("Adam Nowak")
         expect(response.body).to include("Jan Kowal")
@@ -158,6 +159,18 @@ RSpec.describe "Home page" do
         expect(response.body).not_to include("otwartych tokenów")
         top_scorers_tile = response.body[/<article class="dashboard-tile dashboard-tile--span-3 dashboard-tile--ranking" id="top_scorers">.*?<\/article>/m]
         expect(top_scorers_tile.scan(/ranking-preview__rank">(\d+)</).flatten).to eq(%w[1 1 3])
+        expect(top_scorers_tile).to include(
+          "player-identity-pill player-identity-pill--xs player-identity-pill--compact"
+        )
+        expect(top_scorers_tile).not_to include("ranking-preview__avatar")
+        expect(top_scorers_tile).not_to include("Napastnik")
+        expect(top_scorers_tile).not_to include("Pomocnik")
+        expect(top_scorers_tile).not_to include("Obrońca")
+        expect(day_balance_tile).to include(
+          "player-identity-pill player-identity-pill--xs player-identity-pill--compact"
+        )
+        expect(response.body).to include("dashboard-best-duo__players")
+        expect(response.body).not_to include("dashboard-best-duo__avatars")
         expect(response.body).to include("Najlepszy duet")
         expect(response.body).to include("1 wspólny dzień grania")
         expect(response.body).to include("1W · 0R · 0P")
@@ -172,6 +185,25 @@ RSpec.describe "Home page" do
         expect(response.body).not_to include("+48111111111")
         expect(response.body).not_to include("+48222222222")
         expect(response.body).not_to include("+48333333333")
+      end
+
+      it "renders no data for MVP and DEF when no player has votes" do
+        season = create(:season, name: "Summer 2026", status: Season::STATUS_ACTIVE)
+        player = create(:player, name: "Kuba Bratek", nickname: "kuba", approval_status: "approved", active: true)
+        match_day = create(:match_day, season:, played_on: Date.current, status: "finished")
+        match_day_player = create(:match_day_player, match_day:, player:)
+        create(:match_day_vote_token, match_day_player:, expires_at: 1.day.from_now)
+        create(:player_season_stat, season:, player:, elo: 1000, mvp_votes_count: 0, def_votes_count: 0)
+
+        get root_path
+
+        expect(response).to have_http_status(:ok)
+        mvp_def_tile = response.body[/<article class="dashboard-tile dashboard-tile--span-5 dashboard-tile--wide" id="mvp_def">.*?<\/article>/m]
+        expect(mvp_def_tile).to include("MVP sezonu")
+        expect(mvp_def_tile).to include("Najlepszy DEF")
+        expect(mvp_def_tile.scan("Brak danych").size).to eq(2)
+        expect(mvp_def_tile).not_to include("Kuba Bratek")
+        expect(mvp_def_tile).not_to include("0 głosów")
       end
     end
   end

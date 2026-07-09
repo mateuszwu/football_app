@@ -7,7 +7,7 @@ RSpec.describe Matches::UpdateLineupParams do
         params = {
           match: {
             teams_data: {
-              "0" => { "id" => "10", "name" => "Team A", "player_ids" => [ "1", "2" ] },
+              "0" => { "id" => "10", "name" => "Team A", "captain_id" => "2", "player_ids" => [ "1", "2" ] },
               "1" => { "id" => "11", "name" => "Team B" }
             }
           }
@@ -17,8 +17,8 @@ RSpec.describe Matches::UpdateLineupParams do
 
         expect(result).to eq(
           [
-            { id: "10", name: "Team A", player_ids: [ "1", "2" ] },
-            { id: "11", name: "Team B", player_ids: [] }
+            { id: "10", name: "Team A", captain_id: "2", player_ids: [ "1", "2" ] },
+            { id: "11", name: "Team B", captain_id: nil, player_ids: [] }
           ]
         )
       end
@@ -38,7 +38,7 @@ RSpec.describe Matches::UpdateLineupParams do
 
         expect(result).to eq(
           [
-            { id: "10", name: "Team A", player_ids: [ "1" ] }
+            { id: "10", name: "Team A", captain_id: nil, player_ids: [ "1" ] }
           ]
         )
       end
@@ -71,7 +71,7 @@ RSpec.describe Matches::UpdateLineupParams do
 
         expect(result).to eq(
           [
-            { id: "10", name: "Team A", player_ids: [ "1" ] }
+            { id: "10", name: "Team A", captain_id: nil, player_ids: [ "1" ] }
           ]
         )
       end

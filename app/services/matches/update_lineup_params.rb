@@ -15,6 +15,7 @@ module Matches
         {
           id: team[:id],
           name: team[:name],
+          captain_id: team[:captain_id],
           player_ids: team[:player_ids] || []
         }
       end

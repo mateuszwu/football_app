@@ -1,5 +1,13 @@
 module Ratings
   class RecalculateSeasonElo
+    PRESERVED_STAT_COLUMNS = %i[
+      goals
+      assists
+      mvp_votes_count
+      def_votes_count
+      performance_score
+    ].freeze
+
     def self.call(season:)
       new(season:).call
     end
@@ -9,6 +17,7 @@ module Ratings
     end
 
     def call
+      preserved_stats = preserved_stats_by_player_id
       reset_recalculation_state!
 
       elo_map = initial_elo_map
@@ -20,6 +29,7 @@ module Ratings
       end
 
       persist(elo_map)
+      restore_preserved_stats!(preserved_stats)
       season.update!(elo_recalculated_at: Time.current)
     end
 
@@ -30,6 +40,21 @@ module Ratings
     def reset_recalculation_state!
       season.player_season_stats.delete_all
       season.player_rating_changes.where(source_type: PlayerRatingChange::SOURCE_TYPE_MATCH).delete_all
+    end
+
+    def preserved_stats_by_player_id
+      PlayerSeasonStat.where(season:).each_with_object({}) do |player_season_stat, preserved|
+        preserved[player_season_stat.player_id] = player_season_stat.attributes.symbolize_keys.slice(
+          *PRESERVED_STAT_COLUMNS
+        )
+      end
+    end
+
+    def restore_preserved_stats!(preserved_stats)
+      PlayerSeasonStat.where(season:).find_each do |player_season_stat|
+        attributes = preserved_stats[player_season_stat.player_id]
+        player_season_stat.update!(attributes) if attributes.present?
+      end
     end
 
     def initial_elo_map

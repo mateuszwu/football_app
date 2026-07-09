@@ -31,9 +31,24 @@ RSpec.describe "Statistics" do
         expect(response.body).to include("Rozkład czasu meczów")
         expect(response.body).to include("data-controller=\"stats-chart\"")
         expect(response.body).to include("Zawodnicy clutch")
+        expect(response.body).to include("statistics-quick-row")
+        expect(response.body).to include("statistics-quick-value")
+        expect(response.body).to include("statistics-match-link")
+        expect(response.body).to include(match_path(match))
+        expect(response.body).not_to include("Najczęstszy scenariusz")
         expect(response.body).not_to include("+48111111111")
         expect(response.body).not_to include("+48222222222")
         expect(response.body).not_to include("phone")
+
+        get "/statistics", params: { season_id: season.id, tab: "records" }
+
+        expect(response).to have_http_status(:ok)
+        expect(response.body).to include("Najwięcej goli w meczu")
+        expect(response.body).to include("Adam Demo")
+        expect(response.body).to include("5 goli")
+        expect(response.body).to include("Największa dominacja")
+        expect(response.body).to include("+5 / 5:0")
+        expect(response.body).to include(match_path(match))
       end
     end
 

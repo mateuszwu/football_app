@@ -38,6 +38,14 @@ RSpec.describe RelationshipsHelper do
   end
 
   describe "#relationship_primary_metric" do
+    it "uses mutual assists for direct offensive cards" do
+      summary = Relationships::DuoInsightsQuery::Summary.new(mutual_assists: 3)
+
+      result = helper.relationship_primary_metric(summary, :direct_offense_total)
+
+      expect(result).to eq("3 asysty między sobą")
+    end
+
     it "falls back to shared days when win rate is unavailable" do
       summary = Relationships::DuoInsightsQuery::Summary.new(
         shared_matches_count: 0,
@@ -57,31 +65,23 @@ RSpec.describe RelationshipsHelper do
     end
   end
 
-  describe "#relationship_player_avatars" do
-    it "renders player initials without a size modifier by default" do
-      player = build_stubbed(:player, name: "Adam Demo")
-
-      result = helper.relationship_player_avatars([ player ])
-
-      expect(result).to include("AD")
-      expect(result).to include("href=\"#{player_path(player)}\"")
-      expect(result).to include("data-turbo-frame=\"_top\"")
-      expect(result).to include("title=\"Adam Demo\"")
-      expect(result).to include("aria-label=\"Adam Demo\"")
-      expect(result).to include("relationship-avatar__tooltip")
-      expect(result).not_to include("relationship-avatar--")
+  describe "#relationship_win_rate_class" do
+    context "when the win rate is at least 50 percent" do
+      it "returns the positive class" do
+        expect(helper.relationship_win_rate_class(50)).to eq("relationship-win-rate relationship-win-rate--positive")
+      end
     end
-  end
 
-  describe "#relationship_player_names" do
-    it "renders profile links that escape the relationships turbo frame" do
-      player = build_stubbed(:player, name: "Adam Demo")
+    context "when the win rate is below 50 percent" do
+      it "returns the negative class" do
+        expect(helper.relationship_win_rate_class(49)).to eq("relationship-win-rate relationship-win-rate--negative")
+      end
+    end
 
-      result = helper.relationship_player_names([ player ])
-
-      expect(result).to include("Adam Demo")
-      expect(result).to include("href=\"#{player_path(player)}\"")
-      expect(result).to include("data-turbo-frame=\"_top\"")
+    context "when the win rate is unavailable" do
+      it "returns the neutral base class" do
+        expect(helper.relationship_win_rate_class(nil)).to eq("relationship-win-rate")
+      end
     end
   end
 

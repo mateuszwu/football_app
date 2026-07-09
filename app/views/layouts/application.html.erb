@@ -32,8 +32,6 @@
         "theme-dark public-layout"
       elsif controller_path.start_with?("admin/")
         "theme-light admin-layout"
-      elsif controller_name == "matches" && action_name == "show"
-        "theme-dark live-layout"
       else
         "theme-dark public-layout"
       end

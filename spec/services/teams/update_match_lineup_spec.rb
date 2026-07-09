@@ -23,9 +23,9 @@ RSpec.describe Teams::UpdateMatchLineup do
       result = described_class.call(
         match: match,
         teams_data: [
-          { id: home_team.id, name: "Team A", player_ids: [ second_player.id.to_s ] },
-          { id: away_team.id, name: "Team B", player_ids: [ first_player.id.to_s ] },
-          { name: "Waiting", player_ids: [ third_player.id.to_s ] }
+          { id: home_team.id, name: "Team A", player_ids: [ second_player.id.to_s ], captain_id: second_player.id.to_s },
+          { id: away_team.id, name: "Team B", player_ids: [ first_player.id.to_s ], captain_id: third_player.id.to_s },
+          { name: "Waiting", player_ids: [ third_player.id.to_s ], captain_id: third_player.id.to_s }
         ]
       )
 
@@ -34,6 +34,9 @@ RSpec.describe Teams::UpdateMatchLineup do
       expect(match.away_team.players).to contain_exactly(first_player)
       expect(match.teams.find_by!(name: "Waiting").players).to contain_exactly(third_player)
       expect(match.teams.find_by!(name: "Waiting")).not_to be_playing
+      expect(match.home_team.captain).to eq(second_player)
+      expect(match.away_team.captain).to be_nil
+      expect(match.teams.find_by!(name: "Waiting").captain).to eq(third_player)
     end
 
     it "returns false when a player is left unassigned" do

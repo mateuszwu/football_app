@@ -7,6 +7,7 @@
       <span><%= t("players.profile.synergy.shared_matches") %>: <strong><%= result.shared_matches_count %></strong></span>
       <span><%= t("players.profile.synergy.win_rate") %>: <strong><%= result.win_rate || 0 %>%</strong></span>
       <span><%= t("players.profile.synergy.goals_assists") %>: <strong><%= result.goals_assists %></strong></span>
+      <span><%= t("players.profile.synergy.mutual_assists") %>: <strong><%= result.mutual_assists %></strong></span>
     </div>
   <% else %>
     <%= render "players/profile_empty", title: t("players.profile.empty.no_synergy_title"), body: t("players.profile.empty.no_synergy_body") %>

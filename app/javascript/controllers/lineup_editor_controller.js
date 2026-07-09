@@ -16,6 +16,7 @@ export default class extends Controller {
       teams: (this.teamsValue || []).map((team) => ({
         id: team.id || null,
         name: team.name,
+        captain_id: team.captain_id ? String(team.captain_id) : "",
         player_ids: (team.player_ids || []).map(String),
       })),
     };
@@ -33,6 +34,7 @@ export default class extends Controller {
     const teamIndex = this.state.teams.length + 1;
     this.state.teams.push({
       name: `Team ${teamIndex}`,
+      captain_id: "",
       player_ids: [],
     });
     this.render();
@@ -48,6 +50,11 @@ export default class extends Controller {
   renameTeam(event) {
     const index = parseInt(event.currentTarget.dataset.teamIndex);
     this.state.teams[index].name = event.currentTarget.value;
+  }
+
+  changeCaptain(event) {
+    const index = parseInt(event.currentTarget.dataset.teamIndex);
+    this.state.teams[index].captain_id = event.currentTarget.value;
   }
 
   selectedPlayers() {
@@ -85,6 +92,9 @@ export default class extends Controller {
         }
         return false;
       });
+      if (!team.player_ids.includes(team.captain_id)) {
+        team.captain_id = team.player_ids[0] || "";
+      }
     });
   }
 
@@ -204,6 +214,27 @@ export default class extends Controller {
     });
 
     section.appendChild(list);
+
+    const captainSelect = document.createElement("select");
+    captainSelect.className = "lineup-column__captain-select";
+    captainSelect.name = `${this.inputNamePrefixValue}[${index}][captain_id]`;
+    captainSelect.dataset.teamIndex = index;
+    captainSelect.dataset.action = "lineup-editor#changeCaptain";
+
+    const blankOption = document.createElement("option");
+    blankOption.value = "";
+    blankOption.textContent = "Kapitan";
+    captainSelect.appendChild(blankOption);
+
+    teamPlayers.forEach((player) => {
+      const option = document.createElement("option");
+      option.value = player.id;
+      option.textContent = player.label;
+      option.selected = team.captain_id === player.id;
+      captainSelect.appendChild(option);
+    });
+
+    section.appendChild(captainSelect);
 
     const inputsContainer = document.createElement("div");
     if (team.id) {

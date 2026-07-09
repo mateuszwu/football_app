@@ -16,26 +16,26 @@ RSpec.describe "API match imports" do
             season_id: season.id,
             played_on: "2026-06-19",
             original_teams: [
-              { name: "Original A", players: [ "adam", "jan" ] },
-              { name: "Original B", players: [ "marek" ] }
+              { name: "Original A", players: [ "adam", "jan" ], captain: "adam" },
+              { name: "Original B", players: [ "marek" ], captain: "marek" }
             ],
             matches: [
               {
                 started_at: "2026-06-19 19:00",
                 finished_at: "2026-06-19 19:30",
                 teams: [
-                  { name: "Team A", players: [ "adam" ] },
-                  { name: "Team B", players: [ "jan" ] }
+                  { name: "Team A", players: [ "adam" ], captain: "adam" },
+                  { name: "Team B", players: [ "jan" ], captain: "jan" }
                 ],
                 goals: [
-                  { team: "Team A", scorer: "adam" }
+                  { team: "Team A", scorer: "adam", scored_at: "2026-06-19 19:12:34" }
                 ]
               },
               {
                 started_at: "2026-06-19 19:35",
                 teams: [
-                  { name: "Team A", players: [ "adam", "marek" ] },
-                  { name: "Team B", players: [ "jan" ] }
+                  { name: "Team A", players: [ "adam", "marek" ], captain: "marek" },
+                  { name: "Team B", players: [ "jan" ], captain: "jan" }
                 ],
                 goals: [
                   { team: "Team B", scorer: "jan" }
@@ -69,8 +69,13 @@ RSpec.describe "API match imports" do
           expect(matches.first.match_day.season).to eq(season)
           expect(matches.first.home_team.players.map(&:nickname)).to eq([ "adam" ])
           expect(matches.first.away_team.players.map(&:nickname)).to eq([ "jan" ])
+          expect(matches.first.home_team.captain.nickname).to eq("adam")
+          expect(matches.first.away_team.captain.nickname).to eq("jan")
+          expect(matches.first.match_goals.first.scored_at).to eq(Time.zone.parse("2026-06-19 19:12:34"))
           expect(matches.second.home_team.players.map(&:nickname)).to contain_exactly("adam", "marek")
           expect(matches.second.away_team.players.map(&:nickname)).to eq([ "jan" ])
+          expect(matches.second.home_team.captain.nickname).to eq("marek")
+          expect(matches.second.away_team.captain.nickname).to eq("jan")
         ensure
           if original_api_token.nil?
             ENV.delete("FOOTBALL_APP_API_TOKEN")

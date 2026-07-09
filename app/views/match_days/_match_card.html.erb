@@ -9,8 +9,17 @@
 
   <div class="match-day-match-card__score">
     <div class="match-day-team-block">
-      <span class="match-day-team-chip"></span>
-      <strong><%= match_row.home_team.name %></strong>
+      <div class="match-day-team-main">
+        <% if match_row.home_captain.present? %>
+          <%= player_identity_badge(match_row.home_captain, size: :sm, label: match_row.home_captain.name) %>
+        <% else %>
+          <span class="match-day-team-chip"></span>
+        <% end %>
+        <strong><%= match_row.home_team.name %></strong>
+      </div>
+      <% if match_row.home_captain.present? %>
+        <small class="match-day-captain-line"><%= t("matches.captain_short") %> <%= match_row.home_captain.name %></small>
+      <% end %>
     </div>
 
     <div class="match-day-score-block">
@@ -19,28 +28,21 @@
     </div>
 
     <div class="match-day-team-block match-day-team-block--right">
-      <strong><%= match_row.away_team.name %></strong>
-      <span class="match-day-team-chip match-day-team-chip--away"></span>
+      <div class="match-day-team-main">
+        <strong><%= match_row.away_team.name %></strong>
+        <% if match_row.away_captain.present? %>
+          <%= player_identity_badge(match_row.away_captain, size: :sm, label: match_row.away_captain.name) %>
+        <% else %>
+          <span class="match-day-team-chip match-day-team-chip--away"></span>
+        <% end %>
+      </div>
+      <% if match_row.away_captain.present? %>
+        <small class="match-day-captain-line"><%= t("matches.captain_short") %> <%= match_row.away_captain.name %></small>
+      <% end %>
     </div>
   </div>
 
   <div class="match-day-match-card__bottom">
-    <% if match_row.events.any? %>
-      <ol class="match-day-event-list">
-        <% match_row.events.each do |event| %>
-          <li>
-            <span><%= match_report_minute(event.minute_seconds) %></span>
-            <p>
-              <%= match_day_event_text(event) %>
-              <small><%= match_report_compact_score(event.score_after) %></small>
-            </p>
-          </li>
-        <% end %>
-      </ol>
-    <% else %>
-      <p class="empty-state"><%= t("match_days.show.empty.events") %></p>
-    <% end %>
-
     <%= link_to t("match_days.show.view_match"), match_path(match_row.match), class: "button button--secondary" %>
   </div>
 </article>

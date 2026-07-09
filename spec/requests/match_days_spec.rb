@@ -20,6 +20,8 @@ RSpec.describe "Match days" do
       bartek_black = create(:team_player, team: black_team, player: bartek)
       celina_green = create(:team_player, team: green_team, player: celina)
       daniel_white = create(:team_player, team: white_team, player: daniel)
+      adam.update_columns(profile_color_key: "gold", profile_color_hex: "#F59E0B", profile_icon: "chess-queen")
+      orange_team.update!(captain: adam)
       first_match = create(
         :match,
         match_day:,
@@ -103,9 +105,13 @@ RSpec.describe "Match days" do
       expect(response.body).to include("17:00 - 17:32")
       expect(response.body).to include("Orange Demo")
       expect(response.body).to include("Black Demo")
+      expect(response.body).to include("kpt. Adam Demo")
+      expect(response.body).to include("--player-color: #F59E0B")
+      expect(response.body).to include("lucide-chess-queen")
       expect(response.body).to include("2 : 1")
       expect(response.body).to include("Wygrana Orange Demo")
-      expect(response.body).to include("Bartek Demo, sam.")
+      expect(response.body).not_to include("match-day-event-list")
+      expect(response.body).not_to include("Bartek Demo, sam.")
       expect(response.body).to include("Liderzy dnia")
       expect(response.body).to include("Najlepszy strzelec")
       expect(response.body).to include("Najlepszy asystent")

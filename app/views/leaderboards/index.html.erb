@@ -86,9 +86,8 @@
                       <td><%= leaderboard_rank_badge(leaderboard_cell_value(player_stat, column, ranked_entry)) %></td>
                     <% elsif column == :player %>
                       <td>
-                        <div class="leaderboards-player">
-                          <span class="leaderboards-player__avatar"><%= leaderboard_player_initials(player_stat.player) %></span>
-                          <strong><%= link_to leaderboard_cell_value(player_stat, column, ranked_entry), player_path(player_stat.player) %></strong>
+                        <div class="leaderboard-player-cell">
+                          <%= render "shared/player_identity_pill", player: player_stat.player, size: :sm, variant: :default %>
                         </div>
                       </td>
                     <% else %>

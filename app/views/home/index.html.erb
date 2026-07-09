@@ -184,7 +184,7 @@
               <% if dashboard.day_balance.top_player.present? %>
                 <div class="day-balance-top-player">
                   <span><%= t("dashboard.labels.top_day") %></span>
-                  <strong><%= dashboard.day_balance.top_player.player.name %></strong>
+                  <%= render "shared/player_identity_pill", player: dashboard.day_balance.top_player.player, size: :xs, variant: :compact %>
                   <small><%= dashboard.day_balance.top_player.goal_assists %> G+A</small>
                 </div>
               <% end %>
@@ -197,8 +197,8 @@
           </div>
 
           <div class="dashboard-tile__footer">
-            <% if dashboard.day_balance.present? && dashboard.day_balance.first_match.present? %>
-              <%= link_to t("dashboard.cta.see_day_matches"), match_path(dashboard.day_balance.first_match), class: "dashboard-link" %>
+            <% if dashboard.day_balance.present? && dashboard.day_balance.match_day.present? %>
+              <%= link_to t("dashboard.cta.see_day_matches"), match_day_path(dashboard.day_balance.match_day), class: "dashboard-link" %>
             <% else %>
               <span class="dashboard-link dashboard-link--disabled"><%= t("dashboard.cta.see_match_days") %></span>
             <% end %>
@@ -222,21 +222,19 @@
                 <div class="dashboard-vote-card">
                   <span class="dashboard-caption"><%= t("dashboard.labels.season_mvp") %></span>
                   <% if dashboard.top_mvp.first.present? %>
-                    <strong><%= dashboard.top_mvp.first.player.name %></strong>
+                    <%= render "shared/player_identity_pill", player: dashboard.top_mvp.first.player, size: :xs, variant: :compact %>
                     <span><%= t("dashboard.labels.votes", count: dashboard.top_mvp.first.mvp_votes_count) %></span>
                   <% else %>
-                    <strong><%= t("dashboard.votes.no_leader") %></strong>
-                    <span><%= t("dashboard.labels.votes", count: 0) %></span>
+                    <strong><%= t("dashboard.votes.no_data") %></strong>
                   <% end %>
                 </div>
                 <div class="dashboard-vote-card dashboard-vote-card--def">
                   <span class="dashboard-caption"><%= t("dashboard.labels.best_def") %></span>
                   <% if dashboard.top_def.first.present? %>
-                    <strong><%= dashboard.top_def.first.player.name %></strong>
+                    <%= render "shared/player_identity_pill", player: dashboard.top_def.first.player, size: :xs, variant: :compact %>
                     <span><%= t("dashboard.labels.votes", count: dashboard.top_def.first.def_votes_count) %></span>
                   <% else %>
-                    <strong><%= t("dashboard.votes.no_leader") %></strong>
-                    <span><%= t("dashboard.labels.votes", count: 0) %></span>
+                    <strong><%= t("dashboard.votes.no_data") %></strong>
                   <% end %>
                 </div>
               </div>
@@ -269,15 +267,11 @@
               <% best_duo = dashboard.best_duo_summary %>
               <span class="dashboard-caption"><%= t("dashboard.labels.best_duo") %></span>
               <div class="dashboard-best-duo__hero">
-                <div class="dashboard-best-duo__avatars" aria-hidden="true">
-                  <span><%= best_duo.player_a.name.split.map { |part| part.first }.join.first(2).upcase %></span>
-                  <span><%= best_duo.player_b.name.split.map { |part| part.first }.join.first(2).upcase %></span>
+                <div class="dashboard-best-duo__players">
+                  <%= render "shared/player_identity_pill", player: best_duo.player_a, size: :xs, variant: :compact %>
+                  <span class="dashboard-best-duo__plus" aria-hidden="true">+</span>
+                  <%= render "shared/player_identity_pill", player: best_duo.player_b, size: :xs, variant: :compact %>
                 </div>
-                <h3 class="dashboard-best-duo__names">
-                  <%= best_duo.player_a.name %>
-                  <span>+</span>
-                  <%= best_duo.player_b.name %>
-                </h3>
               </div>
               <p class="dashboard-best-duo__days">
                 <%= t("dashboard.labels.shared_play_days", count: best_duo.shared_match_days_count) %>

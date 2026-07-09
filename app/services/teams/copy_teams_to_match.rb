@@ -82,6 +82,7 @@ module Teams
           elo_delta: team_player.elo_delta
         )
       end
+      copied_team.update!(captain_id: source_team.captain_id) if source_team.captain_id.present?
 
       copied_team
     end

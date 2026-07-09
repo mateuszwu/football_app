@@ -105,6 +105,33 @@ RSpec.describe "Admin players" do
           expect(response.body).to include("Edytuj zawodnika")
           expect(response.body).to include("Adam Nowak")
           expect(response.body).to include("+48111111111")
+          expect(response.body).to include("Identyfikacja zawodnika")
+          expect(response.body).to include("Kolor zawodnika")
+          expect(response.body).to include("Ikona zawodnika")
+          expect(response.body).to include("profile_color_key")
+          expect(response.body).to include("profile_icon")
+        ensure
+          if original_admin_password.nil?
+            ENV.delete("FOOTBALL_APP_ADMIN_PASSWORD")
+          else
+            ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = original_admin_password
+          end
+        end
+      end
+
+      it "warns about a legacy reserved icon without offering it as an option" do
+        begin
+          original_admin_password = ENV["FOOTBALL_APP_ADMIN_PASSWORD"]
+          ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = "secret-password"
+          player = create(:player)
+          player.update_columns(profile_icon: "trophy")
+
+          post "/admin/session", params: { password: "secret-password" }
+          get "/admin/players/#{player.id}/edit"
+
+          expect(response).to have_http_status(:ok)
+          expect(response.body).to include("Ta ikona jest zarezerwowana dla interfejsu aplikacji")
+          expect(response.body).not_to include('value="trophy"')
         ensure
           if original_admin_password.nil?
             ENV.delete("FOOTBALL_APP_ADMIN_PASSWORD")
@@ -146,7 +173,9 @@ RSpec.describe "Admin players" do
                 description: "Updated description",
                 role_code: "MID",
                 approval_status: "approved",
-                active: "0"
+                active: "0",
+                profile_color_key: "red_dark",
+                profile_icon: "sun"
               }
             }
           )
@@ -160,6 +189,9 @@ RSpec.describe "Admin players" do
           expect(player.role_code).to eq("MID")
           expect(player.approval_status).to eq("approved")
           expect(player).not_to be_active
+          expect(player.profile_color_key).to eq("red_dark")
+          expect(player.profile_color_hex).to eq("#B91C1C")
+          expect(player.profile_icon).to eq("sun")
         ensure
           if original_admin_password.nil?
             ENV.delete("FOOTBALL_APP_ADMIN_PASSWORD")
@@ -212,6 +244,7 @@ RSpec.describe "Admin players" do
           original_admin_password = ENV["FOOTBALL_APP_ADMIN_PASSWORD"]
           ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = "secret-password"
           player = create(:player, approval_status: "pending", active: false, approved_at: nil, rejected_at: Time.current)
+          player.update_columns(profile_color_key: nil, profile_color_hex: nil, profile_icon: nil)
 
           post "/admin/session", params: { password: "secret-password" }
           patch "/admin/players/#{player.id}/approve"
@@ -222,6 +255,9 @@ RSpec.describe "Admin players" do
           expect(player).to be_active
           expect(player.approved_at).to be_present
           expect(player.rejected_at).to be_nil
+          expect(player.profile_color_key).to be_present
+          expect(player.profile_color_hex).to be_present
+          expect(player.profile_icon).to be_present
         ensure
           if original_admin_password.nil?
             ENV.delete("FOOTBALL_APP_ADMIN_PASSWORD")

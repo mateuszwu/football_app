@@ -15,7 +15,20 @@
         <% rows.each do |row| %>
           <tr>
             <td><%= t("statistics.index.records.#{row.fetch(:key)}") %></td>
-            <td><%= statistics_row_value(row.fetch(:subject)) %></td>
+            <td>
+              <div class="statistics-record-subject">
+                <% if row.fetch(:match).present? && row.fetch(:subject) == "#{row.fetch(:match).match_day.played_on} · ##{row.fetch(:match).id}" %>
+                  <strong><%= statistics_match_meta(row.fetch(:match)) %></strong>
+                <% else %>
+                  <strong><%= statistics_row_value(row.fetch(:subject)) %></strong>
+                <% end %>
+                <% if row.fetch(:match).present? && row.fetch(:subject) != "#{row.fetch(:match).match_day.played_on} · ##{row.fetch(:match).id}" %>
+                  <span><%= statistics_match_meta(row.fetch(:match)) %></span>
+                <% elsif row.fetch(:detail).present? %>
+                  <span><%= row.fetch(:detail) %></span>
+                <% end %>
+              </div>
+            </td>
             <td><%= statistics_row_value(row.fetch(:value)) %></td>
             <td>
               <% if row.fetch(:path).present? %>

@@ -14,10 +14,11 @@
         </span>
         <% if summary.present? && !summary.empty? %>
           <span class="synergy-summary-card__label"><%= t("relationships.summary.#{card.fetch(:key)}") %></span>
-          <div class="synergy-summary-card__avatars">
-            <%= relationship_duo_avatars(summary) %>
+          <div class="relationship-summary-player-group">
+            <%= render "shared/player_identity_pill", player: summary.player_a, size: :xs, variant: :compact %>
+            <span class="relationship-summary-player-plus" aria-hidden="true">+</span>
+            <%= render "shared/player_identity_pill", player: summary.player_b, size: :xs, variant: :compact %>
           </div>
-          <strong class="synergy-summary-card__names"><%= relationship_duo_names(summary) %></strong>
           <em class="synergy-summary-card__metric"><%= relationship_primary_metric(summary, card.fetch(:primary_metric)) %></em>
           <div class="synergy-summary-card__chips">
             <% relationship_secondary_metrics(summary, card.fetch(:primary_metric)).each do |metric| %>
@@ -169,41 +170,54 @@
 
       <% if combination_ranking.any? %>
         <div class="leaderboards-table-wrap">
-          <table class="leaderboards-table relationship-duo-table">
+          <table class="leaderboards-table relationship-duo-table relationship-ranking-table">
+            <colgroup>
+              <col class="relationship-ranking-table__rank">
+              <col class="relationship-ranking-table__duet">
+              <col class="relationship-ranking-table__matches">
+              <col class="relationship-ranking-table__record">
+              <col class="relationship-ranking-table__win-rate">
+              <col class="relationship-ranking-table__offense">
+            </colgroup>
             <thead>
               <tr>
-                <th><%= t("relationships.table.position") %></th>
-                <th><%= relationship_combination_label(active_tab) %></th>
-                <th class="is-numeric"><%= t("relationships.table.shared_matches") %></th>
-                <th class="is-numeric"><%= t("relationships.table.wins") %></th>
-                <th class="is-numeric"><%= t("relationships.table.draws") %></th>
-                <th class="is-numeric"><%= t("relationships.table.losses") %></th>
-                <th class="is-numeric"><%= t("relationships.table.win_rate") %></th>
-                <th class="is-numeric"><%= t("relationships.table.goals") %></th>
-                <th class="is-numeric"><%= t("relationships.table.assists") %></th>
-                <th class="is-numeric"><%= t("relationships.table.goals_assists") %></th>
+                <th class="relationship-ranking-table__rank"><%= t("relationships.table.position") %></th>
+                <th class="relationship-ranking-table__duet"><%= relationship_combination_label(active_tab) %></th>
+                <th class="relationship-ranking-table__matches"><%= t("relationships.table.matches") %></th>
+                <th class="relationship-ranking-table__record"><%= t("relationships.table.record") %></th>
+                <th class="relationship-ranking-table__win-rate"><%= t("relationships.table.win_rate") %></th>
+                <th class="relationship-ranking-table__offense"><%= t("relationships.table.offense") %></th>
               </tr>
             </thead>
             <tbody>
               <% combination_ranking.each_with_index do |result, index| %>
                 <tr>
-                  <td><%= leaderboard_rank_badge(index + 1) %></td>
-                  <td>
-                    <div class="relationship-table-duo">
-                      <div class="relationship-table-duo__avatars">
-                        <%= relationship_player_avatars(result.players, size: "sm") %>
-                      </div>
-                      <strong><%= relationship_player_names(result.players) %></strong>
+                  <td class="relationship-ranking-table__rank"><%= leaderboard_rank_badge(index + 1) %></td>
+                  <td class="relationship-ranking-table__duet">
+                    <div class="relationship-group-cell">
+                      <% result.players.each_with_index do |player, player_index| %>
+                        <%= render "shared/player_identity_pill", player:, size: :sm, variant: :default %>
+                        <% unless player_index == result.players.size - 1 %>
+                          <span class="relationship-group-plus" aria-hidden="true">+</span>
+                        <% end %>
+                      <% end %>
                     </div>
                   </td>
-                  <td class="is-numeric"><%= result.shared_matches_count %></td>
-                  <td class="is-numeric"><%= result.wins %></td>
-                  <td class="is-numeric"><%= result.draws %></td>
-                  <td class="is-numeric"><%= result.losses %></td>
-                  <td class="is-numeric"><%= result.win_rate ? t("relationships.table.win_rate_value", value: result.win_rate) : "—" %></td>
-                  <td class="is-numeric"><%= result.goals %></td>
-                  <td class="is-numeric"><%= result.assists %></td>
-                  <td class="is-numeric"><%= result.goals_assists %></td>
+                  <td class="relationship-ranking-table__matches">
+                    <strong class="relationship-stat-main"><%= result.shared_matches_count %></strong>
+                  </td>
+                  <td class="relationship-ranking-table__record">
+                    <span class="relationship-record"><%= result.wins %>-<%= result.draws %>-<%= result.losses %></span>
+                  </td>
+                  <td class="relationship-ranking-table__win-rate">
+                    <strong class="<%= relationship_win_rate_class(result.win_rate) %>"><%= result.win_rate ? t("relationships.table.win_rate_value", value: result.win_rate) : "—" %></strong>
+                  </td>
+                  <td class="relationship-ranking-table__offense">
+                    <div class="relationship-offense">
+                      <strong class="relationship-offense__value"><%= result.goals_assists %> G+A</strong>
+                      <span class="relationship-offense__details"><%= result.goals %>G • <%= result.assists %>A</span>
+                    </div>
+                  </td>
                 </tr>
               <% end %>
             </tbody>

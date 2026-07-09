@@ -47,6 +47,7 @@ module TeamSetups
           team_name: team_definition.fetch(:name),
           team_type: team_definition.fetch(:team_type),
           player_ids: team_definition.fetch(:player_ids),
+          captain_id: team_definition[:captain_id],
           playing: baseline_team_playing?(team_definition:, index:)
         )
       end
@@ -92,7 +93,7 @@ module TeamSetups
       generated_teams.flat_map { |team_definition| team_definition.fetch(:player_ids) }.uniq
     end
 
-    def create_team(team_setup:, team_name:, team_type:, player_ids:, playing:)
+    def create_team(team_setup:, team_name:, team_type:, player_ids:, captain_id:, playing:)
       return if player_ids.empty?
 
       team = team_setup.teams.create!(
@@ -104,6 +105,7 @@ module TeamSetups
       player_ids.each do |player_id|
         team.team_players.create!(player_id:)
       end
+      team.update!(captain_id:) if captain_id.present?
     end
 
     def baseline_team_playing?(team_definition:, index:)

@@ -31,7 +31,7 @@
 
     <div class="form-field">
       <%= form.label :phone, t("players.phone") %>
-      <%= form.telephone_field :phone, required: true %>
+      <%= form.telephone_field :phone %>
     </div>
 
     <div class="form-field">
@@ -53,6 +53,65 @@
       <%= form.check_box :active %>
       <%= form.label :active, t("players.active") %>
     </div>
+
+    <section class="identity-section">
+      <div>
+        <h2 class="identity-section__title"><%= t("players.identity.title") %></h2>
+        <p class="identity-section__subtitle"><%= t("players.identity.subtitle") %></p>
+      </div>
+
+      <div class="identity-field">
+        <span class="identity-field__label"><%= t("players.identity.color") %></span>
+        <span class="identity-field__hint"><%= t("players.identity.color_hint") %></span>
+        <div class="identity-color-grid">
+          <% PlayerIdentity.colors.each do |color| %>
+            <% selected = player.profile_color_key == color.fetch(:key) %>
+            <label
+              class="identity-color-option <%= "is-selected" if selected %>"
+              style="--identity-color: <%= color.fetch(:hex) %>"
+              title="<%= t("players.identity.colors.#{color.fetch(:key)}") %> · <%= color.fetch(:hex) %>"
+            >
+              <%= form.radio_button :profile_color_key, color.fetch(:key), checked: selected, class: "sr-only" %>
+              <span class="sr-only"><%= t("players.identity.colors.#{color.fetch(:key)}") %></span>
+            </label>
+          <% end %>
+        </div>
+      </div>
+
+      <div class="identity-field">
+        <span class="identity-field__label"><%= t("players.identity.icon") %></span>
+        <span class="identity-field__hint"><%= t("players.identity.icon_hint") %></span>
+        <% if PlayerIdentity.reserved_icon?(player.profile_icon) %>
+          <p class="identity-field__warning"><%= t("players.identity.reserved_icon_warning") %></p>
+        <% end %>
+        <div class="identity-icon-grid">
+          <% PlayerIdentity.icons.each do |icon| %>
+            <% selected = player.profile_icon_name == icon %>
+            <label class="identity-icon-option <%= "is-selected" if selected %>" title="<%= icon.humanize %>">
+              <%= form.radio_button :profile_icon, icon, checked: selected, class: "sr-only" %>
+              <%= safe_lucide_icon(icon, fallback: PlayerIdentity::DEFAULT_ICON, class_name: "ui-icon ui-icon--sm") %>
+              <span class="sr-only"><%= icon.humanize %></span>
+            </label>
+          <% end %>
+        </div>
+      </div>
+
+      <div class="identity-preview">
+        <%= player_identity_badge(player, size: :lg, label: t("players.identity.preview")) %>
+        <div>
+          <strong class="identity-preview__name"><%= player.name %></strong>
+          <p class="identity-preview__meta">
+            <% if player.profile_color_key.present? %>
+              <%= t("players.identity.colors.#{player.profile_color_key}", default: player.profile_color_name) %>
+            <% else %>
+              <%= t("players.identity.default_color") %>
+            <% end %>
+            ·
+            <%= player.profile_icon_name %>
+          </p>
+        </div>
+      </div>
+    </section>
 
     <div class="form-actions">
       <%= form.submit t("common.save"), class: "button button--primary" %>

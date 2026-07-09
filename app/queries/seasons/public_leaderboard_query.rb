@@ -68,10 +68,12 @@ module Seasons
           .order(Arel.sql("matches_played_count ASC"))
           .order("players.name": :asc),
         top_mvp: leaderboard_scope
+          .where("player_season_stats.mvp_votes_count > 0")
           .order(mvp_votes_count: :desc)
           .order(Arel.sql("matches_played_count ASC"))
           .order("players.name": :asc),
         top_def: leaderboard_scope
+          .where("player_season_stats.def_votes_count > 0")
           .order(def_votes_count: :desc)
           .order(Arel.sql("matches_played_count ASC"))
           .order("players.name": :asc),

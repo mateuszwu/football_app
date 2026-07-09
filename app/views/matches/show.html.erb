@@ -46,7 +46,7 @@
 
     <article class="match-score-team match-score-team--home">
       <div class="match-score-team__header">
-        <span class="match-team-mark"><%= safe_lucide_icon("shield", fallback: "circle", class_name: "ui-icon") %></span>
+        <%= match_team_captain_mark(home_team) %>
         <h2><%= home_team.name %></h2>
       </div>
 
@@ -61,7 +61,7 @@
 
     <article class="match-score-team match-score-team--away">
       <div class="match-score-team__header">
-        <span class="match-team-mark"><%= safe_lucide_icon("shield-check", fallback: "shield", class_name: "ui-icon") %></span>
+        <%= match_team_captain_mark(away_team) %>
         <h2><%= away_team.name %></h2>
       </div>
 
@@ -120,7 +120,7 @@
           <ol class="match-timeline">
             <% summary.timeline.each do |event| %>
               <li class="match-timeline-row match-timeline-row--<%= event.fetch(:event_type) %>">
-                <span class="match-event-time"><%= match_report_minute(event.fetch(:occurred_at_seconds)) %></span>
+                <span class="match-event-time"><%= match_report_minute_label(event.fetch(:occurred_at_seconds)) %></span>
                 <div class="match-timeline__body">
                   <div class="match-event-main">
                     <span class="match-event-type"><%= event.fetch(:own_goal) ? t("matches.show.timeline.own_goal_badge") : t("matches.goal") %></span>
@@ -178,23 +178,23 @@
 
               <% if roster.fetch(:players).any? %>
                 <div class="match-roster-table">
-                  <div class="match-roster-table__head">
-                    <span><%= t("matches.show.rosters.player") %></span>
-                    <span>G</span>
-                    <span>A</span>
-                    <span>SG</span>
-                    <span><%= t("matches.show.rosters.badges") %></span>
+                  <div class="match-roster-table__head player-stats-grid">
+                    <span class="player-name-cell"><%= t("matches.show.rosters.player") %></span>
+                    <span class="player-stat-cell">G</span>
+                    <span class="player-stat-cell">A</span>
+                    <span class="player-stat-cell"><%= t("matches.show.rosters.own_goals") %></span>
+                    <span class="player-badges-cell"><%= t("matches.show.rosters.badges") %></span>
                   </div>
                   <% roster.fetch(:players).each do |row| %>
-                    <div class="match-roster-table__row">
-                      <div class="match-roster-player">
-                        <span class="match-player-avatar"><%= match_player_initials(row.fetch(:player)) %></span>
-                        <strong><%= match_player_profile_link(row.fetch(:player), class_name: "match-player-link") %></strong>
+                    <div class="match-roster-table__row player-stats-grid">
+                      <div class="match-roster-player player-name-cell">
+                        <%= match_player_identity_avatar(row.fetch(:player)) %>
+                        <strong class="name"><%= match_player_profile_link(row.fetch(:player), class_name: "match-player-link") %></strong>
                       </div>
-                      <span><%= row.fetch(:goals) %></span>
-                      <span><%= row.fetch(:assists) %></span>
-                      <span><%= row.fetch(:own_goals) %></span>
-                      <div class="match-roster-card__badges">
+                      <span class="player-stat-cell"><%= row.fetch(:goals) %></span>
+                      <span class="player-stat-cell"><%= row.fetch(:assists) %></span>
+                      <span class="player-stat-cell"><%= row.fetch(:own_goals) %></span>
+                      <div class="match-roster-card__badges player-badges-cell">
                         <% if row.fetch(:mvp) %>
                           <span>MVP</span>
                         <% end %>
@@ -266,7 +266,7 @@
             <% end %>
           </div>
         <% else %>
-          <p class="empty-state"><%= t("matches.show.awards.empty") %></p>
+          <p class="empty-state match-awards-empty"><%= t("matches.show.awards.empty") %></p>
         <% end %>
       </section>
 
@@ -296,7 +296,7 @@
             data-controller="lineup-editor"
             data-lineup-editor-input-name-prefix-value="match[teams_data]"
             data-lineup-editor-players-value="<%= lineup_editor_state[:players].to_json %>"
-            data-lineup-editor-teams-value="<%= lineup_editor_state[:teams].map { |team| { id: team.id, name: team.name, player_ids: team.player_ids.map(&:to_s) } }.to_json %>"
+            data-lineup-editor-teams-value="<%= lineup_editor_state[:teams].map { |team| { id: team.id, name: team.name, captain_id: team.captain_id&.to_s, player_ids: team.player_ids.map(&:to_s) } }.to_json %>"
           >
             <div class="form-actions">
               <button type="button" class="button button--secondary" data-action="lineup-editor#addTeam">Add team</button>

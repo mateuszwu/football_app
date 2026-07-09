@@ -12,27 +12,27 @@ RSpec.describe MatchDays::ImportFromPayload do
         payload = {
           played_on: "2026-06-19",
           original_teams: [
-            { name: "Original A", players: [ "adam", "jan" ] },
-            { name: "Original B", players: [ "marek", "piotr" ] }
+            { name: "Original A", players: [ "adam", "jan" ], captain: "adam" },
+            { name: "Original B", players: [ "marek", "piotr" ], captain: "marek" }
           ],
           matches: [
             {
               started_at: "2026-06-19 19:00",
               finished_at: "2026-06-19 19:30",
               teams: [
-                { name: "Team Red", players: [ "adam", "jan" ] },
-                { name: "Team Blue", players: [ "marek", "piotr" ] }
+                { name: "Team Red", players: [ "adam", "jan" ], captain: "jan" },
+                { name: "Team Blue", players: [ "marek", "piotr" ], captain: "piotr" }
               ],
               goals: [
-                { team: "Team Red", scorer: "adam", assistant: "jan" },
-                { team: "Team Blue", scorer: "marek" }
+                { team: "Team Red", scorer: "adam", assistant: "jan", scored_at: "2026-06-19 19:01:34" },
+                { team: "Team Blue", scorer: "marek", scored_at: "2026-06-19 19:12:34" }
               ]
             },
             {
               started_at: "2026-06-19 19:35",
               teams: [
-                { name: "Team Red", players: [ "adam", "marek" ] },
-                { name: "Team Blue", players: [ "jan", "piotr" ] }
+                { name: "Team Red", players: [ "adam", "marek" ], captain: "marek" },
+                { name: "Team Blue", players: [ "jan", "piotr" ], captain: "jan" }
               ],
               goals: [
                 { team: "Team Blue", scorer: "jan" }
@@ -53,19 +53,31 @@ RSpec.describe MatchDays::ImportFromPayload do
         expect(result.matches.size).to eq(2)
         expect(result.match_day.teams.where(team_type: Team::TEAM_TYPE_BASELINE).pluck(:name)).to contain_exactly("Original A", "Original B")
         expect(result.match_day.teams.where(team_type: Team::TEAM_TYPE_MATCH).count).to eq(4)
+        expect(result.match_day.teams.find_by!(name: "Original A", team_type: Team::TEAM_TYPE_BASELINE).captain).to eq(adam)
+        expect(result.match_day.teams.find_by!(name: "Original B", team_type: Team::TEAM_TYPE_BASELINE).captain).to eq(marek)
 
         first_match = result.matches.first
         second_match = result.matches.second
         expect(first_match).to be_finished
         expect(first_match.home_team.players).to contain_exactly(adam, jan)
         expect(first_match.away_team.players).to contain_exactly(marek, piotr)
+        expect(first_match.home_team.captain).to eq(jan)
+        expect(first_match.away_team.captain).to eq(piotr)
         expect(first_match.home_score).to eq(1)
         expect(first_match.away_score).to eq(1)
         expect(first_match.match_goals.order(:scored_at).map { |goal| goal.scorer.nickname }).to eq(%w[adam marek])
+        expect(first_match.match_goals.order(:scored_at).map(&:scored_at)).to eq(
+          [
+            Time.zone.parse("2026-06-19 19:01:34"),
+            Time.zone.parse("2026-06-19 19:12:34")
+          ]
+        )
 
         expect(second_match).to be_in_progress
         expect(second_match.home_team.players).to contain_exactly(adam, marek)
         expect(second_match.away_team.players).to contain_exactly(jan, piotr)
+        expect(second_match.home_team.captain).to eq(marek)
+        expect(second_match.away_team.captain).to eq(jan)
         expect(second_match.home_score).to eq(0)
         expect(second_match.away_score).to eq(1)
         expect(second_match.match_goals.order(:scored_at).map { |goal| goal.scorer.nickname }).to eq([ "jan" ])
@@ -217,6 +229,32 @@ RSpec.describe MatchDays::ImportFromPayload do
         expect(result.errors).to include("ghost is not listed in Team B for match 1")
         expect(result.errors).to include("Assistant cannot be the scorer for jan")
         expect(result.errors).to include("Own goal for jan cannot have an assist")
+        expect(MatchDay.count).to eq(0)
+      end
+
+      it "rejects a captain who is not on the team roster" do
+        season = create(:season)
+        create(:player, nickname: "adam", approval_status: "approved", active: true)
+        create(:player, name: "Jan", nickname: "jan", phone: "+48999999998", approval_status: "approved", active: true)
+        payload = {
+          played_on: "2026-06-19",
+          teams: [
+            { name: "Team A", players: [ "adam" ], captain: "jan" },
+            { name: "Team B", players: [ "jan" ], captain: "jan" }
+          ],
+          goals: [
+            { team: "Team A", scorer: "adam" }
+          ]
+        }
+
+        result = described_class.call(
+          payload:,
+          season:,
+          available_players: Player.approved.active.order(:name)
+        )
+
+        expect(result).not_to be_success
+        expect(result.errors).to include("jan must be listed in Team A as a player")
         expect(MatchDay.count).to eq(0)
       end
 

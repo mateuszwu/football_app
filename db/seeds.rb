@@ -40,6 +40,19 @@ def submit_demo_votes!(match_day:, players:)
   end
 end
 
+def assign_demo_captains!(matches:, payload:, players:)
+  payload.fetch(:matches).zip(matches).each do |match_payload, match|
+    match_payload.fetch(:teams).each do |team_payload|
+      captain_nickname = team_payload.fetch(:captain, team_payload.fetch(:players).first)
+      captain = players.fetch(captain_nickname)
+      team = [ match.home_team, match.away_team ].find { |candidate| candidate.name == team_payload.fetch(:name) }
+      next if team.blank? || team.team_players.none? { |team_player| team_player.player_id == captain.id }
+
+      team.update!(captain:)
+    end
+  end
+end
+
 def import_demo_match_day!(season:, payload:)
   result = MatchDays::ImportFromPayload.call(
     payload: payload.merge(season_id: season.id),
@@ -48,6 +61,8 @@ def import_demo_match_day!(season:, payload:)
   )
 
   raise "Could not seed #{payload.fetch(:played_on)}: #{result.errors.to_sentence}" unless result.success?
+
+  assign_demo_captains!(matches: result.matches, payload:, players: Player.approved.active.index_by(&:nickname))
 
   result.matches.each do |match|
     Ratings::ProcessMatchElo.call(match:) if match.finished?

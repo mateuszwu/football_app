@@ -30,6 +30,7 @@
           <th class="is-numeric"><%= t("players.profile.synergy.win_rate") %></th>
           <th class="is-numeric"><%= t("players.profile.synergy.goals_together") %></th>
           <th class="is-numeric"><%= t("players.profile.synergy.assists_together") %></th>
+          <th class="is-numeric"><%= t("players.profile.synergy.mutual_assists") %></th>
           <th class="is-numeric"><%= t("players.profile.synergy.goals_assists") %></th>
         </tr>
       </thead>
@@ -45,6 +46,7 @@
             <td class="is-numeric"><%= entry.win_rate || 0 %>%</td>
             <td class="is-numeric"><%= entry.goals %></td>
             <td class="is-numeric"><%= entry.assists %></td>
+            <td class="is-numeric"><%= entry.mutual_assists %></td>
             <td class="is-numeric"><%= entry.goals_assists %></td>
           </tr>
         <% end %>

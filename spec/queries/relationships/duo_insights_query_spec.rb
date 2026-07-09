@@ -35,10 +35,51 @@ RSpec.describe Relationships::DuoInsightsQuery do
         expect(result.best_overall_duo.player_a).to eq(adam)
         expect(result.most_played_duo.player_b).to eq(bartek)
         expect(result.best_win_rate_duo.win_rate).to eq(100)
-        expect(result.best_offensive_duo.offense_total).to eq(10)
+        expect(result.best_offensive_duo.direct_offense_total).to eq(10)
+        expect(result.best_offensive_duo.mutual_assists).to eq(5)
         expect(result.best_offensive_duo.shared_matches_count).to eq(5)
         expect(result.summaries.first.wins).to eq(5)
         expect(result.summaries.first.assists).to eq(5)
+      end
+
+      it "selects the offensive duo by direct assists between duo members" do
+        season = create(:season)
+        adam = create(:player, name: "Adam Demo", approval_status: "approved", active: true)
+        bartek = create(:player, name: "Bartek Demo", approval_status: "approved", active: true)
+        cezary = create(:player, name: "Cezary Demo", approval_status: "approved", active: true)
+        damian = create(:player, name: "Damian Demo", approval_status: "approved", active: true)
+
+        3.times do |index|
+          match_day = create(:match_day, season:, played_on: Date.new(2026, 6, index + 1), status: "finished")
+          [ adam, bartek, cezary, damian ].each { |player| create(:match_day_player, match_day:, player:) }
+          team_setup = create(:team_setup, match_day:)
+          home_team = create(:team, team_setup:, team_type: Team::TEAM_TYPE_MATCH)
+          away_team = create(:team, team_setup:, team_type: Team::TEAM_TYPE_MATCH)
+          adam_team_player = create(:team_player, team: home_team, player: adam)
+          bartek_team_player = create(:team_player, team: home_team, player: bartek)
+          cezary_team_player = create(:team_player, team: away_team, player: cezary)
+          damian_team_player = create(:team_player, team: away_team, player: damian)
+          match = create(
+            :match,
+            match_day:,
+            home_team:,
+            away_team:,
+            home_score: 3,
+            away_score: 2,
+            status: Match::STATUS_FINISHED,
+            finished_at: index.days.ago
+          )
+          create(:match_goal, match:, scoring_team: home_team, scorer_team_player: adam_team_player, assistant_team_player: bartek_team_player)
+          create(:match_goal, match:, scoring_team: away_team, scorer_team_player: cezary_team_player)
+          create(:match_goal, match:, scoring_team: away_team, scorer_team_player: cezary_team_player)
+          create(:match_goal, match:, scoring_team: away_team, scorer_team_player: damian_team_player)
+        end
+
+        result = described_class.call(season:)
+
+        expect(result.best_offensive_duo.player_a).to eq(adam)
+        expect(result.best_offensive_duo.player_b).to eq(bartek)
+        expect(result.best_offensive_duo.mutual_assists).to eq(3)
       end
     end
 
@@ -140,7 +181,8 @@ RSpec.describe Relationships::DuoInsightsQuery do
           shared_match_days_count: 2,
           shared_matches_count: 0,
           goals: 1,
-          assists: 0
+          assists: 1,
+          mutual_assists: 1
         )
         home_team = build_stubbed(:team)
         away_team = build_stubbed(:team)

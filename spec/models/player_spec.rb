@@ -20,11 +20,23 @@ RSpec.describe Player do
     end
 
     context "when phone is missing" do
-      it "is invalid" do
+      it "is valid" do
         player = build(:player, phone: nil)
 
-        expect(player).not_to be_valid
-        expect(player.errors[:phone]).to include("can't be blank")
+        expect(player).to be_valid
+      end
+
+      it "allows multiple players without a phone" do
+        create(:player, phone: nil)
+        player = build(:player, phone: nil)
+
+        expect(player).to be_valid
+      end
+
+      it "normalizes a blank phone to nil" do
+        player = create(:player, phone: "  ")
+
+        expect(player.reload.phone).to be_nil
       end
     end
 
@@ -99,6 +111,76 @@ RSpec.describe Player do
         expect(player.errors[:role_code]).to include("is not included in the list")
       end
     end
+
+    context "when profile color data is valid" do
+      it "is valid" do
+        player = build(:player, profile_color_key: "red_dark", profile_color_hex: "#B91C1C")
+
+        expect(player).to be_valid
+      end
+    end
+
+    context "when profile color key is unsupported" do
+      it "is invalid" do
+        player = build(:player, profile_color_key: "neon_green")
+
+        expect(player).not_to be_valid
+        expect(player.errors[:profile_color_key]).to include("is not included in the list")
+      end
+    end
+
+    context "when profile color hex is malformed" do
+      it "is invalid" do
+        player = build(:player, profile_color_hex: "green")
+
+        expect(player).not_to be_valid
+        expect(player.errors[:profile_color_hex]).to include("is invalid")
+      end
+    end
+
+    context "when profile icon is supported" do
+      it "is valid" do
+        player = build(:player, profile_icon: "sun")
+
+        expect(player).to be_valid
+      end
+    end
+
+    context "when profile icon is a fallback-only icon" do
+      it "is valid" do
+        player = build(:player, profile_icon: "user-round")
+
+        expect(player).to be_valid
+      end
+    end
+
+    context "when profile icon is reserved for the application" do
+      it "is invalid" do
+        player = build(:player, profile_icon: "trophy")
+
+        expect(player).not_to be_valid
+        expect(player.errors[:profile_icon]).to include("is not included in the list")
+      end
+    end
+
+    context "when profile icon is unsupported" do
+      it "is invalid" do
+        player = build(:player, profile_icon: "spaceship")
+
+        expect(player).not_to be_valid
+        expect(player.errors[:profile_icon]).to include("is not included in the list")
+      end
+    end
+  end
+
+  describe "#profile_icon_name" do
+    context "when the saved icon is reserved for the application" do
+      it "returns the fallback icon" do
+        player = build(:player, profile_icon: "shield")
+
+        expect(player.profile_icon_name).to eq("user-round")
+      end
+    end
   end
 
   describe ".approved" do
@@ -153,6 +235,48 @@ RSpec.describe Player do
 
         expect(result).to contain_exactly(active_player)
       end
+    end
+  end
+
+  describe ".active_public" do
+    context "when players have mixed approval and active states" do
+      it "returns approved active players only" do
+        active_public_player = create(:player, approval_status: "approved", active: true)
+        create(:player, approval_status: "pending", active: true)
+        create(:player, approval_status: "approved", active: false)
+
+        result = described_class.active_public
+
+        expect(result).to contain_exactly(active_public_player)
+      end
+    end
+  end
+
+  describe "identity assignment" do
+    context "when a player is created without profile identity" do
+      it "assigns missing identity fields" do
+        player = create(:player)
+
+        expect(player.profile_color_key).to be_present
+        expect(player.profile_color_hex).to be_present
+        expect(player.profile_icon).to be_present
+      end
+    end
+  end
+
+  describe "#profile_color" do
+    it "returns a fallback color when profile color is missing" do
+      player = build(:player, profile_color_key: nil, profile_color_hex: nil)
+
+      expect(player.profile_color).to eq("#374151")
+    end
+  end
+
+  describe "#profile_icon_name" do
+    it "returns a fallback icon when profile icon is missing" do
+      player = build(:player, profile_icon: nil)
+
+      expect(player.profile_icon_name).to eq("user-round")
     end
   end
 

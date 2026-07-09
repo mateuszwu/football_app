@@ -130,10 +130,6 @@ module LeaderboardsHelper
     end
   end
 
-  def leaderboard_player_initials(player)
-    player.name.split.map { |part| part.first }.join.first(2).upcase
-  end
-
   def leaderboard_delta_tag(value)
     delta = value.to_i if value.present?
     return tag.span("—", class: "leaderboards-delta leaderboards-delta--muted") if delta.blank? || delta.zero?

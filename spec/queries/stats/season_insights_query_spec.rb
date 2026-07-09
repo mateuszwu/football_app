@@ -48,6 +48,11 @@ RSpec.describe Stats::SeasonInsightsQuery do
         expect(result.dig(:first_goal, :first_goal_win_rate)).to eq(50)
         expect(result.dig(:comebacks, :threshold_rows).find { |row| row.fetch(:deficit) == "0:2" }).to include(comeback_wins: 1)
         expect(result.dig(:score_states, :rows).map { |row| row.fetch(:state) }).to include("2:0", "4:0")
+        expect(result.dig(:sidebar, :most_common_scenario)).to be_nil
+        most_goals_match = result.dig(:records, :rows).find { |row| row.fetch(:key) == "most_goals_match" }
+        expect(most_goals_match).to include(subject: "Adam Demo", value: "5 goli", match: first_match)
+        biggest_domination = result.dig(:records, :rows).find { |row| row.fetch(:key) == "biggest_domination" }
+        expect(biggest_domination).to include(value: "+5 / 5:0")
         expect(result.fetch(:clutch_players).find { |row| row.fetch(:player) == adam }).to include(closing_goals: 2)
         expect(result.dig(:chart_data, :match_durations, :labels)).to include("2026-07-01 · ##{first_match.id}")
       end

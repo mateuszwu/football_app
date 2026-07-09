@@ -26,4 +26,15 @@ module ApplicationHelper
   def yes_no_label(value)
     value ? t("common.yes") : t("common.no")
   end
+
+  def player_identity_badge(player, size: :md, label: nil)
+    tag.span(
+      class: "player-identity-badge player-identity-badge--#{size}",
+      style: "--player-color: #{player.profile_color}",
+      title: label.presence || player.name,
+      aria: { label: label.presence || player.name }
+    ) do
+      safe_lucide_icon(player.profile_icon_name, fallback: PlayerIdentity::DEFAULT_ICON, class_name: "player-identity-badge__icon")
+    end
+  end
 end

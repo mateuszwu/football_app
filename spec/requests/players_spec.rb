@@ -127,6 +127,23 @@ RSpec.describe "Players" do
         expect(response.location).not_to include("token")
         expect(Array(response.headers["Set-Cookie"]).join("\n")).to include("httponly")
       end
+
+      it "creates a player without a phone number" do
+        post "/players", params: {
+          player: {
+            name: "Jan Kowalski",
+            nickname: "jan",
+            phone: "",
+            description: "Regular player",
+            role_code: "ANY"
+          }
+        }
+
+        player = Player.find_by!(nickname: "jan")
+
+        expect(response).to redirect_to("/players/#{player.id}/edit")
+        expect(player.phone).to be_nil
+      end
     end
 
     context "when the submission is invalid" do
@@ -145,7 +162,7 @@ RSpec.describe "Players" do
         expect(response.body).to include("Popraw błędy formularza:")
         expect(response.body).to include("Name can&#39;t be blank")
         expect(response.body).to include("Nickname can&#39;t be blank")
-        expect(response.body).to include("Phone can&#39;t be blank")
+        expect(response.body).not_to include("Phone can&#39;t be blank")
         expect(response.body).to include("Description can&#39;t be blank")
         expect(response.body).to include("Role code is not included in the list")
         expect(cookies[:pending_player_edit_token]).to be_nil
@@ -390,6 +407,41 @@ RSpec.describe "Players" do
         expect(response.body).to include("Historia ELO")
         expect(response.body).not_to include("Jak czytać ELO")
         expect(response.body).not_to include("Historia zmian ELO")
+      end
+
+      it "renders direct mutual assists on the synergy tab" do
+        season = create(:season, name: "Summer 2026")
+        adam = create(:player, name: "Adam Nowak", nickname: "adam", phone: "+48111111111", approval_status: "approved", active: true)
+        bartek = create(:player, name: "Bartek Nowak", nickname: "bartek", phone: "+48222222222", approval_status: "approved", active: true)
+        cezary = create(:player, name: "Cezary Nowak", nickname: "cezary", phone: "+48333333333", approval_status: "approved", active: true)
+        match_day = create(:match_day, season:, played_on: Date.new(2026, 6, 19), status: "finished")
+        team_setup = create(:team_setup, match_day:)
+        home_team = create(:team, team_setup:, team_type: Team::TEAM_TYPE_MATCH)
+        away_team = create(:team, team_setup:, team_type: Team::TEAM_TYPE_MATCH)
+        adam_team_player = create(:team_player, team: home_team, player: adam)
+        bartek_team_player = create(:team_player, team: home_team, player: bartek)
+        cezary_team_player = create(:team_player, team: home_team, player: cezary)
+        create(:team_player, team: away_team, player: create(:player, approval_status: "approved", active: true))
+        match = create(
+          :match,
+          match_day:,
+          home_team:,
+          away_team:,
+          home_score: 2,
+          away_score: 0,
+          status: Match::STATUS_FINISHED,
+          finished_at: Time.zone.parse("2026-06-19 20:00:00")
+        )
+        create(:match_goal, match:, scoring_team: home_team, scorer_team_player: adam_team_player, assistant_team_player: bartek_team_player)
+        create(:match_goal, match:, scoring_team: home_team, scorer_team_player: cezary_team_player, assistant_team_player: adam_team_player)
+
+        get "/players/#{adam.id}", params: { season_id: season.id, tab: "synergy" }
+
+        expect(response).to have_http_status(:ok)
+        expect(response.body).to include("Asysty między sobą")
+        expect(response.body).to include("Bartek Nowak")
+        expect(response.body).not_to include("+48111111111")
+        expect(response.body).not_to include("+48222222222")
       end
     end
 

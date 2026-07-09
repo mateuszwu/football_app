@@ -44,7 +44,7 @@
       <% directory.players.each do |card| %>
         <article class="roster-card">
           <div class="roster-card__top">
-            <span class="roster-card__avatar" aria-hidden="true"><%= player_directory_initials(card.player) %></span>
+            <%= player_identity_badge(card.player, size: :lg) %>
             <div class="roster-card__identity">
               <h2><%= link_to card.player.name, player_path(card.player, season_id: directory.selected_season&.id) %></h2>
               <p>@<%= card.player.nickname %></p>

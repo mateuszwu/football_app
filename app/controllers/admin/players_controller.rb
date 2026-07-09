@@ -17,6 +17,8 @@ module Admin
     def update
       player = Player.find(params[:id])
 
+      sync_identity_color_hex
+
       if player.update(player_params)
         redirect_to admin_players_path, notice: t("admin.player_updated")
       else
@@ -41,7 +43,28 @@ module Admin
     private
 
     def player_params
-      params.require(:player).permit(:name, :nickname, :phone, :description, :role_code, :approval_status, :active)
+      params.require(:player).permit(
+        :name,
+        :nickname,
+        :phone,
+        :description,
+        :role_code,
+        :approval_status,
+        :active,
+        :profile_color_key,
+        :profile_color_hex,
+        :profile_icon
+      )
+    end
+
+    def sync_identity_color_hex
+      player_params = params[:player]
+      return if player_params.blank?
+
+      color_key = player_params[:profile_color_key]
+      return if color_key.blank?
+
+      player_params[:profile_color_hex] = PlayerIdentity.hex_for(color_key)
     end
   end
 end
