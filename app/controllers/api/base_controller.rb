@@ -25,9 +25,15 @@ module Api
     end
 
     def api_token
-      Rails.application.credentials.dig(:api, :token).presence ||
-        Rails.application.credentials.api_token.presence ||
-        ENV["FOOTBALL_APP_API_TOKEN"].presence
+      ENV["FOOTBALL_APP_API_TOKEN"].presence ||
+        credentials_value(:api, :token) ||
+        credentials_value(:api_token)
+    end
+
+    def credentials_value(*keys)
+      Rails.application.credentials.dig(*keys).presence
+    rescue ActiveSupport::MessageEncryptor::InvalidMessage, ActiveSupport::EncryptedFile::MissingKeyError
+      nil
     end
   end
 end

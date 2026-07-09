@@ -31,9 +31,15 @@ module Admin
     end
 
     def admin_password
-      Rails.application.credentials.dig(:admin, :password).presence ||
-        Rails.application.credentials.admin_password.presence ||
-        ENV["FOOTBALL_APP_ADMIN_PASSWORD"].presence
+      ENV["FOOTBALL_APP_ADMIN_PASSWORD"].presence ||
+        credentials_value(:admin, :password) ||
+        credentials_value(:admin_password)
+    end
+
+    def credentials_value(*keys)
+      Rails.application.credentials.dig(*keys).presence
+    rescue ActiveSupport::MessageEncryptor::InvalidMessage, ActiveSupport::EncryptedFile::MissingKeyError
+      nil
     end
   end
 end
