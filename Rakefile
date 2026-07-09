@@ -5,12 +5,14 @@ require_relative "config/application"
 
 Rails.application.load_tasks
 
-require "rspec/core/rake_task"
+if Gem.loaded_specs.key?("rspec-core")
+  require "rspec/core/rake_task"
 
-RSpec::Core::RakeTask.new(:spec)
+  RSpec::Core::RakeTask.new(:spec)
 
-namespace :spec do
-  RSpec::Core::RakeTask.new(:system) do |task|
-    task.pattern = "spec/system/**/*_spec.rb"
+  namespace :spec do
+    RSpec::Core::RakeTask.new(:system) do |task|
+      task.pattern = "spec/system/**/*_spec.rb"
+    end
   end
 end
