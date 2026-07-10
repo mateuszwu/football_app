@@ -14,6 +14,12 @@ RSpec.describe "Home page" do
         expect(response.body).to include("branding/neon_green_football_emblem")
         expect(response.body).to include('alt="Football App"')
         expect(response.body).to include("sidebar-brand__logo")
+        expect(response.body).to include("mobile-app-header")
+        expect(response.body).to include('data-controller="mobile-nav"')
+        expect(response.body).to include('data-action="mobile-nav#open"')
+        expect(response.body).to include('data-mobile-nav-target="drawer"')
+        expect(response.body).to include("mobile-nav-drawer__links")
+        expect(response.body).to include("mobile-nav-link")
         expect(response.body).to include("favicon")
         expect(response.body).to include("favicon-32x32")
         expect(response.body).to include("favicon-16x16")
@@ -43,6 +49,8 @@ RSpec.describe "Home page" do
         expect(response.body).not_to include('href="/players/new"')
         expect(response.body).to include("Dołącz")
         expect(response.body).to include("Zaloguj")
+        expect(response.body).not_to include("Wyloguj")
+        expect(response.body).not_to include("site-nav__link--active\">Admin")
         expect(response.body.scan("dashboard-tile__watermark").size).to eq(8)
         expect(response.body).to include('id="join_game"')
         expect(response.body).to include("join-tile__icon")
@@ -76,6 +84,31 @@ RSpec.describe "Home page" do
 
         expect(response.body).not_to include("phone")
         expect(response.body).not_to include("telefon")
+      end
+    end
+
+    context "when admin opens the app" do
+      it "renders authorized admin navigation items" do
+        begin
+          original_admin_password = ENV["FOOTBALL_APP_ADMIN_PASSWORD"]
+          ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = "secret-password"
+
+          post "/admin/session", params: { password: "secret-password" }
+          get root_path
+
+          expect(response).to have_http_status(:ok)
+          expect(response.body).to include("Dni grania")
+          expect(response.body).to include("Sezony")
+          expect(response.body).to include("Admin")
+          expect(response.body).to include("Wyloguj")
+          expect(response.body).to include("mobile-nav-link--button")
+        ensure
+          if original_admin_password.nil?
+            ENV.delete("FOOTBALL_APP_ADMIN_PASSWORD")
+          else
+            ENV["FOOTBALL_APP_ADMIN_PASSWORD"] = original_admin_password
+          end
+        end
       end
     end
 

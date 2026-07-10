@@ -38,6 +38,36 @@
   %>
 
   <body class="<%= body_class %>">
+    <header class="mobile-app-header" data-controller="mobile-nav">
+      <div class="mobile-app-header__brand">
+        <%= image_tag "branding/neon_green_football_emblem.png", class: "mobile-app-header__logo", alt: "Football App" %>
+        <span class="mobile-app-header__title"><%= t("app.name") %></span>
+      </div>
+
+      <button type="button" class="mobile-app-header__menu-button" data-action="mobile-nav#open" aria-label="Otwórz menu">
+        <%= safe_lucide_icon("menu", fallback: "circle", class_name: "mobile-app-header__menu-icon") %>
+      </button>
+
+      <div class="mobile-nav-overlay" data-mobile-nav-target="overlay" data-action="click->mobile-nav#close" hidden></div>
+
+      <nav class="mobile-nav-drawer" data-mobile-nav-target="drawer" aria-label="Nawigacja mobilna" hidden>
+        <div class="mobile-nav-drawer__header">
+          <div class="mobile-nav-drawer__brand">
+            <%= image_tag "branding/neon_green_football_emblem.png", class: "mobile-nav-drawer__logo", alt: "Football App" %>
+            <span class="mobile-nav-drawer__title"><%= t("app.name") %></span>
+          </div>
+
+          <button type="button" class="mobile-nav-drawer__close" data-action="mobile-nav#close" aria-label="Zamknij menu">
+            <%= safe_lucide_icon("x", fallback: "circle", class_name: "mobile-nav-drawer__close-icon") %>
+          </button>
+        </div>
+
+        <div class="mobile-nav-drawer__links">
+          <%= render "shared/navigation_links", variant: :mobile %>
+        </div>
+      </nav>
+    </header>
+
     <header class="site-header">
       <nav class="site-nav" aria-label="<%= t("navigation.dashboard") %>">
         <%= link_to root_path, class: "site-nav__brand sidebar-brand" do %>
@@ -49,48 +79,7 @@
         <% end %>
 
         <div class="site-nav__links">
-          <%= link_to root_path(anchor: "dashboard"), class: "site-nav__link #{'site-nav__link--active' if controller_path == 'home'}", aria: ({ current: "page" } if controller_path == "home") do %>
-            <%= safe_lucide_icon("layout-dashboard", fallback: "home", class_name: "site-nav__icon") %>
-            <%= t("navigation.dashboard") %>
-          <% end %>
-          <%= link_to leaderboards_path, class: "site-nav__link #{'site-nav__link--active' if controller_path == 'leaderboards'}", aria: ({ current: "page" } if controller_path == "leaderboards") do %>
-            <%= safe_lucide_icon("trophy", fallback: "chart-no-axes-combined", class_name: "site-nav__icon") %>
-            <%= t("navigation.leaderboards") %>
-          <% end %>
-          <%= link_to relationships_path, class: "site-nav__link #{'site-nav__link--active' if controller_path == 'relationships'}", aria: ({ current: "page" } if controller_path == "relationships") do %>
-            <%= safe_lucide_icon("network", fallback: "share-2", class_name: "site-nav__icon") %>
-            <%= t("navigation.relationships") %>
-          <% end %>
-          <%= link_to statistics_path, class: "site-nav__link #{'site-nav__link--active' if controller_path == 'statistics'}", aria: ({ current: "page" } if controller_path == "statistics") do %>
-            <%= safe_lucide_icon("activity", fallback: "chart-bar", class_name: "site-nav__icon") %>
-            <%= t("navigation.statistics") %>
-          <% end %>
-          <%= link_to players_path, class: "site-nav__link #{'site-nav__link--active' if controller_path == 'players' && action_name == 'index'}", aria: ({ current: "page" } if controller_path == "players" && action_name == "index") do %>
-            <%= safe_lucide_icon("users", fallback: "user-round", class_name: "site-nav__icon") %>
-            <%= t("navigation.players") %>
-          <% end %>
-          <% if public_join_enabled? %>
-            <%= link_to new_player_path, class: "site-nav__link #{'site-nav__link--active' if controller_path == 'players' && action_name == 'new'}", aria: ({ current: "page" } if controller_path == "players" && action_name == "new") do %>
-              <%= safe_lucide_icon("user-plus", fallback: "circle-plus", class_name: "site-nav__icon") %>
-              <%= t("navigation.join") %>
-            <% end %>
-          <% else %>
-            <span class="site-nav__link site-nav__link--disabled" aria-disabled="true" title="<%= t("dashboard.cta.join_disabled") %>">
-              <%= safe_lucide_icon("user-plus", fallback: "circle-plus", class_name: "site-nav__icon") %>
-              <%= t("navigation.join") %>
-            </span>
-          <% end %>
-          <% if admin_signed_in? %>
-            <%= link_to t("navigation.match_days"), admin_match_days_path, class: "site-nav__link #{'site-nav__link--active' if controller_path == 'admin/match_days'}", aria: ({ current: "page" } if controller_path == "admin/match_days") %>
-            <%= link_to t("navigation.seasons"), admin_seasons_path, class: "site-nav__link #{'site-nav__link--active' if controller_path == 'admin/seasons'}", aria: ({ current: "page" } if controller_path == "admin/seasons") %>
-            <%= link_to t("navigation.admin"), admin_players_path, class: "site-nav__link #{'site-nav__link--active' if controller_path == 'admin/players'}", aria: ({ current: "page" } if controller_path == "admin/players") %>
-            <%= button_to t("navigation.logout"), admin_session_path, method: :delete, class: "site-nav__login site-nav__button" %>
-          <% else %>
-            <%= link_to admin_login_path, class: "site-nav__login #{'site-nav__link--active' if controller_path == 'admin/sessions'}", aria: ({ current: "page" } if controller_path == "admin/sessions") do %>
-              <%= safe_lucide_icon("log-in", fallback: "circle", class_name: "site-nav__icon") %>
-              <%= t("navigation.login") %>
-            <% end %>
-          <% end %>
+          <%= render "shared/navigation_links", variant: :desktop %>
         </div>
       </nav>
     </header>
