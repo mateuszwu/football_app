@@ -100,6 +100,7 @@ pl:
       go_to_players: "Lista zawodników"
       join: "Zgłoś się"
       join_game: "Dołącz do gry"
+      join_disabled: "Zapisy są tymczasowo wstrzymane."
       see_day_matches: "Zobacz wszystkie mecze dnia"
       see_match_days: "Zobacz dni grania"
       full_elo_ranking: "Pełny ranking ELO"

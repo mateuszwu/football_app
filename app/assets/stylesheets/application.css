@@ -2300,6 +2300,7 @@ textarea {
 }
 
 .site-nav__links a,
+.site-nav__link,
 .site-nav__login,
 .site-nav__button {
   align-items: center;
@@ -2313,6 +2314,7 @@ textarea {
 }
 
 .site-nav__links a:hover,
+.site-nav__link:hover,
 .site-nav__login:hover,
 .site-nav__button:hover {
   background: var(--dark-surface-hover);
@@ -2326,13 +2328,22 @@ textarea {
   color: var(--dark-text);
 }
 
+.site-nav__link--disabled,
+.site-nav__link--disabled:hover {
+  background: transparent;
+  color: rgba(148, 163, 184, 0.58);
+  cursor: not-allowed;
+}
+
 .theme-light .site-nav__links a,
+.theme-light .site-nav__link,
 .theme-light .site-nav__login,
 .theme-light .site-nav__button {
   color: var(--light-text-muted);
 }
 
 .theme-light .site-nav__links a:hover,
+.theme-light .site-nav__link:hover,
 .theme-light .site-nav__login:hover,
 .theme-light .site-nav__button:hover {
   background: var(--light-surface-2);
@@ -2344,6 +2355,12 @@ textarea {
   background: #dcfce7;
   box-shadow: inset 3px 0 0 var(--light-primary);
   color: var(--light-text);
+}
+
+.theme-light .site-nav__link--disabled,
+.theme-light .site-nav__link--disabled:hover {
+  background: transparent;
+  color: rgba(100, 116, 139, 0.68);
 }
 
 .site-nav__button {
@@ -4707,6 +4724,18 @@ a:focus-visible {
 .dashboard-button:hover {
   color: #06110a;
   filter: brightness(1.05);
+}
+
+.dashboard-button--disabled {
+  background: rgba(148, 163, 184, 0.24);
+  color: rgba(248, 250, 252, 0.68);
+  cursor: not-allowed;
+  filter: none;
+}
+
+.dashboard-button--disabled:hover {
+  color: rgba(248, 250, 252, 0.68);
+  filter: none;
 }
 
 .tile-icon {

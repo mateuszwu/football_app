@@ -40,10 +40,15 @@ RSpec.describe "Home page" do
         expect(response.body).to include("Rankingi")
         expect(response.body).to include("Synergia")
         expect(response.body).to include("Zawodnicy")
+        expect(response.body).not_to include('href="/players/new"')
         expect(response.body).to include("Dołącz")
         expect(response.body).to include("Zaloguj")
         expect(response.body.scan("dashboard-tile__watermark").size).to eq(8)
+        expect(response.body).to include('id="join_game"')
         expect(response.body).to include("join-tile__icon")
+        expect(response.body).to include("Zapisy są tymczasowo wstrzymane.")
+        expect(response.body).to include("dashboard-button--disabled")
+        expect(response.body).to include("site-nav__link--disabled")
         expect(response.body).to include("<svg")
         expect(response.body).not_to include('class="tile-icon')
         expect(response.body).not_to include("day-balance-icon")
@@ -57,6 +62,7 @@ RSpec.describe "Home page" do
         join_tile = response.body[/<article class="dashboard-tile dashboard-tile--span-4 dashboard-tile--join" id="join_game">.*?<\/article>/m]
         expect(join_tile).to include("Dołącz do gry")
         expect(join_tile).to include("join-tile__icon")
+        expect(join_tile).not_to include("href=")
         expect(join_tile).not_to include("dashboard-tile__number")
         expect(join_tile).not_to include("dashboard-tile__watermark")
       end

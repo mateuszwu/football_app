@@ -69,9 +69,16 @@
             <%= safe_lucide_icon("users", fallback: "user-round", class_name: "site-nav__icon") %>
             <%= t("navigation.players") %>
           <% end %>
-          <%= link_to new_player_path, class: "site-nav__link #{'site-nav__link--active' if controller_path == 'players' && action_name == 'new'}", aria: ({ current: "page" } if controller_path == "players" && action_name == "new") do %>
-            <%= safe_lucide_icon("user-plus", fallback: "circle-plus", class_name: "site-nav__icon") %>
-            <%= t("navigation.join") %>
+          <% if public_join_enabled? %>
+            <%= link_to new_player_path, class: "site-nav__link #{'site-nav__link--active' if controller_path == 'players' && action_name == 'new'}", aria: ({ current: "page" } if controller_path == "players" && action_name == "new") do %>
+              <%= safe_lucide_icon("user-plus", fallback: "circle-plus", class_name: "site-nav__icon") %>
+              <%= t("navigation.join") %>
+            <% end %>
+          <% else %>
+            <span class="site-nav__link site-nav__link--disabled" aria-disabled="true" title="<%= t("dashboard.cta.join_disabled") %>">
+              <%= safe_lucide_icon("user-plus", fallback: "circle-plus", class_name: "site-nav__icon") %>
+              <%= t("navigation.join") %>
+            </span>
           <% end %>
           <% if admin_signed_in? %>
             <%= link_to t("navigation.match_days"), admin_match_days_path, class: "site-nav__link #{'site-nav__link--active' if controller_path == 'admin/match_days'}", aria: ({ current: "page" } if controller_path == "admin/match_days") %>

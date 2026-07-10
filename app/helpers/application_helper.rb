@@ -27,6 +27,10 @@ module ApplicationHelper
     value ? t("common.yes") : t("common.no")
   end
 
+  def public_join_enabled?
+    false
+  end
+
   def player_identity_badge(player, size: :md, label: nil)
     tag.span(
       class: "player-identity-badge player-identity-badge--#{size}",

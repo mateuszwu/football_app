@@ -93,8 +93,10 @@
           <div class="dashboard-tile__footer">
             <% if dashboard.approved_active_players_count.positive? %>
               <span class="dashboard-link dashboard-link--disabled"><%= t("dashboard.cta.go_to_players") %></span>
-            <% else %>
+            <% elsif public_join_enabled? %>
               <%= link_to t("dashboard.cta.join_game"), new_player_path, class: "dashboard-link" %>
+            <% else %>
+              <span class="dashboard-link dashboard-link--disabled" aria-disabled="true"><%= t("dashboard.cta.join_game") %></span>
             <% end %>
           </div>
         </article>
@@ -109,9 +111,16 @@
             <% if dashboard.pending_players_count.present? %>
               <p class="dashboard-caption"><%= t("dashboard.pending_submissions", count: dashboard.pending_players_count) %></p>
             <% end %>
+            <% unless public_join_enabled? %>
+              <p class="dashboard-caption"><%= t("dashboard.cta.join_disabled") %></p>
+            <% end %>
           </div>
           <div class="dashboard-tile__footer">
-            <%= link_to t("dashboard.cta.join"), new_player_path, class: "dashboard-button" %>
+            <% if public_join_enabled? %>
+              <%= link_to t("dashboard.cta.join"), new_player_path, class: "dashboard-button" %>
+            <% else %>
+              <span class="dashboard-button dashboard-button--disabled" aria-disabled="true"><%= t("dashboard.cta.join") %></span>
+            <% end %>
           </div>
         </article>
 
