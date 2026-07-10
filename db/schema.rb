@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_09_150000) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_10_100000) do
   create_table "match_day_players", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.integer "match_day_id", null: false
@@ -68,7 +68,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_09_150000) do
     t.datetime "undone_at"
     t.datetime "updated_at", null: false
     t.index ["assistant_team_player_id"], name: "index_match_goals_on_assistant_team_player_id"
+    t.index ["match_id", "assistant_team_player_id", "undone_at"], name: "idx_on_match_id_assistant_team_player_id_undone_at_f67a413d96"
+    t.index ["match_id", "scorer_team_player_id", "undone_at"], name: "idx_on_match_id_scorer_team_player_id_undone_at_97141c7614"
+    t.index ["match_id", "scoring_team_id", "undone_at"], name: "idx_on_match_id_scoring_team_id_undone_at_cb6ae330f6"
+    t.index ["match_id", "undone_at"], name: "index_match_goals_on_match_id_and_undone_at"
     t.index ["match_id"], name: "index_match_goals_on_match_id"
+    t.index ["own_goal", "undone_at"], name: "index_match_goals_on_own_goal_and_undone_at"
     t.index ["scorer_team_player_id"], name: "index_match_goals_on_scorer_team_player_id"
     t.index ["scoring_team_id"], name: "index_match_goals_on_scoring_team_id"
   end
@@ -97,6 +102,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_09_150000) do
     t.index ["lineup_source_match_id"], name: "index_matches_on_lineup_source_match_id"
     t.index ["match_day_id", "home_team_id", "away_team_id"], name: "idx_on_match_day_id_home_team_id_away_team_id_f7a6ad2a0b", unique: true
     t.index ["match_day_id"], name: "index_matches_on_match_day_id"
+    t.index ["status", "away_team_id"], name: "index_matches_on_status_and_away_team_id"
+    t.index ["status", "home_team_id"], name: "index_matches_on_status_and_home_team_id"
+    t.index ["status", "match_day_id"], name: "index_matches_on_status_and_match_day_id"
     t.index ["team_setup_id"], name: "index_matches_on_team_setup_id"
   end
 
@@ -118,6 +126,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_09_150000) do
     t.datetime "updated_at", null: false
     t.index ["match_day_id"], name: "index_player_rating_changes_on_match_day_id"
     t.index ["match_id"], name: "index_player_rating_changes_on_match_id"
+    t.index ["player_id", "season_id", "rating_scope", "source_type", "created_at"], name: "index_rating_changes_on_player_season_source_created"
     t.index ["player_id"], name: "index_player_rating_changes_on_player_id"
     t.index ["season_id"], name: "index_player_rating_changes_on_season_id"
   end
@@ -135,6 +144,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_09_150000) do
     t.datetime "updated_at", null: false
     t.index ["player_id", "season_id"], name: "index_player_season_stats_on_player_id_and_season_id", unique: true
     t.index ["player_id"], name: "index_player_season_stats_on_player_id"
+    t.index ["season_id", "assists"], name: "index_player_season_stats_on_season_id_and_assists"
+    t.index ["season_id", "def_votes_count"], name: "index_player_season_stats_on_season_id_and_def_votes_count"
+    t.index ["season_id", "elo"], name: "index_player_season_stats_on_season_id_and_elo"
+    t.index ["season_id", "goals"], name: "index_player_season_stats_on_season_id_and_goals"
+    t.index ["season_id", "mvp_votes_count"], name: "index_player_season_stats_on_season_id_and_mvp_votes_count"
     t.index ["season_id"], name: "index_player_season_stats_on_season_id"
   end
 
@@ -156,6 +170,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_09_150000) do
     t.string "role_code", default: "ANY", null: false
     t.datetime "updated_at", null: false
     t.index ["active"], name: "index_players_on_active"
+    t.index ["approval_status", "active", "name"], name: "index_players_on_approval_status_and_active_and_name"
     t.index ["approval_status"], name: "index_players_on_approval_status"
     t.index ["nickname"], name: "index_players_on_nickname", unique: true
     t.index ["phone"], name: "index_players_on_phone", unique: true
@@ -203,6 +218,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_09_150000) do
     t.string "role_code", default: "ANY", null: false
     t.integer "team_id", null: false
     t.datetime "updated_at", null: false
+    t.index ["player_id", "team_id"], name: "index_team_players_on_player_id_and_team_id"
     t.index ["player_id"], name: "index_team_players_on_player_id"
     t.index ["team_id", "player_id"], name: "index_team_players_on_team_id_and_player_id", unique: true
     t.index ["team_id"], name: "index_team_players_on_team_id"
@@ -237,9 +253,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_09_150000) do
     t.string "team_type", null: false
     t.datetime "updated_at", null: false
     t.index ["captain_id"], name: "index_teams_on_captain_id"
+    t.index ["match_id", "team_type"], name: "index_teams_on_match_id_and_team_type"
     t.index ["match_id"], name: "index_teams_on_match_id"
     t.index ["source_team_id"], name: "index_teams_on_source_team_id"
     t.index ["team_setup_id"], name: "index_teams_on_team_setup_id"
+    t.index ["team_type", "team_setup_id"], name: "index_teams_on_team_type_and_team_setup_id"
     t.index ["team_type"], name: "index_teams_on_team_type"
   end
 

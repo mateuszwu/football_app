@@ -20,8 +20,6 @@ class RelationshipsController < ApplicationController
 
   def index
     season = Season.find_by(id: params[:season_id]) if params[:season_id].present?
-    graph = Players::RelationshipGraphQuery.call
-    duo_insights = Relationships::DuoInsightsQuery.call
     active_tab = normalized_tab
     direction = normalized_direction
     limit = active_tab == "graph" ? normalized_graph_limit : normalized_limit
@@ -31,22 +29,25 @@ class RelationshipsController < ApplicationController
     player_id = params[:player_id].presence
     selected_player = Player.approved.active.find_by(id: player_id) if player_id.present?
     graph_player_filter = player_filter.presence || selected_player&.name.to_s
-    combination_ranking = Synergy::CombinationRankingQuery.call(
+    graph = cached_relationship_graph
+    duo_insights = cached_duo_insights(season)
+    combination_ranking = cached_combination_ranking(
       season:,
-      combination_size: TAB_SIZES.fetch(active_tab),
+      active_tab:,
       direction:,
       limit:,
       minimum_shared_matches:,
       player_filter:,
       player_id:
     )
-    graph_data = Synergy::GraphDataQuery.call(
+    graph_data = cached_graph_data(
       season:,
+      active_tab:,
+      limit:,
+      metric:,
       minimum_shared_matches:,
       player_filter:,
-      player_id:,
-      limit: active_tab == "graph" ? limit : 20,
-      metric:
+      player_id:
     )
 
     render :index, locals: {
@@ -70,6 +71,70 @@ class RelationshipsController < ApplicationController
   end
 
   private
+
+  def cached_relationship_graph
+    Rails.cache.fetch([ "relationships-overview", PublicStats::CacheKey.global ], expires_in: 10.minutes) do
+      Players::RelationshipGraphQuery.call
+    end
+  end
+
+  def cached_duo_insights(season)
+    Rails.cache.fetch([ "relationships-duo-insights", season&.id || "all", public_cache_key_for(season) ], expires_in: 10.minutes) do
+      Relationships::DuoInsightsQuery.call(season:)
+    end
+  end
+
+  def cached_combination_ranking(season:, active_tab:, direction:, limit:, minimum_shared_matches:, player_filter:, player_id:)
+    Rails.cache.fetch([
+      "relationships-combination",
+      season&.id || "all",
+      active_tab,
+      direction,
+      limit,
+      minimum_shared_matches,
+      player_filter,
+      player_id,
+      public_cache_key_for(season)
+    ], expires_in: 10.minutes) do
+      Synergy::CombinationRankingQuery.call(
+        season:,
+        combination_size: TAB_SIZES.fetch(active_tab),
+        direction:,
+        limit:,
+        minimum_shared_matches:,
+        player_filter:,
+        player_id:
+      )
+    end
+  end
+
+  def cached_graph_data(season:, active_tab:, limit:, metric:, minimum_shared_matches:, player_filter:, player_id:)
+    graph_limit = active_tab == "graph" ? limit : 20
+
+    Rails.cache.fetch([
+      "relationships-graph-data",
+      season&.id || "all",
+      graph_limit,
+      metric,
+      minimum_shared_matches,
+      player_filter,
+      player_id,
+      public_cache_key_for(season)
+    ], expires_in: 10.minutes) do
+      Synergy::GraphDataQuery.call(
+        season:,
+        minimum_shared_matches:,
+        player_filter:,
+        player_id:,
+        limit: graph_limit,
+        metric:
+      )
+    end
+  end
+
+  def public_cache_key_for(season)
+    season.present? ? PublicStats::CacheKey.season(season) : PublicStats::CacheKey.global
+  end
 
   def normalized_tab
     TAB_SIZES.key?(params[:tab].to_s) ? params[:tab].to_s : "duos"

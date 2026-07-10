@@ -60,40 +60,47 @@ module Seasons
           .order(Arel.sql("goals_per_match_value DESC"))
           .order(assists: :desc)
           .order(Arel.sql("matches_played_count ASC"))
-          .order("players.name": :asc),
+          .order("players.name": :asc)
+          .to_a,
         top_assistants: leaderboard_scope
           .order(assists: :desc)
           .order(Arel.sql("assists_per_match_value DESC"))
           .order(goals: :desc)
           .order(Arel.sql("matches_played_count ASC"))
-          .order("players.name": :asc),
+          .order("players.name": :asc)
+          .to_a,
         top_mvp: leaderboard_scope
           .where("player_season_stats.mvp_votes_count > 0")
           .order(mvp_votes_count: :desc)
           .order(Arel.sql("matches_played_count ASC"))
-          .order("players.name": :asc),
+          .order("players.name": :asc)
+          .to_a,
         top_def: leaderboard_scope
           .where("player_season_stats.def_votes_count > 0")
           .order(def_votes_count: :desc)
           .order(Arel.sql("matches_played_count ASC"))
-          .order("players.name": :asc),
+          .order("players.name": :asc)
+          .to_a,
         elo_ranking: leaderboard_scope
           .order(Arel.sql("COALESCE(player_season_stats.elo, 0) DESC"))
           .order(Arel.sql("COALESCE(last_elo_delta_value, 0) DESC"))
-          .order("players.name": :asc),
+          .order("players.name": :asc)
+          .to_a,
         goals_assists_ranking: leaderboard_scope
           .order(Arel.sql("(player_season_stats.goals + player_season_stats.assists) DESC"))
           .order(Arel.sql("goals_assists_per_match_value DESC"))
           .order(goals: :desc)
           .order(assists: :desc)
           .order(Arel.sql("matches_played_count ASC"))
-          .order("players.name": :asc),
+          .order("players.name": :asc)
+          .to_a,
         record_ranking: leaderboard_scope
           .order(Arel.sql("win_rate_value DESC"))
           .order(Arel.sql("wins_count DESC"))
           .order(Arel.sql("goal_difference_value DESC"))
           .order(Arel.sql("matches_played_count DESC"))
           .order("players.name": :asc)
+          .to_a
       )
     end
 

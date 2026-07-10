@@ -1,6 +1,8 @@
 class PlayersController < ApplicationController
   def index
-    directory = Players::DirectoryQuery.call(params:)
+    directory = Rails.cache.fetch([ "players-directory", directory_cache_key, PublicStats::CacheKey.global ], expires_in: 5.minutes) do
+      Players::DirectoryQuery.call(params:)
+    end
 
     render :index, locals: { directory: }
   end
@@ -56,6 +58,14 @@ class PlayersController < ApplicationController
   end
 
   private
+
+  def directory_cache_key
+    {
+      q: params[:q].to_s,
+      role: params[:role].to_s,
+      season_id: params[:season_id].to_s
+    }
+  end
 
   def player_params
     params.require(:player).permit(:name, :nickname, :phone, :description, :role_code)

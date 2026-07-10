@@ -2,12 +2,18 @@ class LeaderboardsController < ApplicationController
   def index
     available_seasons = Season.order(starts_on: :desc, created_at: :desc)
     season = selected_season(available_seasons)
-    leaderboards = season.present? ? Seasons::PublicLeaderboardQuery.call(season:) : nil
+    leaderboards = season.present? ? cached_leaderboards_for(season) : nil
 
     render :index, locals: { available_seasons:, leaderboards:, season:, active_tab: active_tab }
   end
 
   private
+
+  def cached_leaderboards_for(season)
+    Rails.cache.fetch([ "leaderboards", season.id, PublicStats::CacheKey.season(season) ], expires_in: 10.minutes) do
+      Seasons::PublicLeaderboardQuery.call(season:)
+    end
+  end
 
   def selected_season(available_seasons)
     if params[:season_id].present?

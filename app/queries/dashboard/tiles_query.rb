@@ -113,7 +113,7 @@ module Dashboard
     def leaderboard_entries(name, minimum_column: nil, limit: 5)
       return [] if leaderboards.blank?
 
-      entries = leaderboards.public_send(name).limit(limit)
+      entries = leaderboards.public_send(name).first(limit)
       return entries.to_a if minimum_column.blank?
 
       entries.select { |entry| entry.public_send(minimum_column).to_i.positive? }
