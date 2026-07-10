@@ -15,6 +15,7 @@ pl:
       - lis
       - gru
     formats:
+      default: "%Y-%m-%d"
       short: "%d.%m.%Y"
       month_abbr: "%b"
 
