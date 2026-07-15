@@ -55,16 +55,17 @@
     <% end %>
   </div>
 
-  <nav class="leaderboards-tabs player-profile-tabs" aria-label="<%= player.name %>">
-    <% player_profile_tabs.each do |tab_key, icon| %>
-      <%= link_to player_profile_tab_path(player, profile, tab_key), class: "leaderboards-tab #{'leaderboards-tab--active' if profile.active_tab == tab_key}", aria: ({ current: "page" } if profile.active_tab == tab_key) do %>
-        <%= safe_lucide_icon(icon, fallback: "circle", class_name: "ui-icon ui-icon--sm") %>
-        <span><%= t("players.profile.tabs.#{tab_key}") %></span>
+  <%= turbo_frame_tag "player_profile_results", data: { turbo_action: "advance" } do %>
+    <nav class="leaderboards-tabs leaderboards-tabs--responsive player-profile-tabs" aria-label="<%= player.name %>" role="tablist">
+      <% player_profile_tabs.each do |tab_key, icon| %>
+        <%= link_to player_profile_tab_path(player, profile, tab_key), class: "leaderboards-tab #{'leaderboards-tab--active' if profile.active_tab == tab_key}", role: "tab", aria: { selected: profile.active_tab == tab_key, current: ("page" if profile.active_tab == tab_key) }.compact, data: { turbo_frame: "player_profile_results" } do %>
+          <%= safe_lucide_icon(icon, fallback: "circle", class_name: "ui-icon ui-icon--sm") %>
+          <span><%= t("players.profile.tabs.#{tab_key}") %></span>
+        <% end %>
       <% end %>
-    <% end %>
-  </nav>
+    </nav>
 
-  <% if profile.active_tab == "overview" %>
+    <% if profile.active_tab == "overview" %>
     <div class="player-profile-layout">
       <main class="player-profile-main">
         <%= render "players/profile_summary_cards", profile: %>
@@ -121,7 +122,7 @@
         <%= link_to t("players.profile.synergy.full_relationship_graph"), profile.synergy.fetch(:graph_path), class: "dashboard-button" %>
       </aside>
     </div>
-  <% elsif profile.active_tab == "stats" %>
+    <% elsif profile.active_tab == "stats" %>
     <div class="player-profile-layout">
       <main class="player-profile-main">
         <%= render "players/profile_summary_cards", profile:, extended: true %>
@@ -154,7 +155,7 @@
         </section>
       </aside>
     </div>
-  <% elsif profile.active_tab == "matches" %>
+    <% elsif profile.active_tab == "matches" %>
     <section class="player-profile-card">
       <h2><%= t("players.profile.matches.form_last_5") %></h2>
       <div class="player-profile-form-pills">
@@ -164,7 +165,7 @@
       </div>
     </section>
     <%= render "players/profile_matches_table", player:, profile:, matches: profile.paginated_matches.items, title: t("players.profile.matches.title"), paginated: true %>
-  <% elsif profile.active_tab == "charts" %>
+    <% elsif profile.active_tab == "charts" %>
     <div class="player-profile-chart-grid player-profile-chart-grid--full">
       <% { cumulative_goals: "stepped-line", cumulative_assists: "stepped-line", cumulative_goals_assists: "multi-line", record: "doughnut" }.each do |key, type| %>
         <section class="player-profile-chart-card">
@@ -173,11 +174,12 @@
         </section>
       <% end %>
     </div>
-  <% elsif profile.active_tab == "elo" %>
-    <%= render "players/profile_elo_tab", player:, profile: %>
-  <% elsif profile.active_tab == "synergy" %>
-    <%= render "players/profile_synergy_tab", player:, profile: %>
-  <% elsif profile.active_tab == "awards" %>
-    <%= render "players/profile_awards_tab", player:, profile: %>
+    <% elsif profile.active_tab == "elo" %>
+      <%= render "players/profile_elo_tab", player:, profile: %>
+    <% elsif profile.active_tab == "synergy" %>
+      <%= render "players/profile_synergy_tab", player:, profile: %>
+    <% elsif profile.active_tab == "awards" %>
+      <%= render "players/profile_awards_tab", player:, profile: %>
+    <% end %>
   <% end %>
 </section>

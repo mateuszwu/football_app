@@ -46,112 +46,44 @@ module Relationships
     def call
       return empty_summary if season.blank?
 
-      summaries.sort_by do |summary|
-        [
-          -summary.shared_match_days_count,
-          -summary.wins,
-          -summary.offense_total,
-          summary.player_a.name,
-          summary.player_b.name
-        ]
-      end.first || empty_summary
+      result = Synergy::CombinationRankingQuery.call(
+        season:,
+        combination_size: 2,
+        direction: "best",
+        limit: 20,
+        minimum_shared_matches: 3
+      ).first
+
+      result.present? ? build_summary(result) : empty_summary
     end
 
     private
 
     attr_reader :season
 
-    def summaries
-      Players::BestDuoLeaderboardQuery.call(season:).map do |duo|
-        build_summary(duo)
-      end
-    end
-
-    def build_summary(duo)
-      shared_matches = shared_matches_for(duo)
-      goals, assists = offensive_totals_for(duo:, shared_matches:)
-      wins, draws, losses = record_for(shared_matches)
-
+    def build_summary(result)
       Summary.new(
-        player_a: duo.player_one,
-        player_b: duo.player_two,
-        shared_match_days_count: duo.shared_match_days_count,
-        shared_matches_count: shared_matches.count,
-        wins: wins,
-        draws: draws,
-        losses: losses,
-        goals: goals,
-        assists: assists
+        player_a: result.players.first,
+        player_b: result.players.second,
+        shared_match_days_count: shared_match_days_count_for(result.players),
+        shared_matches_count: result.shared_matches_count,
+        wins: result.wins,
+        draws: result.draws,
+        losses: result.losses,
+        goals: result.goals,
+        assists: result.assists
       )
     end
 
-    def shared_matches_for(duo)
-      shared_team_ids = shared_team_ids_for(duo)
-      return [] if shared_team_ids.empty?
-
-      Match
-        .where(match_day: season.match_days)
-        .where(status: Match::STATUS_FINISHED)
-        .where("home_team_id IN (:team_ids) OR away_team_id IN (:team_ids)", team_ids: shared_team_ids)
-        .includes(:home_team, :away_team)
-        .filter_map { |match| shared_match_for(match:, shared_team_ids:) }
-    end
-
-    def shared_team_ids_for(duo)
-      Team
-        .joins(:team_players)
-        .joins(team_setup: :match_day)
-        .where(team_type: Team::TEAM_TYPE_MATCH)
+    def shared_match_days_count_for(players)
+      MatchDayPlayer
+        .joins(:match_day)
         .where(match_days: { season_id: season.id })
-        .where(team_players: { player_id: [ duo.player_one.id, duo.player_two.id ] })
-        .group("teams.id")
-        .having("COUNT(DISTINCT team_players.player_id) = 2")
-        .pluck(:id)
-    end
-
-    def shared_match_for(match:, shared_team_ids:)
-      shared_team = if shared_team_ids.include?(match.home_team_id)
-        match.home_team
-      elsif shared_team_ids.include?(match.away_team_id)
-        match.away_team
-      end
-
-      return nil if shared_team.blank?
-
-      [ match, shared_team ]
-    end
-
-    def record_for(shared_matches)
-      shared_matches.each_with_object([ 0, 0, 0 ]) do |(match, shared_team), record|
-        if match.draw?
-          record[1] += 1
-        elsif match.winner == shared_team
-          record[0] += 1
-        else
-          record[2] += 1
-        end
-      end
-    end
-
-    def offensive_totals_for(duo:, shared_matches:)
-      match_ids = shared_matches.map { |match, _team| match.id }
-      return [ 0, 0 ] if match_ids.empty?
-
-      player_ids = [ duo.player_one.id, duo.player_two.id ]
-      goals = MatchGoal
-        .active
-        .joins(:scorer_team_player)
-        .where(match_id: match_ids)
-        .where(team_players: { player_id: player_ids })
+        .where(player_id: players.map(&:id))
+        .group(:match_day_id)
+        .having("COUNT(DISTINCT match_day_players.player_id) = 2")
         .count
-      assists = MatchGoal
-        .active
-        .joins(:assistant_team_player)
-        .where(match_id: match_ids)
-        .where(team_players: { player_id: player_ids })
-        .count
-
-      [ goals, assists ]
+        .size
     end
 
     def empty_summary

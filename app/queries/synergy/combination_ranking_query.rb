@@ -12,6 +12,8 @@ module Synergy
       :goal_difference,
       keyword_init: true
     ) do
+      attr_accessor :rank
+
       def win_rate
         return nil if shared_matches_count.to_i.zero?
 
@@ -43,7 +45,7 @@ module Synergy
     end
 
     def call
-      ranked_results.first(limit)
+      ranked_results.first(limit).then { |results| assign_ranks(results) }
     end
 
     private
@@ -169,9 +171,35 @@ module Synergy
 
     def sort_key_for(result)
       if direction == "worst"
-        [ result.win_rate.to_i, -result.losses, -result.shared_matches_count, result.goals_assists, player_names_for(result) ]
+        [ result.win_rate.to_i, -result.losses, -result.shared_matches_count, result.goals_assists, result.mutual_assists, player_names_for(result) ]
       else
-        [ -result.win_rate.to_i, -result.wins, -result.shared_matches_count, -result.goals_assists, player_names_for(result) ]
+        [ -result.win_rate.to_i, -result.wins, -result.shared_matches_count, -result.goals_assists, -result.mutual_assists, player_names_for(result) ]
+      end
+    end
+
+    def ranking_key_for(result)
+      [
+        result.win_rate.to_i,
+        result.wins,
+        result.draws,
+        result.losses,
+        result.shared_matches_count,
+        result.goals_assists,
+        result.mutual_assists
+      ]
+    end
+
+    def assign_ranks(results)
+      previous_key = nil
+      previous_rank = nil
+
+      results.each_with_index do |result, index|
+        key = ranking_key_for(result)
+        rank = key == previous_key ? previous_rank : index + 1
+
+        result.rank = rank
+        previous_key = key
+        previous_rank = rank
       end
     end
 

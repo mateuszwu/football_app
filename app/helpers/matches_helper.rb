@@ -50,6 +50,17 @@ module MatchesHelper
     player_identity_badge(player, size: :sm)
   end
 
+  def match_roster_offense_total(row)
+    row.fetch(:goals).to_i + row.fetch(:assists).to_i
+  end
+
+  def match_roster_offense_breakdown(row)
+    breakdown = "#{row.fetch(:goals)}G + #{row.fetch(:assists)}A"
+    own_goals = row.fetch(:own_goals).to_i
+
+    own_goals.positive? ? "#{breakdown} + #{own_goals}S" : breakdown
+  end
+
   def match_team_captain(team)
     team.captain
   end
@@ -58,14 +69,16 @@ module MatchesHelper
     captain = match_team_captain(team)
     return fallback_team_mark if captain.blank?
 
+    captain_name = captain.display_name
+
     tag.span(
       class: "match-team-captain",
       style: "--captain-color: #{captain.profile_color}",
-      title: captain.name
+      title: captain_name
     ) do
-      player_identity_badge(captain, size: :sm, label: captain.name) +
-        tag.span(t("matches.captain"), class: "match-team-captain__label") +
-        tag.span(captain.name, class: "match-team-captain__name")
+      player_identity_badge(captain, size: :sm, label: captain_name) +
+        tag.span("#{t("matches.captain")}: ", class: "match-team-captain__label") +
+        tag.span(captain_name, class: "match-team-captain__name")
     end
   end
 

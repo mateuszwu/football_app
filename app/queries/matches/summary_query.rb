@@ -58,10 +58,17 @@ module Matches
 
     def result_label
       return I18n.t("matches.show.result.draw") if match.draw?
-      return I18n.t("matches.show.result.home_win", team: match.home_team.name) if match.home_score.to_i > match.away_score.to_i
-      return I18n.t("matches.show.result.away_win", team: match.away_team.name) if match.away_score.to_i > match.home_score.to_i
+      return I18n.t("matches.show.result.home_win", team: result_team_label(match.home_team)) if match.home_score.to_i > match.away_score.to_i
+      return I18n.t("matches.show.result.away_win", team: result_team_label(match.away_team)) if match.away_score.to_i > match.home_score.to_i
 
       I18n.t("matches.show.result.pending")
+    end
+
+    def result_team_label(team)
+      captain = team.captain
+      team_name = captain.present? ? captain.display_name : team.name
+
+      team_name.start_with?("Team ") ? team_name : "Team #{team_name}"
     end
 
     def time
@@ -222,14 +229,14 @@ module Matches
       first_lead = timeline.find { |event| event.fetch(:go_ahead_goal) }
       return I18n.t("common.none") if first_lead.blank?
 
-      "#{first_lead.fetch(:team).name} · #{score_label(first_lead.fetch(:score_after))}"
+      "#{first_lead.fetch(:scorer).display_name} (#{result_team_label(first_lead.fetch(:team))}) · #{score_label(first_lead.fetch(:score_after))}"
     end
 
     def first_equalizer_label
       first_equalizer = timeline.find { |event| event.fetch(:equalizer) }
       return I18n.t("common.none") if first_equalizer.blank?
 
-      "#{first_equalizer.fetch(:team).name} · #{score_label(first_equalizer.fetch(:score_after))}"
+      "#{first_equalizer.fetch(:scorer).display_name} (#{result_team_label(first_equalizer.fetch(:team))}) · #{score_label(first_equalizer.fetch(:score_after))}"
     end
 
     def last_goal_time_label

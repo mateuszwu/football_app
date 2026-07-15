@@ -2,6 +2,10 @@ require "lucide-rails"
 
 module DashboardHelper
   def dashboard_icon(name, class_name: "tile-icon")
+    if class_name.to_s.split.include?("dashboard-tile__watermark")
+      return render "shared/decorative_card_icon", icon: name, class_name:, fallback: "circle"
+    end
+
     safe_lucide_icon(name, fallback: "circle", class_name:)
   end
 

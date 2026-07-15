@@ -63,6 +63,53 @@ RSpec.describe Synergy::CombinationRankingQuery do
         expect(adam_and_cezary.goals).to eq(6)
         expect(adam_and_cezary.assists).to eq(3)
         expect(adam_and_cezary.mutual_assists).to eq(3)
+        expect(result.map(&:rank)).to eq([ 1, 1, 3 ])
+      end
+
+      it "uses mutual assists as a tie breaker before player names" do
+        season = create(:season)
+        adam = create(:player, name: "Adam Demo", nickname: "adam", approval_status: "approved", active: true)
+        bartek = create(:player, name: "Bartek Demo", nickname: "bartek", approval_status: "approved", active: true)
+        cezary = create(:player, name: "Cezary Demo", nickname: "cezary", approval_status: "approved", active: true)
+        dawid = create(:player, name: "Dawid Demo", nickname: "dawid", approval_status: "approved", active: true)
+        opponent = create(:player, name: "Opponent Demo", nickname: "opponent", approval_status: "approved", active: true)
+
+        3.times do |index|
+          match_day = create(:match_day, season:, played_on: Date.new(2026, 6, index + 10), status: "finished")
+          team_setup = create(:team_setup, match_day:)
+          first_home = create(:team, team_setup:, team_type: Team::TEAM_TYPE_MATCH)
+          first_away = create(:team, team_setup:, team_type: Team::TEAM_TYPE_MATCH)
+          adam_team_player = create(:team_player, team: first_home, player: adam)
+          bartek_team_player = create(:team_player, team: first_home, player: bartek)
+          create(:team_player, team: first_away, player: opponent)
+          first_match = create(:match, match_day:, home_team: first_home, away_team: first_away, home_score: 1, away_score: 0, finished_at: index.days.ago)
+          create(:match_goal, match: first_match, scoring_team: first_home, scorer_team_player: adam_team_player, assistant_team_player: bartek_team_player)
+
+          second_home = create(:team, team_setup:, team_type: Team::TEAM_TYPE_MATCH)
+          second_away = create(:team, team_setup:, team_type: Team::TEAM_TYPE_MATCH)
+          cezary_team_player = create(:team_player, team: second_home, player: cezary)
+          dawid_team_player = create(:team_player, team: second_home, player: dawid)
+          create(:team_player, team: second_away, player: opponent)
+          second_match = create(:match, match_day:, home_team: second_home, away_team: second_away, home_score: 2, away_score: 0, finished_at: index.days.ago + 30.minutes)
+          create(:match_goal, match: second_match, scoring_team: second_home, scorer_team_player: cezary_team_player)
+          create(:match_goal, match: second_match, scoring_team: second_home, scorer_team_player: dawid_team_player)
+        end
+
+        result = described_class.call(
+          season:,
+          combination_size: 2,
+          direction: "best",
+          limit: 20,
+          minimum_shared_matches: 3,
+          player_filter: nil
+        )
+
+        expect(result.first.players).to contain_exactly(adam, bartek)
+        expect(result.first.goals_assists).to eq(result.second.goals_assists)
+        expect(result.first.mutual_assists).to eq(3)
+        expect(result.second.players).to contain_exactly(cezary, dawid)
+        expect(result.second.mutual_assists).to eq(0)
+        expect(result.map(&:rank).first(2)).to eq([ 1, 2 ])
       end
     end
 

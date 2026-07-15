@@ -15,7 +15,7 @@ class StatisticsController < ApplicationController
   private
 
   def cached_insights_for(season)
-    Rails.cache.fetch([ "statistics", season.id, PublicStats::CacheKey.season(season) ], expires_in: 10.minutes) do
+    Rails.cache.fetch([ "statistics", "v3", season.id, PublicStats::CacheKey.season(season) ], expires_in: 10.minutes) do
       Stats::SeasonInsightsQuery.call(season:)
     end
   end

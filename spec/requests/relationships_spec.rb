@@ -41,8 +41,23 @@ RSpec.describe "Relationships" do
         expect(response.body).to include("Najczęściej razem")
         expect(response.body).to include("Najskuteczniejszy duet")
         expect(response.body).to include("Najlepszy duet ofensywny")
+        expect(response.body).to include("Jak liczony jest Najlepszy duet ogólnie")
+        expect(response.body).to include("Jak liczony jest Najczęściej razem")
+        expect(response.body).to include("Jak liczony jest Najskuteczniejszy duet")
+        expect(response.body).to include("Jak liczony jest Najlepszy duet ofensywny")
+        expect(response.body).to include("Wynik = wygrane × 3 + remisy + gole + asysty")
+        expect(response.body).to include("Najpierw liczba wspólnych meczów")
+        expect(response.body).to include("Win% = wygrane / wspólne mecze × 100")
+        expect(response.body).to include("Najpierw asysty między sobą")
         expect(response.body).to include("synergy-summary-card__watermark")
         expect(response.body).to include("synergy-summary-card__label")
+        expect(response.body).to include("synergy-summary-card__tooltip-control")
+        summary_card = Nokogiri::HTML(response.body).at_css(".synergy-summary-card")
+        label_row = summary_card.at_css(".synergy-summary-card__label-row")
+        expect(label_row.css("button.synergy-summary-card__tooltip-control").size).to eq(1)
+        expect(label_row.css(".synergy-summary-card__label").size).to eq(1)
+        expect(label_row.element_children.first["class"]).to include("synergy-summary-card__tooltip-anchor")
+        expect(summary_card.at_css(".synergy-summary-card__watermark")).not_to be_nil
         expect(response.body).to include("relationship-summary-player-group")
         expect(response.body).to include("relationship-summary-player-plus")
         expect(response.body).to include("synergy-summary-card__metric")
@@ -62,6 +77,15 @@ RSpec.describe "Relationships" do
         expect(response.body).to include("5 goli · 5 asyst")
         table_headers = Nokogiri::HTML(response.body).css(".relationship-ranking-table thead th").map { |header| header.text.strip }
         expect(table_headers).to eq([ "#", "Duet", "Mecze", "Bilans", "Win%", "Ofensywa" ])
+        document = Nokogiri::HTML(response.body)
+        mobile_headers = document.css(".relationship-mobile-ranking__header span").map { |header| header.text.squish }
+        expect(mobile_headers).to eq([ "#", "Duet", "Mecze", "G+A", "Wzajemne asysty" ])
+        mobile_row = document.at_css(".relationship-mobile-ranking__row")
+        expect(mobile_row.at_css(".relationship-mobile-ranking__matches").text.squish).to eq("5 100%")
+        expect(mobile_row.at_css(".relationship-mobile-ranking__offense").text.squish).to eq("10 (5g + 5a)")
+        expect(mobile_row.at_css(".relationship-mobile-ranking__mutual").text.squish).to eq("5")
+        expect(mobile_row.css(".relationship-mobile-player__avatar").size).to eq(2)
+        expect(mobile_row.css(".relationship-mobile-player__name").map { |name| name.text.squish }).to contain_exactly("Adam Nowak", "Marek Kowalski")
         expect(response.body).to include("relationship-group-cell")
         expect(response.body).to include("player-identity-pill")
         expect(response.body).to include("player-identity-pill__icon")
@@ -125,6 +149,36 @@ RSpec.describe "Relationships" do
         expect(response.body).to include("value=\"1\" min=\"1\"")
         expect(response.body).to include("value=\"Adam\"")
         expect(response.body).to include("Trio")
+      end
+
+      it "renders shared competition ranks for exact ranking ties" do
+        adam = create(:player, name: "Adam Nowak", nickname: "adam", approval_status: "approved", active: true)
+        bartek = create(:player, name: "Bartek Kowal", nickname: "bartek", approval_status: "approved", active: true)
+        cezary = create(:player, name: "Cezary Lis", nickname: "cezary", approval_status: "approved", active: true)
+        opponent = create(:player, name: "Opponent Player", nickname: "opponent", approval_status: "approved", active: true)
+        season = create(:season)
+
+        3.times do |index|
+          match_day = create(:match_day, season:, played_on: Date.new(2026, 6, index + 10), status: "finished")
+          team_setup = create(:team_setup, match_day:)
+          home_team = create(:team, team_setup:, team_type: Team::TEAM_TYPE_MATCH)
+          away_team = create(:team, team_setup:, team_type: Team::TEAM_TYPE_MATCH)
+          adam_team_player = create(:team_player, team: home_team, player: adam)
+          bartek_team_player = create(:team_player, team: home_team, player: bartek)
+          cezary_team_player = create(:team_player, team: home_team, player: cezary)
+          create(:team_player, team: away_team, player: opponent)
+          match = create(:match, match_day:, home_team:, away_team:, home_score: 2, away_score: 1, finished_at: index.days.ago)
+          create(:match_goal, match:, scoring_team: home_team, scorer_team_player: adam_team_player, assistant_team_player: bartek_team_player)
+          create(:match_goal, match:, scoring_team: home_team, scorer_team_player: cezary_team_player, assistant_team_player: adam_team_player)
+        end
+
+        get "/relationships", params: { season_id: season.id }
+
+        ranks = Nokogiri::HTML(response.body).css(".relationship-ranking-table tbody tr .relationship-ranking-table__rank").map { |cell| cell.text.strip }
+
+        expect(response).to have_http_status(:ok)
+        expect(ranks).to eq(%w[1 1 3])
+        expect(response.body).to include("3 asysty między sobą")
       end
 
       it "updates meta pills from the filtered ranking results" do

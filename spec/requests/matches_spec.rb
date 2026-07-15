@@ -16,6 +16,7 @@ RSpec.describe "Matches" do
           create(:team_player, team: home_team, player: home_player, position: 1)
           create(:team_player, team: away_team, player: away_player)
           home_team.update!(captain: home_player)
+          away_team.update!(captain: away_player)
           match = create(
             :match,
             match_day: match_day,
@@ -29,7 +30,7 @@ RSpec.describe "Matches" do
           get "/matches/#{match.id}"
 
           expect(response).to have_http_status(:ok)
-          expect(response.body).to include('<body class="theme-dark public-layout">')
+          expect(response.body).to include('<body class="theme-dark public-layout"')
           expect(response.body).to include("Football App")
           expect(response.body).to include("Weekendowe granie")
           expect(response.body).to include("MECZ")
@@ -48,8 +49,15 @@ RSpec.describe "Matches" do
           expect(response.body).to include("Składy i wkład zawodników")
           expect(response.body).to include(">SAM</span>")
           expect(response.body).not_to include(">SG</span>")
+          expect(response.body).to include("match-roster-mobile-summary")
+          expect(response.body).to include("match-roster-mobile-summary__total")
+          expect(response.body).to include("match-roster-mobile-summary__breakdown")
           expect(response.body).to include("Adam Nowak")
           expect(response.body).to include("Marek Kowalski")
+          expect(response.body).to include("Team Adam Nowak")
+          expect(response.body).to include("Team Marek Kowalski")
+          expect(response.body).to include("Team Adam Nowak wygrał")
+          expect(response.body).to include("Kapitan: ")
           expect(response.body).to include("lucide-sun")
           expect(response.body).to include("--captain-color: #B91C1C")
           expect(response.body).to include("Kapitan")
@@ -141,10 +149,62 @@ RSpec.describe "Matches" do
         expect(response.body).to include("Adam Nowak")
         expect(response.body).to include("13. minuta")
         expect(response.body).to include("26. minuta")
+        expect(response.body).to include("match-timeline__tag--event-type")
         expect(response.body).to include("asysta: Jan Kowalski")
-        expect(response.body).to include("0:0 → 1:0 → 2:0")
+        expect(response.body).not_to match(/asysta: Jan Kowalski\s*·\s*Team A/)
+        expect(response.body).to include("match-score-progression__score")
+        expect(response.body).to include("match-score-progression__arrow")
+        expect(response.body).to include("0:0")
+        expect(response.body).to include("1:0")
+        expect(response.body).to include("2:0")
         expect(response.body).to include("2 : 0")
         expect(response.body).not_to include("Ostatnie wydarzenia")
+      end
+
+      it "renders the lead and equalizer summary with scorer and team names" do
+        season = create(:season, name: "Summer 2026")
+        match_day = create(:match_day, season: season, played_on: Date.new(2026, 6, 19), status: "finished")
+        team_setup = create(:team_setup, match_day: match_day)
+        home_team = create(:team, team_setup: team_setup, name: "Home", team_type: "match")
+        away_team = create(:team, team_setup: team_setup, name: "Away", team_type: "match")
+        home_player = create(:player, name: "Home Scorer", nickname: "home-scorer")
+        away_player = create(:player, name: "Away Scorer", nickname: "away-scorer")
+        home_team_player = create(:team_player, team: home_team, player: home_player)
+        away_team_player = create(:team_player, team: away_team, player: away_player)
+        match = create(
+          :match,
+          match_day: match_day,
+          home_team: home_team,
+          away_team: away_team,
+          home_score: 1,
+          away_score: 1,
+          started_at: Time.zone.parse("2026-06-19 19:15:00"),
+          finished_at: Time.zone.parse("2026-06-19 19:45:00")
+        )
+        create(
+          :match_goal,
+          match: match,
+          scoring_team: home_team,
+          scorer_team_player: home_team_player,
+          scored_at: Time.zone.parse("2026-06-19 19:27:00"),
+          home_score_after: 1,
+          away_score_after: 0
+        )
+        create(
+          :match_goal,
+          match: match,
+          scoring_team: away_team,
+          scorer_team_player: away_team_player,
+          scored_at: Time.zone.parse("2026-06-19 19:35:00"),
+          home_score_after: 1,
+          away_score_after: 1
+        )
+
+        get "/matches/#{match.id}"
+
+        expect(response).to have_http_status(:ok)
+        expect(response.body).to include("Home Scorer (Team Home) · 1:0")
+        expect(response.body).to include("Away Scorer (Team Away) · 1:1")
       end
 
       it "renders own goals as match summary data" do
@@ -184,6 +244,7 @@ RSpec.describe "Matches" do
         expect(response.body).to include("samobój: Marek Kowalski")
         expect(response.body).to include("SAMOBÓJ")
         expect(response.body).to include("dla: Team A")
+        expect(response.body).to include("0G + 0A + 1S")
         expect(response.body).not_to include("+48222222222")
       end
 

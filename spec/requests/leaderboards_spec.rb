@@ -46,6 +46,13 @@ RSpec.describe "Leaderboards" do
         expect(response.body).to include("ui-icon")
         expect(response.body).to include("<svg")
         expect(response.body.scan("<col ").size).to eq(6)
+        goals_assists_table = Nokogiri::HTML(response.body).at_css("table.leaderboards-table--goals_assists")
+        goals_assists_header = goals_assists_table.at_css("thead th:nth-child(5)")
+        goals_assists_cell = goals_assists_table.at_css("tbody tr td:nth-child(5)")
+        expect(goals_assists_header.css(".leaderboards-table__header-main").text.strip).to eq("G+A")
+        expect(goals_assists_header.css(".leaderboards-table__header-subvalue").text.strip).to eq("G+A/mecz")
+        expect(goals_assists_cell.css(".leaderboards-table__cell-main").text.strip).to eq("7")
+        expect(goals_assists_cell.css(".leaderboards-table__mobile-subvalue").text.strip).to eq("7")
         expect(response.body).to include("leaderboards-table__col--position")
         expect(response.body).to include("leaderboards-table__col--player")
         expect(response.body).to include("leaderboards-table__col--role")
@@ -62,6 +69,12 @@ RSpec.describe "Leaderboards" do
         expect(response.body).to include("leaderboards-rank--gold")
         expect(response.body).to include("leaderboards-rank--bronze")
         expect(response.body).to include("lucide-medal")
+        tabs = Nokogiri::HTML(response.body).at_css(".leaderboards-tabs")
+        frame = Nokogiri::HTML(response.body).at_css("turbo-frame#leaderboards_results")
+        expect(tabs["role"]).to eq("tablist")
+        expect(tabs.css(".leaderboards-tab[role='tab']").size).to eq(7)
+        expect(frame["data-turbo-action"]).to eq("advance")
+        expect(frame.css("a[data-turbo-frame='leaderboards_results']").size).to eq(7)
         expect(response.body).not_to include(">Punkty<")
         expect(response.body).not_to include("Pending Player")
         expect(response.body).not_to include("+48111111111")
@@ -85,8 +98,27 @@ RSpec.describe "Leaderboards" do
 
         expect(response).to have_http_status(:ok)
         expect(response.body.scan("<col ").size).to eq(6)
+        expect(response.body).to include("leaderboards-table leaderboards-table--elo")
+        expect(response.body).to include("leaderboards-table__cell-main")
+        expect(response.body).to include("leaderboards-table__mobile-subvalue")
         expect(response.body).to include("Ostatnia zmiana")
         expect(response.body).to include("+18")
+
+        get leaderboards_path, params: { season_id: season.id, tab: "goals" }
+
+        expect(response).to have_http_status(:ok)
+        expect(response.body).to include("leaderboards-table leaderboards-table--goals")
+        expect(response.body).to include("Gole/mecz")
+        expect(response.body).to include("leaderboards-table__header-subvalue")
+        expect(response.body).to include("leaderboards-table__mobile-subvalue")
+
+        get leaderboards_path, params: { season_id: season.id, tab: "assists" }
+
+        expect(response).to have_http_status(:ok)
+        expect(response.body).to include("leaderboards-table leaderboards-table--assists")
+        expect(response.body).to include("Asysty/mecz")
+        expect(response.body).to include("leaderboards-table__header-subvalue")
+        expect(response.body).to include("leaderboards-table__mobile-subvalue")
 
         get leaderboards_path, params: { season_id: season.id, tab: "mvp" }
 

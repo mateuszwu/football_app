@@ -17,7 +17,7 @@
   <% end %>
 </section>
 
-<section class="player-profile-table-card">
+<section class="player-profile-table-card player-profile-table-card--synergy">
   <div class="leaderboards-table-wrap">
     <table class="leaderboards-table player-profile-table">
       <thead>
@@ -53,4 +53,51 @@
       </tbody>
     </table>
   </div>
+</section>
+
+<section class="player-profile-synergy-mobile" aria-label="<%= t("players.profile.synergy.title") %>">
+  <% profile.synergy.fetch(:entries).each do |entry| %>
+    <% partner = player_profile_partner(entry, player) %>
+    <article class="player-profile-synergy-mobile__row">
+      <div class="player-profile-synergy-mobile__top">
+        <%= link_to player_path(partner), class: "player-profile-synergy-mobile__partner" do %>
+          <%= player_identity_badge(partner, size: :sm) %>
+          <span class="player-profile-synergy-mobile__partner-name"><%= partner.name %></span>
+        <% end %>
+
+        <div class="player-profile-synergy-mobile__offense">
+          <span><%= t("players.profile.synergy.goals_assists") %></span>
+          <strong><%= entry.goals_assists %></strong>
+          <small>(<%= entry.goals %>G + <%= entry.assists %>A)</small>
+        </div>
+      </div>
+
+      <dl class="player-profile-synergy-mobile__metrics">
+        <div>
+          <dt><%= t("players.profile.synergy.shared_matches") %></dt>
+          <dd><%= entry.shared_matches_count %></dd>
+        </div>
+        <div>
+          <dt><%= t("players.profile.synergy.wins") %> / <%= t("players.profile.synergy.draws") %> / <%= t("players.profile.synergy.losses") %></dt>
+          <dd><%= entry.wins %>W · <%= entry.draws %>R · <%= entry.losses %>P</dd>
+        </div>
+        <div>
+          <dt><%= t("players.profile.synergy.win_rate") %></dt>
+          <dd><%= entry.win_rate || 0 %>%</dd>
+        </div>
+        <div>
+          <dt><%= t("players.profile.synergy.goals_together") %></dt>
+          <dd><%= entry.goals %></dd>
+        </div>
+        <div>
+          <dt><%= t("players.profile.synergy.assists_together") %></dt>
+          <dd><%= entry.assists %></dd>
+        </div>
+        <div>
+          <dt><%= t("players.profile.synergy.mutual_assists") %></dt>
+          <dd><%= entry.mutual_assists %></dd>
+        </div>
+      </dl>
+    </article>
+  <% end %>
 </section>

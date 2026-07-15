@@ -1,4 +1,4 @@
-<section class="player-profile-table-card">
+<section class="player-profile-table-card player-profile-table-card--matches">
   <div class="leaderboards-table-card__header">
     <div>
       <h2><%= title %></h2>
@@ -41,11 +41,62 @@
                   <span class="player-profile-award-badge player-profile-award-badge--<%= award_type.downcase %>"><%= award_type %></span>
                 <% end %>
               </td>
-              <td><%= link_to t("players.profile.matches.view_match"), match_path(entry.match), class: "roster-card__link" %></td>
+              <td><%= link_to t("players.profile.matches.view_match"), match_path(entry.match), class: "roster-card__link", data: { turbo_frame: "_top" } %></td>
             </tr>
           <% end %>
         </tbody>
       </table>
+    </div>
+
+    <div class="player-profile-matches-mobile">
+      <% matches.each do |entry| %>
+        <article class="player-profile-matches-mobile__row">
+          <div class="player-profile-matches-mobile__header">
+            <div class="player-profile-matches-mobile__date">
+              <strong><%= l(entry.date) %></strong>
+              <span>#<%= entry.match.id %></span>
+            </div>
+            <span class="player-profile-match-result player-profile-match-result--<%= entry.result %>"><%= player_profile_result_label(entry.result) %></span>
+          </div>
+
+          <div class="player-profile-matches-mobile__teams">
+            <div>
+              <span><%= t("players.profile.matches.team") %></span>
+              <strong><%= entry.team.name %></strong>
+              <small>vs <%= entry.opponent.name %></small>
+            </div>
+            <strong class="player-profile-matches-mobile__score"><%= entry.score %></strong>
+          </div>
+
+          <dl class="player-profile-matches-mobile__metrics">
+            <div>
+              <dt><%= t("players.profile.matches.goals") %></dt>
+              <dd><%= entry.goals %></dd>
+            </div>
+            <div>
+              <dt><%= t("players.profile.matches.assists") %></dt>
+              <dd><%= entry.assists %></dd>
+            </div>
+            <div>
+              <dt><%= t("players.profile.matches.own_goals") %></dt>
+              <dd><%= entry.own_goals %></dd>
+            </div>
+            <div>
+              <dt><%= t("players.profile.matches.elo_change") %></dt>
+              <dd><%= player_profile_signed_delta(entry.elo_delta) %></dd>
+            </div>
+          </dl>
+
+          <div class="player-profile-matches-mobile__footer">
+            <div class="player-profile-matches-mobile__badges">
+              <% entry.award_types.each do |award_type| %>
+                <span class="player-profile-award-badge player-profile-award-badge--<%= award_type.downcase %>"><%= award_type %></span>
+              <% end %>
+            </div>
+            <%= link_to t("players.profile.matches.view_match"), match_path(entry.match), class: "player-profile-matches-mobile__link", data: { turbo_frame: "_top" } %>
+          </div>
+        </article>
+      <% end %>
     </div>
 
     <% if paginated && profile.paginated_matches.total_pages > 1 %>

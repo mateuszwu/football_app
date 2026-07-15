@@ -59,6 +59,36 @@ RSpec.describe Dashboard::TilesQuery do
         scorer = create(:team_player, team: home_team, player: first_player)
         assistant = create(:team_player, team: home_team, player: second_player)
         create(:match_goal, match:, scoring_team: home_team, scorer_team_player: scorer, assistant_team_player: assistant)
+        second_home_team = create(:team, name: "Green Team", team_setup:, team_type: Team::TEAM_TYPE_MATCH, score: 1)
+        second_away_team = create(:team, name: "Blue Team", team_setup:, team_type: Team::TEAM_TYPE_MATCH, score: 0)
+        create(:team_player, team: second_home_team, player: first_player)
+        create(:team_player, team: second_home_team, player: second_player)
+        create(:team_player, team: second_away_team, player: third_player)
+        create(
+          :match,
+          match_day:,
+          home_team: second_home_team,
+          away_team: second_away_team,
+          home_score: 1,
+          away_score: 0,
+          started_at: 25.minutes.ago,
+          finished_at: 20.minutes.ago
+        )
+        third_home_team = create(:team, name: "White Team", team_setup:, team_type: Team::TEAM_TYPE_MATCH, score: 0)
+        third_away_team = create(:team, name: "Red Team", team_setup:, team_type: Team::TEAM_TYPE_MATCH, score: 1)
+        create(:team_player, team: third_home_team, player: third_player)
+        create(:team_player, team: third_away_team, player: first_player)
+        create(:team_player, team: third_away_team, player: second_player)
+        create(
+          :match,
+          match_day:,
+          home_team: third_home_team,
+          away_team: third_away_team,
+          home_score: 0,
+          away_score: 1,
+          started_at: 15.minutes.ago,
+          finished_at: 10.minutes.ago
+        )
 
         create(:player_season_stat, season:, player: first_player, elo: 1040, goals: 3, assists: 1, mvp_votes_count: 2)
         create(:player_season_stat, season:, player: second_player, elo: 1010, goals: 1, assists: 4, def_votes_count: 3)
@@ -86,7 +116,8 @@ RSpec.describe Dashboard::TilesQuery do
         expect(result.best_duo_summary.player_a).to eq(first_player)
         expect(result.best_duo_summary.player_b).to eq(second_player)
         expect(result.best_duo_summary.shared_match_days_count).to eq(1)
-        expect(result.best_duo_summary.wins).to eq(1)
+        expect(result.best_duo_summary.shared_matches_count).to eq(3)
+        expect(result.best_duo_summary.wins).to eq(3)
         expect(result.best_duo_summary.goals).to eq(1)
         expect(result.best_duo_summary.assists).to eq(1)
       end

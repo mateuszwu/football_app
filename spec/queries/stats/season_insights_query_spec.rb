@@ -56,6 +56,126 @@ RSpec.describe Stats::SeasonInsightsQuery do
         expect(result.fetch(:clutch_players).find { |row| row.fetch(:player) == adam }).to include(closing_goals: 2)
         expect(result.dig(:chart_data, :match_durations, :labels)).to include("2026-07-01 · ##{first_match.id}")
       end
+
+      it "sorts first goal players by first goals, rate, win rate, and name" do
+        season = create(:season)
+        high_win_player = create(:player, name: "Zed Demo", approval_status: "approved", active: true)
+        low_win_player = create(:player, name: "Adam Demo", approval_status: "approved", active: true)
+        alpha_first_player = create(:player, name: "Bartek Demo", approval_status: "approved", active: true)
+        alpha_second_player = create(:player, name: "Cezary Demo", approval_status: "approved", active: true)
+        opponent = create(:player, name: "Opponent Demo", approval_status: "approved", active: true)
+
+        create_completed_match(
+          season:,
+          played_on: Date.new(2026, 7, 1),
+          home_player: low_win_player,
+          away_player: opponent,
+          scores: [ [ :home, 30 ], [ :away, 60 ], [ :away, 90 ], [ :away, 120 ], [ :away, 150 ], [ :away, 180 ] ],
+          final_score: [ 1, 5 ]
+        )
+        create_completed_match(
+          season:,
+          played_on: Date.new(2026, 7, 2),
+          home_player: low_win_player,
+          away_player: opponent,
+          scores: [ [ :home, 30 ], [ :away, 60 ], [ :away, 90 ], [ :away, 120 ], [ :away, 150 ], [ :away, 180 ] ],
+          final_score: [ 1, 5 ]
+        )
+        create_completed_match(
+          season:,
+          played_on: Date.new(2026, 7, 3),
+          home_player: high_win_player,
+          away_player: opponent,
+          scores: [ [ :home, 30 ], [ :home, 60 ], [ :home, 90 ], [ :home, 120 ], [ :home, 150 ] ],
+          final_score: [ 5, 0 ]
+        )
+        create_completed_match(
+          season:,
+          played_on: Date.new(2026, 7, 4),
+          home_player: high_win_player,
+          away_player: opponent,
+          scores: [ [ :home, 30 ], [ :away, 60 ], [ :home, 90 ], [ :home, 120 ], [ :home, 150 ], [ :home, 180 ] ],
+          final_score: [ 5, 1 ]
+        )
+        create_completed_match(
+          season:,
+          played_on: Date.new(2026, 7, 5),
+          home_player: alpha_second_player,
+          away_player: opponent,
+          scores: [ [ :home, 30 ], [ :home, 60 ], [ :home, 90 ], [ :home, 120 ], [ :home, 150 ] ],
+          final_score: [ 5, 0 ]
+        )
+        create_completed_match(
+          season:,
+          played_on: Date.new(2026, 7, 6),
+          home_player: alpha_first_player,
+          away_player: opponent,
+          scores: [ [ :home, 30 ], [ :home, 60 ], [ :home, 90 ], [ :home, 120 ], [ :home, 150 ] ],
+          final_score: [ 5, 0 ]
+        )
+
+        result = described_class.call(season:)
+
+        rows = result.dig(:first_goal, :player_rows)
+
+        expect(rows.map { |row| row.fetch(:player).name }).to eq([ "Zed Demo", "Adam Demo", "Bartek Demo", "Cezary Demo" ])
+        expect(rows.map { |row| row.fetch(:first_goals) }).to eq([ 2, 2, 1, 1 ])
+        expect(rows.map { |row| row.fetch(:first_goal_rate) }).to eq([ 33, 33, 17, 17 ])
+        expect(rows.map { |row| row.fetch(:win_rate_after_first_goal) }).to eq([ 100, 0, 100, 100 ])
+      end
+
+      it "selects biggest domination by margin, match speed, first goal speed, and latest match" do
+        season = create(:season)
+        home_player = create(:player, name: "Home Demo", approval_status: "approved", active: true)
+        away_player = create(:player, name: "Away Demo", approval_status: "approved", active: true)
+
+        create_completed_match(
+          season:,
+          played_on: Date.new(2026, 7, 1),
+          home_player:,
+          away_player:,
+          scores: [ [ :home, 10 ], [ :home, 20 ], [ :home, 30 ], [ :home, 40 ], [ :away, 50 ], [ :home, 120 ] ],
+          final_score: [ 5, 1 ]
+        )
+        create_completed_match(
+          season:,
+          played_on: Date.new(2026, 7, 2),
+          home_player:,
+          away_player:,
+          scores: [ [ :home, 90 ], [ :home, 120 ], [ :home, 180 ], [ :home, 240 ], [ :home, 300 ] ],
+          final_score: [ 5, 0 ]
+        )
+        create_completed_match(
+          season:,
+          played_on: Date.new(2026, 7, 3),
+          home_player:,
+          away_player:,
+          scores: [ [ :home, 120 ], [ :home, 150 ], [ :home, 180 ], [ :home, 210 ], [ :home, 240 ] ],
+          final_score: [ 5, 0 ]
+        )
+        create_completed_match(
+          season:,
+          played_on: Date.new(2026, 7, 4),
+          home_player:,
+          away_player:,
+          scores: [ [ :home, 60 ], [ :home, 150 ], [ :home, 180 ], [ :home, 210 ], [ :home, 240 ] ],
+          final_score: [ 5, 0 ]
+        )
+        latest_tied_match = create_completed_match(
+          season:,
+          played_on: Date.new(2026, 7, 5),
+          home_player:,
+          away_player:,
+          scores: [ [ :home, 60 ], [ :home, 150 ], [ :home, 180 ], [ :home, 210 ], [ :home, 240 ] ],
+          final_score: [ 5, 0 ]
+        )
+
+        result = described_class.call(season:)
+
+        biggest_domination = result.dig(:records, :rows).find { |row| row.fetch(:key) == "biggest_domination" }
+
+        expect(biggest_domination).to include(value: "+5 / 5:0", match: latest_tied_match)
+      end
     end
   end
 

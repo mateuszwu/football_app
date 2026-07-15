@@ -15,11 +15,16 @@ RSpec.describe "Home page" do
         expect(response.body).to include('alt="Football App"')
         expect(response.body).to include("sidebar-brand__logo")
         expect(response.body).to include("mobile-app-header")
-        expect(response.body).to include('data-controller="mobile-nav"')
+        expect(response.body).to include('<body class="theme-dark public-layout" data-controller="mobile-nav">')
         expect(response.body).to include('data-action="mobile-nav#open"')
         expect(response.body).to include('data-mobile-nav-target="drawer"')
         expect(response.body).to include("mobile-nav-drawer__links")
         expect(response.body).to include("mobile-nav-link")
+
+        mobile_header = response.body[/<header class="mobile-app-header">.*?<\/header>/m]
+        expect(mobile_header).not_to include("mobile-nav-overlay")
+        expect(mobile_header).not_to include("mobile-nav-drawer")
+
         expect(response.body).to include("favicon")
         expect(response.body).to include("favicon-32x32")
         expect(response.body).to include("favicon-16x16")
@@ -173,6 +178,30 @@ RSpec.describe "Home page" do
         scorer_team_player = create(:team_player, team: home_team, player: scorer)
         assistant_team_player = create(:team_player, team: home_team, player: assistant)
         create(:match_goal, match:, scoring_team: home_team, scorer_team_player:, assistant_team_player:)
+
+        second_match_day = create(:match_day, season:, played_on: Date.current - 2.days, status: "finished")
+        [ scorer, assistant, defender ].each do |player|
+          create(:match_day_player, match_day: second_match_day, player:)
+        end
+        second_setup = create(:team_setup, match_day: second_match_day)
+        second_home_team = create(:team, name: "Green Team", team_setup: second_setup, team_type: Team::TEAM_TYPE_MATCH, score: 1)
+        second_away_team = create(:team, name: "Blue Team", team_setup: second_setup, team_type: Team::TEAM_TYPE_MATCH, score: 0)
+        create(:team_player, team: second_home_team, player: scorer)
+        create(:team_player, team: second_home_team, player: assistant)
+        create(:team_player, team: second_away_team, player: defender)
+        create(:match, match_day: second_match_day, home_team: second_home_team, away_team: second_away_team, home_score: 1, away_score: 0, started_at: 2.days.ago, finished_at: 2.days.ago + 30.minutes)
+
+        third_match_day = create(:match_day, season:, played_on: Date.current - 1.day, status: "finished")
+        [ scorer, assistant, defender ].each do |player|
+          create(:match_day_player, match_day: third_match_day, player:)
+        end
+        third_setup = create(:team_setup, match_day: third_match_day)
+        third_home_team = create(:team, name: "White Team", team_setup: third_setup, team_type: Team::TEAM_TYPE_MATCH, score: 0)
+        third_away_team = create(:team, name: "Red Team", team_setup: third_setup, team_type: Team::TEAM_TYPE_MATCH, score: 1)
+        create(:team_player, team: third_home_team, player: defender)
+        create(:team_player, team: third_away_team, player: scorer)
+        create(:team_player, team: third_away_team, player: assistant)
+        create(:match, match_day: third_match_day, home_team: third_home_team, away_team: third_away_team, home_score: 0, away_score: 1, started_at: 1.day.ago, finished_at: 1.day.ago + 30.minutes)
         create(:player_season_stat, season:, player: scorer, elo: 1040, goals: 2, assists: 1, mvp_votes_count: 3)
         create(:player_season_stat, season:, player: assistant, elo: 1010, goals: 1, assists: 4, def_votes_count: 2)
         create(:player_season_stat, season:, player: defender, elo: 1000, goals: 2)
@@ -211,8 +240,8 @@ RSpec.describe "Home page" do
         expect(response.body).to include("dashboard-best-duo__players")
         expect(response.body).not_to include("dashboard-best-duo__avatars")
         expect(response.body).to include("Najlepszy duet")
-        expect(response.body).to include("1 wspólny dzień grania")
-        expect(response.body).to include("1W · 0R · 0P")
+        expect(response.body).to include("3 wspólne mecze")
+        expect(response.body).to include("3W · 0R · 0P")
         expect(response.body).to include("100% wygranych")
         expect(response.body).to match(/1 gol\s+·\s+1 asysta/)
         expect(response.body).to include("Zobacz synergię")

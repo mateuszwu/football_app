@@ -280,6 +280,14 @@ RSpec.describe Player do
     end
   end
 
+  describe "#display_name" do
+    it "returns the player's persisted name without requiring another field" do
+      player = build(:player, name: "Captain Demo")
+
+      expect(player.display_name).to eq("Captain Demo")
+    end
+  end
+
   describe "#match_history" do
     context "when the player has played multiple match days" do
       it "returns the player's match days ordered from newest to oldest" do

@@ -37,8 +37,8 @@
       end
   %>
 
-  <body class="<%= body_class %>">
-    <header class="mobile-app-header" data-controller="mobile-nav">
+  <body class="<%= body_class %>" data-controller="mobile-nav">
+    <header class="mobile-app-header">
       <div class="mobile-app-header__brand">
         <%= image_tag "branding/neon_green_football_emblem.png", class: "mobile-app-header__logo", alt: "Football App" %>
         <span class="mobile-app-header__title"><%= t("app.name") %></span>
@@ -47,26 +47,26 @@
       <button type="button" class="mobile-app-header__menu-button" data-action="mobile-nav#open" aria-label="Otwórz menu">
         <%= safe_lucide_icon("menu", fallback: "circle", class_name: "mobile-app-header__menu-icon") %>
       </button>
-
-      <div class="mobile-nav-overlay" data-mobile-nav-target="overlay" data-action="click->mobile-nav#close" hidden></div>
-
-      <nav class="mobile-nav-drawer" data-mobile-nav-target="drawer" aria-label="Nawigacja mobilna" hidden>
-        <div class="mobile-nav-drawer__header">
-          <div class="mobile-nav-drawer__brand">
-            <%= image_tag "branding/neon_green_football_emblem.png", class: "mobile-nav-drawer__logo", alt: "Football App" %>
-            <span class="mobile-nav-drawer__title"><%= t("app.name") %></span>
-          </div>
-
-          <button type="button" class="mobile-nav-drawer__close" data-action="mobile-nav#close" aria-label="Zamknij menu">
-            <%= safe_lucide_icon("x", fallback: "circle", class_name: "mobile-nav-drawer__close-icon") %>
-          </button>
-        </div>
-
-        <div class="mobile-nav-drawer__links">
-          <%= render "shared/navigation_links", variant: :mobile %>
-        </div>
-      </nav>
     </header>
+
+    <div class="mobile-nav-overlay" data-mobile-nav-target="overlay" data-action="click->mobile-nav#close" hidden></div>
+
+    <nav class="mobile-nav-drawer" data-mobile-nav-target="drawer" aria-label="Nawigacja mobilna" hidden>
+      <div class="mobile-nav-drawer__header">
+        <div class="mobile-nav-drawer__brand">
+          <%= image_tag "branding/neon_green_football_emblem.png", class: "mobile-nav-drawer__logo", alt: "Football App" %>
+          <span class="mobile-nav-drawer__title"><%= t("app.name") %></span>
+        </div>
+
+        <button type="button" class="mobile-nav-drawer__close" data-action="mobile-nav#close" aria-label="Zamknij menu">
+          <%= safe_lucide_icon("x", fallback: "circle", class_name: "mobile-nav-drawer__close-icon") %>
+        </button>
+      </div>
+
+      <div class="mobile-nav-drawer__links">
+        <%= render "shared/navigation_links", variant: :mobile %>
+      </div>
+    </nav>
 
     <header class="site-header">
       <nav class="site-nav" aria-label="<%= t("navigation.dashboard") %>">

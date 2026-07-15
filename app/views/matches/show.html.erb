@@ -41,13 +41,15 @@
   <section class="match-score-hero">
     <% home_team = summary.teams.fetch(:home) %>
     <% away_team = summary.teams.fetch(:away) %>
+    <% home_captain = match_team_captain(home_team) %>
+    <% away_captain = match_team_captain(away_team) %>
     <% home_events = summary.timeline.select { |event| event.fetch(:team) == home_team } %>
     <% away_events = summary.timeline.select { |event| event.fetch(:team) == away_team } %>
 
     <article class="match-score-team match-score-team--home">
       <div class="match-score-team__header">
         <%= match_team_captain_mark(home_team) %>
-        <h2><%= home_team.name %></h2>
+        <h2><%= home_captain.present? ? "Team #{home_captain.display_name}" : home_team.name %></h2>
       </div>
 
       <%= render partial: "matches/team_goals", locals: { events: home_events } %>
@@ -62,7 +64,7 @@
     <article class="match-score-team match-score-team--away">
       <div class="match-score-team__header">
         <%= match_team_captain_mark(away_team) %>
-        <h2><%= away_team.name %></h2>
+        <h2><%= away_captain.present? ? "Team #{away_captain.display_name}" : away_team.name %></h2>
       </div>
 
       <%= render partial: "matches/team_goals", locals: { events: away_events } %>
@@ -111,7 +113,12 @@
           </div>
           <% if summary.score_progression.any? %>
             <div class="match-score-progression">
-              <%= summary.score_progression.map { |score| match_report_compact_score(score) }.join(" → ") %>
+              <% summary.score_progression.each_with_index do |score, index| %>
+                <span class="match-score-progression__score"><%= match_report_compact_score(score) %></span>
+                <% unless index == summary.score_progression.length - 1 %>
+                  <span aria-hidden="true" class="match-score-progression__arrow">→</span>
+                <% end %>
+              <% end %>
             </div>
           <% end %>
         </div>
@@ -131,12 +138,10 @@
                       <%= t("matches.show.timeline.for_team", team: event.fetch(:team).name) %>
                     <% elsif event.fetch(:assister).present? %>
                       <%= t("matches.show.timeline.assist", player: event.fetch(:assister).name) %>
-                      ·
-                      <%= event.fetch(:team).name %>
                     <% end %>
                   </p>
                   <div class="match-timeline__tags">
-                    <span><%= event.fetch(:own_goal) ? t("matches.show.timeline.own_goal_badge") : t("matches.goal") %></span>
+                    <span class="match-timeline__tag--event-type"><%= event.fetch(:own_goal) ? t("matches.show.timeline.own_goal_badge") : t("matches.goal") %></span>
                     <% if event.fetch(:first_goal) %>
                       <span><%= t("matches.show.timeline.first_goal") %></span>
                     <% end %>
@@ -204,6 +209,16 @@
                         <% unless row.fetch(:mvp) || row.fetch(:def) %>
                           <span class="match-roster-card__empty-badge">—</span>
                         <% end %>
+                      </div>
+                      <div class="match-roster-mobile-summary">
+                        <div class="match-roster-mobile-summary__identity">
+                          <%= match_player_identity_avatar(row.fetch(:player)) %>
+                          <strong class="match-roster-mobile-summary__name"><%= match_player_profile_link(row.fetch(:player), class_name: "match-player-link") %></strong>
+                        </div>
+                        <div class="match-roster-mobile-summary__stats">
+                          <strong class="match-roster-mobile-summary__total"><%= match_roster_offense_total(row) %></strong>
+                          <span class="match-roster-mobile-summary__breakdown"><%= match_roster_offense_breakdown(row) %></span>
+                        </div>
                       </div>
                     </div>
                   <% end %>

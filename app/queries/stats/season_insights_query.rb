@@ -110,7 +110,7 @@ module Stats
         wins_after_first_goal: wins_after_first,
         first_goal_win_rate: percentage(wins_after_first, valid_events.count),
         no_win_after_first_goal_rate: percentage(valid_events.count - wins_after_first, valid_events.count),
-        player_rows: grouped.map { |player, events| first_goal_player_row(player, events) }.sort_by { |row| [ -row.fetch(:first_goals), row.fetch(:player).name ] }
+        player_rows: grouped.map { |player, events| first_goal_player_row(player, events) }.sort_by { |row| first_goal_player_sort_key(row) }
       }
     end
 
@@ -292,6 +292,15 @@ module Stats
       }
     end
 
+    def first_goal_player_sort_key(row)
+      [
+        -row.fetch(:first_goals),
+        -row.fetch(:first_goal_rate),
+        -row.fetch(:win_rate_after_first_goal),
+        row.fetch(:player).name
+      ]
+    end
+
     def closing_goal_rows
       closing_goal_events.group_by { |event| event.fetch(:scorer) }
         .map { |player, events| { player:, closing_goals: events.count } }
@@ -389,14 +398,7 @@ module Stats
     end
 
     def biggest_domination_card
-      timeline = completed_timelines.max_by do |candidate|
-        [
-          final_goal_difference(candidate),
-          -winner_goals_against(candidate),
-          -(candidate.summary.fetch(:duration_seconds).to_i),
-          -candidate.match.id
-        ]
-      end
+      timeline = completed_timelines.max_by { |candidate| biggest_domination_sort_key(candidate) }
       return nil if timeline.blank?
 
       {
@@ -407,6 +409,16 @@ module Stats
         path: Rails.application.routes.url_helpers.match_path(timeline.match),
         seconds: timeline.summary.fetch(:duration_seconds)
       }
+    end
+
+    def biggest_domination_sort_key(timeline)
+      [
+        final_goal_difference(timeline),
+        -timeline.summary.fetch(:duration_seconds).to_i,
+        -timeline.summary.fetch(:first_goal_event).fetch(:occurred_at_seconds).to_i,
+        timeline.match.match_day.played_on,
+        timeline.match.id
+      ]
     end
 
     def interesting_match_card

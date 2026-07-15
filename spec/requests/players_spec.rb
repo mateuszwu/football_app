@@ -374,6 +374,10 @@ RSpec.describe "Players" do
         expect(response.body).to include("Historia ELO")
         expect(response.body).to include("Synergia")
         expect(response.body).to include("MVP / DEF")
+        expect(response.body).to include('id="player_profile_results"')
+        expect(response.body).to include("leaderboards-tabs--responsive")
+        expect(response.body).to include('role="tablist"')
+        expect(response.body).to include('data-turbo-frame="player_profile_results"')
         expect(response.body).to include("1020")
         expect(response.body).to include("Mecze")
         expect(response.body).to include("Wygrane")
@@ -388,6 +392,9 @@ RSpec.describe "Players" do
         expect(response.body).to include("Ostatnie mecze")
         expect(response.body).to include("Bilans meczów")
         expect(response.body).to include("Zobacz mecz")
+        match_links = Nokogiri::HTML(response.body).css("a").select { |link| link.text.strip == "Zobacz mecz" }
+        expect(match_links).not_to be_empty
+        expect(match_links).to all(satisfy { |link| link["data-turbo-frame"] == "_top" })
         expect(response.body).to include("2026-05-29")
         expect(response.body).to include("Summer 2026")
         expect(response.body).to include("2:1")

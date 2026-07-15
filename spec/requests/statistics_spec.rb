@@ -26,6 +26,9 @@ RSpec.describe "Statistics" do
         expect(response).to have_http_status(:ok)
         expect(response.body).to include("Statystyki i ciekawostki")
         expect(response.body).to include("Tempo meczu")
+        tabs = Nokogiri::HTML(response.body).at_css(".stats-tabs")
+        expect(tabs["role"]).to eq("tablist")
+        expect(tabs.css(".leaderboards-tab[role='tab']").size).to eq(6)
         expect(response.body).to include("Najszybszy gol")
         expect(response.body).to include("00:30")
         expect(response.body).to include("Rozkład czasu meczów")
@@ -39,6 +42,16 @@ RSpec.describe "Statistics" do
         expect(response.body).not_to include("+48111111111")
         expect(response.body).not_to include("+48222222222")
         expect(response.body).not_to include("phone")
+
+        get "/statistics", params: { season_id: season.id, tab: "first_goal" }
+
+        expect(response).to have_http_status(:ok)
+        first_goal_table = Nokogiri::HTML(response.body).at_css("table.stats-first-goal-table")
+        expect(first_goal_table).not_to be_nil
+        expect(first_goal_table.css(".player-identity-pill").size).to eq(1)
+        expect(first_goal_table.css(".player-identity-pill__icon").size).to eq(1)
+        expect(first_goal_table.css(".stats-player-link")).to be_empty
+        expect(response.body).to include("stats-first-goal-table-wrap")
 
         get "/statistics", params: { season_id: season.id, tab: "records" }
 

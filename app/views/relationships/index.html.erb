@@ -8,35 +8,43 @@
   <div class="relationships-summary">
     <% relationship_summary_cards(duo_insights).each do |card| %>
       <% summary = card.fetch(:summary) %>
+      <% tooltip_id = "relationship-summary-tooltip-#{card.fetch(:key)}" %>
       <article class="synergy-summary-card">
-        <span class="synergy-summary-card__watermark" aria-hidden="true">
-          <%= safe_lucide_icon(card.fetch(:icon), fallback: card.fetch(:fallback), class_name: "ui-icon") %>
-        </span>
-        <% if summary.present? && !summary.empty? %>
-          <span class="synergy-summary-card__label"><%= t("relationships.summary.#{card.fetch(:key)}") %></span>
-          <div class="relationship-summary-player-group">
-            <%= render "shared/player_identity_pill", player: summary.player_a, size: :xs, variant: :compact %>
-            <span class="relationship-summary-player-plus" aria-hidden="true">+</span>
-            <%= render "shared/player_identity_pill", player: summary.player_b, size: :xs, variant: :compact %>
-          </div>
-          <em class="synergy-summary-card__metric"><%= relationship_primary_metric(summary, card.fetch(:primary_metric)) %></em>
-          <div class="synergy-summary-card__chips">
-            <% relationship_secondary_metrics(summary, card.fetch(:primary_metric)).each do |metric| %>
-              <span class="synergy-summary-card__chip"><%= metric %></span>
-            <% end %>
-          </div>
-        <% else %>
-          <span class="synergy-summary-card__label"><%= t("relationships.summary.#{card.fetch(:key)}") %></span>
-          <div class="synergy-summary-card__avatars synergy-summary-card__avatars--empty" aria-hidden="true">
-            <span class="synergy-summary-card__avatar synergy-summary-card__avatar--empty">?</span>
-            <span class="synergy-summary-card__avatar synergy-summary-card__avatar--empty">?</span>
-          </div>
-          <strong class="synergy-summary-card__names synergy-summary-card__names--empty"><%= t("relationships.empty.summary_card") %></strong>
-          <p class="synergy-summary-card__empty-body"><%= t("relationships.empty.summary_card_body") %></p>
-          <div class="synergy-summary-card__chips">
-            <span class="synergy-summary-card__chip synergy-summary-card__chip--muted"><%= t("relationships.empty.not_enough_data") %></span>
-          </div>
-        <% end %>
+        <%= render "shared/decorative_card_icon", icon: card.fetch(:icon), fallback: card.fetch(:fallback), class_name: "synergy-summary-card__watermark" %>
+        <div class="synergy-summary-card__content decorative-card-content">
+          <span class="synergy-summary-card__label-row">
+            <span class="synergy-summary-card__tooltip-anchor">
+              <button type="button" class="synergy-summary-card__tooltip-control" aria-label="<%= t("relationships.summary_tooltips.label", title: t("relationships.summary.#{card.fetch(:key)}")) %>" aria-describedby="<%= tooltip_id %>">
+                <%= safe_lucide_icon("info", fallback: "circle-help", class_name: "synergy-summary-card__tooltip-icon") %>
+              </button>
+              <span class="synergy-summary-card__tooltip" id="<%= tooltip_id %>" role="tooltip"><%= t("relationships.summary_tooltips.#{card.fetch(:tooltip_key)}") %></span>
+            </span>
+            <span class="synergy-summary-card__label"><%= t("relationships.summary.#{card.fetch(:key)}") %></span>
+          </span>
+          <% if summary.present? && !summary.empty? %>
+            <div class="relationship-summary-player-group">
+              <%= render "shared/player_identity_pill", player: summary.player_a, size: :xs, variant: :compact %>
+              <span class="relationship-summary-player-plus" aria-hidden="true">+</span>
+              <%= render "shared/player_identity_pill", player: summary.player_b, size: :xs, variant: :compact %>
+            </div>
+            <em class="synergy-summary-card__metric"><%= relationship_primary_metric(summary, card.fetch(:primary_metric)) %></em>
+            <div class="synergy-summary-card__chips">
+              <% relationship_secondary_metrics(summary, card.fetch(:primary_metric)).each do |metric| %>
+                <span class="synergy-summary-card__chip"><%= metric %></span>
+              <% end %>
+            </div>
+          <% else %>
+            <div class="synergy-summary-card__avatars synergy-summary-card__avatars--empty" aria-hidden="true">
+              <span class="synergy-summary-card__avatar synergy-summary-card__avatar--empty">?</span>
+              <span class="synergy-summary-card__avatar synergy-summary-card__avatar--empty">?</span>
+            </div>
+            <strong class="synergy-summary-card__names synergy-summary-card__names--empty"><%= t("relationships.empty.summary_card") %></strong>
+            <p class="synergy-summary-card__empty-body"><%= t("relationships.empty.summary_card_body") %></p>
+            <div class="synergy-summary-card__chips">
+              <span class="synergy-summary-card__chip synergy-summary-card__chip--muted"><%= t("relationships.empty.not_enough_data") %></span>
+            </div>
+          <% end %>
+        </div>
       </article>
     <% end %>
   </div>
@@ -192,7 +200,7 @@
             <tbody>
               <% combination_ranking.each_with_index do |result, index| %>
                 <tr>
-                  <td class="relationship-ranking-table__rank"><%= leaderboard_rank_badge(index + 1) %></td>
+                  <td class="relationship-ranking-table__rank"><%= leaderboard_rank_badge(result.rank || index + 1) %></td>
                   <td class="relationship-ranking-table__duet">
                     <div class="relationship-group-cell">
                       <% result.players.each_with_index do |player, player_index| %>
@@ -215,13 +223,63 @@
                   <td class="relationship-ranking-table__offense">
                     <div class="relationship-offense">
                       <strong class="relationship-offense__value"><%= result.goals_assists %> G+A</strong>
-                      <span class="relationship-offense__details"><%= result.goals %>G • <%= result.assists %>A</span>
+                      <span class="relationship-offense__details">
+                        <%= result.goals %>G • <%= result.assists %>A • <%= t("relationships.labels.mutual_assists", count: result.mutual_assists) %>
+                      </span>
                     </div>
                   </td>
                 </tr>
               <% end %>
             </tbody>
           </table>
+        </div>
+
+        <div class="relationship-mobile-ranking" aria-label="<%= t("relationships.ranking.title.#{active_tab}") %>">
+          <div class="relationship-mobile-ranking__header" aria-hidden="true">
+            <span><%= t("relationships.table.position") %></span>
+            <span><%= relationship_combination_label(active_tab) %></span>
+            <span><%= t("relationships.table.matches") %></span>
+            <span>G+A</span>
+            <span><%= t("relationships.table.mutual_assists_mobile") %></span>
+          </div>
+
+          <% combination_ranking.each_with_index do |result, index| %>
+            <article class="relationship-mobile-ranking__row">
+              <div class="relationship-mobile-ranking__rank">
+                <%= leaderboard_rank_badge(result.rank || index + 1) %>
+              </div>
+
+              <div class="relationship-mobile-ranking__players">
+                <% result.players.each do |player| %>
+                  <%= link_to player_path(player),
+                    class: "relationship-mobile-player",
+                    style: "--player-color: #{player.profile_color}",
+                    title: player.name,
+                    aria: { label: player.name },
+                    data: { turbo_frame: "_top" } do %>
+                    <span class="relationship-mobile-player__avatar" aria-hidden="true">
+                      <%= safe_lucide_icon(player.profile_icon_name, fallback: PlayerIdentity::DEFAULT_ICON, class_name: "ui-icon") %>
+                    </span>
+                    <span class="relationship-mobile-player__name"><%= player.name %></span>
+                  <% end %>
+                <% end %>
+              </div>
+
+              <div class="relationship-mobile-ranking__matches">
+                <strong><%= result.shared_matches_count %></strong>
+                <span><%= result.win_rate ? t("relationships.table.win_rate_value", value: result.win_rate) : "—" %></span>
+              </div>
+
+              <div class="relationship-mobile-ranking__offense">
+                <strong><%= result.goals_assists %></strong>
+                <span>(<%= result.goals %>g + <%= result.assists %>a)</span>
+              </div>
+
+              <div class="relationship-mobile-ranking__mutual">
+                <strong><%= result.mutual_assists %></strong>
+              </div>
+            </article>
+          <% end %>
         </div>
       <% else %>
         <div class="relationships-empty relationships-empty--results">

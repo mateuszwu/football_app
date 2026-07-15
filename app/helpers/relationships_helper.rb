@@ -15,10 +15,10 @@ module RelationshipsHelper
 
   def relationship_summary_cards(duo_insights)
     [
-      relationship_summary_card(:best_overall_duo, duo_insights.best_overall_duo, :win_rate, "star", "award"),
-      relationship_summary_card(:most_played_duo, duo_insights.most_played_duo, :shared_count, "users", "link"),
-      relationship_summary_card(:best_win_rate_duo, duo_insights.best_win_rate_duo, :win_rate, "trending-up", "target"),
-      relationship_summary_card(:best_offensive_duo, duo_insights.best_offensive_duo, :direct_offense_total, "zap", "target")
+      relationship_summary_card(:best_overall_duo, duo_insights.best_overall_duo, :win_rate, "star", "award", :best_overall_duo),
+      relationship_summary_card(:most_played_duo, duo_insights.most_played_duo, :shared_count, "users", "link", :most_played_duo),
+      relationship_summary_card(:best_win_rate_duo, duo_insights.best_win_rate_duo, :win_rate, "trending-up", "target", :best_win_rate_duo),
+      relationship_summary_card(:best_offensive_duo, duo_insights.best_offensive_duo, :direct_offense_total, "zap", "target", :best_offensive_duo)
     ]
   end
 
@@ -153,8 +153,8 @@ module RelationshipsHelper
 
   private
 
-  def relationship_summary_card(key, summary, primary_metric, icon, fallback)
-    { key:, summary:, primary_metric:, icon:, fallback: }
+  def relationship_summary_card(key, summary, primary_metric, icon, fallback, tooltip_key)
+    { key:, summary:, primary_metric:, icon:, fallback:, tooltip_key: }
   end
 
   def relationship_graph_positions(players:, width:, height:)

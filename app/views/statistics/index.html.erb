@@ -38,23 +38,25 @@
       }.each do |card_key, icon| %>
         <% card = insights.fetch(:top_cards).fetch(card_key) %>
         <article class="stats-insight-card">
-          <span class="stats-insight-card__watermark" aria-hidden="true"><%= safe_lucide_icon(icon, fallback: "activity", class_name: "ui-icon") %></span>
-          <span class="stats-insight-card__label"><%= t("statistics.index.cards.#{card_key}") %></span>
-          <strong class="stats-metric"><%= statistics_card_value(card) %></strong>
-          <span class="stats-insight-card__subject"><%= statistics_card_subject(card) %></span>
-          <% if statistics_card_detail(card).present? %>
-            <span class="stats-insight-card__detail"><%= statistics_card_detail(card) %></span>
-          <% end %>
-          <% if card&.fetch(:path).present? %>
-            <%= link_to t("statistics.index.table.view_match"), card.fetch(:path), class: "stats-card-link" %>
-          <% end %>
+          <%= render "shared/decorative_card_icon", icon:, fallback: "activity", class_name: "stats-insight-card__watermark" %>
+          <div class="stats-insight-card__content decorative-card-content">
+            <span class="stats-insight-card__label"><%= t("statistics.index.cards.#{card_key}") %></span>
+            <strong class="stats-metric"><%= statistics_card_value(card) %></strong>
+            <span class="stats-insight-card__subject"><%= statistics_card_subject(card) %></span>
+            <% if statistics_card_detail(card).present? %>
+              <span class="stats-insight-card__detail"><%= statistics_card_detail(card) %></span>
+            <% end %>
+            <% if card&.fetch(:path).present? %>
+              <%= link_to t("statistics.index.table.view_match"), card.fetch(:path), class: "stats-card-link" %>
+            <% end %>
+          </div>
         </article>
       <% end %>
     </div>
 
-    <nav class="leaderboards-tabs stats-tabs" aria-label="<%= t("statistics.index.title") %>">
+    <nav class="leaderboards-tabs stats-tabs" aria-label="<%= t("statistics.index.title") %>" role="tablist">
       <% statistics_tabs.each do |tab_key| %>
-        <%= link_to statistics_path(season_id: season.id, tab: tab_key), class: "leaderboards-tab #{'leaderboards-tab--active' if active_tab == tab_key}", aria: ({ current: "page" } if active_tab == tab_key) do %>
+        <%= link_to statistics_path(season_id: season.id, tab: tab_key), class: "leaderboards-tab #{'leaderboards-tab--active' if active_tab == tab_key}", role: "tab", aria: { selected: active_tab == tab_key, current: ("page" if active_tab == tab_key) }.compact do %>
           <span><%= t("statistics.index.tabs.#{tab_key}") %></span>
         <% end %>
       <% end %>
@@ -115,8 +117,8 @@
               <div class="leaderboards-table-card__header">
                 <div><h2><%= t("statistics.index.first_goal.title") %></h2></div>
               </div>
-              <div class="leaderboards-table-wrap">
-                <table class="leaderboards-table stats-records-table">
+              <div class="leaderboards-table-wrap stats-first-goal-table-wrap">
+                <table class="leaderboards-table stats-records-table stats-first-goal-table">
                   <thead>
                     <tr>
                       <th><%= t("statistics.index.first_goal.player") %></th>
@@ -129,7 +131,9 @@
                   <tbody>
                     <% insights.dig(:first_goal, :player_rows).each do |row| %>
                       <tr>
-                        <td><%= link_to row.fetch(:player).name, player_path(row.fetch(:player)), class: "stats-player-link" %></td>
+                        <td>
+                          <%= render "shared/player_identity_pill", player: row.fetch(:player), size: :xs, variant: :compact, max_width: "100%" %>
+                        </td>
                         <td class="is-numeric"><%= row.fetch(:first_goals) %></td>
                         <td class="is-numeric"><%= row.fetch(:matches) %></td>
                         <td class="is-numeric"><%= statistics_format_percentage(row.fetch(:first_goal_rate)) %></td>

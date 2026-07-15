@@ -49,6 +49,10 @@ class Player < ApplicationRecord
     PlayerIdentity.name_for(profile_color_key)
   end
 
+  def display_name
+    name
+  end
+
   private
 
   def normalize_phone

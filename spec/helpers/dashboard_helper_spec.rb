@@ -15,7 +15,7 @@ RSpec.describe DashboardHelper do
     it "supports custom wrapper classes for watermarks" do
       html = helper.dashboard_icon("network", class_name: "dashboard-tile__watermark")
 
-      expect(html).to include('class="dashboard-tile__watermark"')
+      expect(html).to include('class="decorative-card-icon dashboard-tile__watermark"')
       expect(html).to include("<svg")
     end
   end

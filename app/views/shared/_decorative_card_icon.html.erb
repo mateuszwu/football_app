@@ -1,0 +1,5 @@
+<% icon_name = local_assigns.fetch(:icon) %>
+<% fallback = local_assigns.fetch(:fallback, "circle") %>
+<% class_name = local_assigns[:class_name] %>
+<% icon_classes = [ "decorative-card-icon", class_name ].compact.join(" ") %>
+<%= safe_lucide_icon(icon_name, fallback:, class_name: icon_classes) %>

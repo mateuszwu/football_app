@@ -101,6 +101,7 @@ RSpec.describe "Match days" do
       expect(response.body).to include("2 mecze")
       expect(response.body).to include("5 zawodników")
       expect(response.body).to include("Mecze dnia")
+      expect(response.body).to include('class="match-day-matches-section"')
       expect(response.body).to include("Mecz #1")
       expect(response.body).to include("17:00 - 17:32")
       expect(response.body).to include("Orange Demo")

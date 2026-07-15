@@ -87,6 +87,7 @@ class RelationshipsController < ApplicationController
   def cached_combination_ranking(season:, active_tab:, direction:, limit:, minimum_shared_matches:, player_filter:, player_id:)
     Rails.cache.fetch([
       "relationships-combination",
+      "v2",
       season&.id || "all",
       active_tab,
       direction,

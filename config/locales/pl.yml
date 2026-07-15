@@ -147,6 +147,12 @@ pl:
         many: "%{count} wspólnych dni grania"
         other: "%{count} wspólnego dnia grania"
 
+      shared_matches:
+        one: "%{count} wspólny mecz"
+        few: "%{count} wspólne mecze"
+        many: "%{count} wspólnych meczów"
+        other: "%{count} wspólnego meczu"
+
       votes:
         one: "%{count} głos"
         few: "%{count} głosy"
@@ -552,6 +558,12 @@ pl:
       most_played_duo: "Najczęściej razem"
       best_win_rate_duo: "Najskuteczniejszy duet"
       best_offensive_duo: "Najlepszy duet ofensywny"
+    summary_tooltips:
+      label: "Jak liczony jest %{title}"
+      best_overall_duo: "Wynik = wygrane × 3 + remisy + gole + asysty. Liczone dla duetów z minimum 3 wspólnymi meczami; remis rozstrzyga większa liczba wspólnych meczów."
+      most_played_duo: "Najpierw liczba wspólnych meczów w jednej drużynie. Remisy rozstrzygają kolejno: wyższy win%, więcej G+A, a potem nazwy zawodników."
+      best_win_rate_duo: "Win% = wygrane / wspólne mecze × 100. Liczone dla duetów z minimum 5 wspólnymi meczami; remisy rozstrzygają wygrane, mecze i G+A."
+      best_offensive_duo: "Najpierw asysty między sobą, czyli podania jednego zawodnika zakończone golem drugiego. Dalej rozstrzygają: G+A, win% i liczba wspólnych meczów."
     labels:
       win_rate: "%{value}% wygranych"
       shared_matches:
@@ -601,6 +613,7 @@ pl:
       goals: "Gole"
       assists: "Asysty"
       goals_assists: "G+A"
+      mutual_assists_mobile: "Wzajemne asysty"
     empty:
       summary_card: "Brak duetu"
       summary_card_body: "Dane pojawią się, gdy zawodnicy rozegrają więcej wspólnych meczów."
