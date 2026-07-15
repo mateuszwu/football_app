@@ -16,12 +16,20 @@ module Relationships
         player_a.blank? || player_b.blank?
       end
 
+      def match_level?
+        shared_matches_count.to_i.positive?
+      end
+
+      def shared_count
+        match_level? ? shared_matches_count.to_i : shared_match_days_count.to_i
+      end
+
       def offensive_stats?
         goals.to_i.positive? || assists.to_i.positive?
       end
 
       def record?
-        shared_matches_count.to_i.positive?
+        match_level?
       end
 
       def win_rate
@@ -46,13 +54,7 @@ module Relationships
     def call
       return empty_summary if season.blank?
 
-      result = Synergy::CombinationRankingQuery.call(
-        season:,
-        combination_size: 2,
-        direction: "best",
-        limit: 20,
-        minimum_shared_matches: 3
-      ).first
+      result = DuoInsightsQuery.call(season:).best_overall_duo
 
       result.present? ? build_summary(result) : empty_summary
     end
@@ -63,9 +65,9 @@ module Relationships
 
     def build_summary(result)
       Summary.new(
-        player_a: result.players.first,
-        player_b: result.players.second,
-        shared_match_days_count: shared_match_days_count_for(result.players),
+        player_a: result.player_a,
+        player_b: result.player_b,
+        shared_match_days_count: result.shared_match_days_count,
         shared_matches_count: result.shared_matches_count,
         wins: result.wins,
         draws: result.draws,
@@ -73,17 +75,6 @@ module Relationships
         goals: result.goals,
         assists: result.assists
       )
-    end
-
-    def shared_match_days_count_for(players)
-      MatchDayPlayer
-        .joins(:match_day)
-        .where(match_days: { season_id: season.id })
-        .where(player_id: players.map(&:id))
-        .group(:match_day_id)
-        .having("COUNT(DISTINCT match_day_players.player_id) = 2")
-        .count
-        .size
     end
 
     def empty_summary

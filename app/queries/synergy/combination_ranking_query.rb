@@ -23,6 +23,10 @@ module Synergy
       def goals_assists
         goals.to_i + assists.to_i
       end
+
+      def overall_score
+        wins.to_i * 3 + draws.to_i + goals_assists
+      end
     end
 
     VALID_DIRECTIONS = %w[best worst].freeze
@@ -173,11 +177,13 @@ module Synergy
       if direction == "worst"
         [ result.win_rate.to_i, -result.losses, -result.shared_matches_count, result.goals_assists, result.mutual_assists, player_names_for(result) ]
       else
-        [ -result.win_rate.to_i, -result.wins, -result.shared_matches_count, -result.goals_assists, -result.mutual_assists, player_names_for(result) ]
+        [ -result.overall_score, -result.shared_matches_count, -result.mutual_assists, -result.win_rate.to_i, -result.goals_assists, player_names_for(result) ]
       end
     end
 
     def ranking_key_for(result)
+      return [ result.overall_score, result.shared_matches_count, result.mutual_assists, result.win_rate.to_i, result.goals_assists ] if direction == "best"
+
       [
         result.win_rate.to_i,
         result.wins,

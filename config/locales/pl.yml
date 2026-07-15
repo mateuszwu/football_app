@@ -125,7 +125,7 @@ pl:
       season_mvp: "MVP sezonu"
       best_def: "Najlepszy DEF"
       voting_closed: "Głosowanie zamknięte"
-      best_duo: "Najlepszy duet"
+      best_duo: "Najlepszy duet ogólnie"
       win_rate: "%{value}% wygranych"
       points: "pkt"
 

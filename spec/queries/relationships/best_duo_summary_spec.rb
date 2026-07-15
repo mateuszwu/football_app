@@ -15,6 +15,26 @@ RSpec.describe Relationships::BestDuoSummary do
       end
     end
 
+    context "when only shared match day data is available" do
+      it "uses the same shared-day fallback as the relationships page" do
+        season = create(:season)
+        adam = create(:player, name: "Adam Demo", approval_status: "approved", active: true)
+        bartek = create(:player, name: "Bartek Demo", approval_status: "approved", active: true)
+
+        2.times do |index|
+          match_day = create(:match_day, season:, played_on: Date.new(2026, 8, index + 1), status: "finished")
+          [ adam, bartek ].each { |player| create(:match_day_player, match_day:, player:) }
+        end
+
+        result = described_class.call(season:)
+
+        expect(result.player_a).to eq(adam)
+        expect(result.player_b).to eq(bartek)
+        expect(result.match_level?).to be(false)
+        expect(result.shared_count).to eq(2)
+      end
+    end
+
     context "when duos share finished match teams" do
       it "returns the relationships ranking leader with record, win rate, goals, and assists" do
         season = create(:season)

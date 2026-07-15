@@ -7,6 +7,12 @@ RSpec.describe Synergy::CombinationRankingQuery do
 
       expect(result.win_rate).to be_nil
     end
+
+    it "calculates the overall score from wins, draws, goals, and assists" do
+      result = described_class.new(wins: 6, draws: 1, goals: 2, assists: 3)
+
+      expect(result.overall_score).to eq(24)
+    end
   end
 
   describe ".call" do
@@ -174,6 +180,80 @@ RSpec.describe Synergy::CombinationRankingQuery do
 
         expect(result.size).to eq(2)
         expect(result).to all(have_attributes(players: include(adam)))
+      end
+    end
+
+    context "when combinations have different sample sizes" do
+      it "prefers the higher overall score over a higher small-sample win rate" do
+        season = create(:season)
+        short_sample_one = create(:player, name: "Short One", approval_status: "approved", active: true)
+        short_sample_two = create(:player, name: "Short Two", approval_status: "approved", active: true)
+        long_sample_one = create(:player, name: "Long One", approval_status: "approved", active: true)
+        long_sample_two = create(:player, name: "Long Two", approval_status: "approved", active: true)
+        opponent = create(:player, name: "Opponent", approval_status: "approved", active: true)
+
+        create_finished_match = lambda do |match_day:, home_players:, home_score:, away_score:|
+          (home_players + [ opponent ]).each do |player|
+            create(:match_day_player, match_day:, player:)
+          end
+
+          team_setup = create(:team_setup, match_day:)
+          home_team = create(:team, team_setup:, team_type: Team::TEAM_TYPE_MATCH)
+          away_team = create(:team, team_setup:, team_type: Team::TEAM_TYPE_MATCH)
+          home_players.each { |player| create(:team_player, team: home_team, player:) }
+          create(:team_player, team: away_team, player: opponent)
+
+          create(
+            :match,
+            match_day:,
+            home_team:,
+            away_team:,
+            home_score:,
+            away_score:,
+            status: Match::STATUS_FINISHED,
+            finished_at: Time.current
+          )
+        end
+
+        10.times do |index|
+          won = index < 6
+          match_day = create(:match_day, season:, played_on: Date.new(2026, 11, 1) + index.days, status: "finished")
+          create_finished_match.call(
+            match_day:,
+            home_players: [ short_sample_one, short_sample_two ],
+            home_score: won ? 1 : 0,
+            away_score: won ? 0 : 1
+          )
+        end
+
+        50.times do |index|
+          won = index < 29
+          match_day = create(:match_day, season:, played_on: Date.new(2027, 1, 1) + index.days, status: "finished")
+          create_finished_match.call(
+            match_day:,
+            home_players: [ long_sample_one, long_sample_two ],
+            home_score: won ? 1 : 0,
+            away_score: won ? 0 : 1
+          )
+        end
+
+        result = described_class.call(
+          season:,
+          combination_size: 2,
+          direction: "best",
+          limit: 20,
+          minimum_shared_matches: 1,
+          player_filter: nil
+        )
+
+        expect(result.first.players).to contain_exactly(long_sample_one, long_sample_two)
+        expect(result.first.shared_matches_count).to eq(50)
+        expect(result.first.win_rate).to eq(58)
+        expect(result.first.overall_score).to eq(87)
+        expect(result.second.players).to contain_exactly(short_sample_one, short_sample_two)
+        expect(result.second.shared_matches_count).to eq(10)
+        expect(result.second.win_rate).to eq(60)
+        expect(result.second.overall_score).to eq(18)
       end
     end
 

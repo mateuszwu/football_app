@@ -39,9 +39,11 @@ module Relationships
         mutual_assists.to_i * 2
       end
 
-      def duet_score
+      def overall_score
         wins.to_i * 3 + draws.to_i + offense_total
       end
+
+      alias duet_score overall_score
     end
 
     Result = Struct.new(
@@ -110,7 +112,7 @@ module Relationships
     def best_overall_duo(summaries, match_level_available:)
       summaries
         .select { |summary| eligible_for_balanced_duo?(summary, match_level_available:) }
-        .sort_by { |summary| [ -summary.duet_score, -play_count_for(summary, match_level_available:), summary.player_a.name, summary.player_b.name ] }
+        .sort_by { |summary| [ -summary.overall_score, -play_count_for(summary, match_level_available:), summary.player_a.name, summary.player_b.name ] }
         .first
     end
 
