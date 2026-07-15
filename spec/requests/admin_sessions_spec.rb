@@ -7,7 +7,7 @@ RSpec.describe "Admin sessions" do
         get "/admin/login"
 
         expect(response).to have_http_status(:ok)
-        expect(response.body).to include('<body class="theme-dark public-layout">')
+        expect(response.body).to include('<body class="theme-dark public-layout"')
         expect(response.body).to include("Zaloguj")
         expect(response.body).to include("Hasło")
       end
