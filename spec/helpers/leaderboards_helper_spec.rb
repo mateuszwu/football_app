@@ -5,6 +5,25 @@ RSpec.describe LeaderboardsHelper do
     it "returns an empty list when leaderboards are missing" do
       expect(helper.leaderboard_ranked_entries(nil, "elo")).to eq([])
     end
+
+    it "sorts entries by the selected column and recalculates competition ranks" do
+      player_stat_class = Struct.new(:player, :goals, keyword_init: true)
+      first_player = build_stubbed(:player, name: "Adam Nowak")
+      second_player = build_stubbed(:player, name: "Marek Kowalski")
+      first_stat = player_stat_class.new(player: first_player, goals: 5)
+      second_stat = player_stat_class.new(player: second_player, goals: 2)
+      leaderboards = Seasons::PublicLeaderboardQuery::Leaderboards.new(top_scorers: [ first_stat, second_stat ])
+
+      result = helper.leaderboard_ranked_entries(
+        leaderboards,
+        "goals",
+        sort_column: "goals",
+        sort_direction: "asc"
+      )
+
+      expect(result.map { |entry| entry.entry.player.name }).to eq([ "Marek Kowalski", "Adam Nowak" ])
+      expect(result.map(&:rank)).to eq([ 1, 2 ])
+    end
   end
 
   describe "#leaderboard_summary_cards" do

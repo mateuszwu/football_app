@@ -66,7 +66,9 @@ class RelationshipsController < ApplicationController
       players: graph.players,
       season:,
       tab_minimums: DEFAULT_MINIMUMS,
-      duo_insights:
+      duo_insights:,
+      sort_column: params[:sort].to_s.presence,
+      sort_direction: params[:sort_direction].to_s.presence
     }
   end
 

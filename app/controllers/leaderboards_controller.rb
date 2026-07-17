@@ -4,7 +4,14 @@ class LeaderboardsController < ApplicationController
     season = selected_season(available_seasons)
     leaderboards = season.present? ? cached_leaderboards_for(season) : nil
 
-    render :index, locals: { available_seasons:, leaderboards:, season:, active_tab: active_tab }
+    render :index, locals: {
+      available_seasons:,
+      leaderboards:,
+      season:,
+      active_tab: active_tab,
+      sort_column: params[:sort].to_s.presence,
+      sort_direction: params[:sort_direction].to_s.presence
+    }
   end
 
   private

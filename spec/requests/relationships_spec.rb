@@ -78,6 +78,10 @@ RSpec.describe "Relationships" do
         table_headers = Nokogiri::HTML(response.body).css(".relationship-ranking-table thead th").map { |header| header.text.strip }
         expect(table_headers).to eq([ "#", "Duet", "Mecze", "Bilans", "Win%", "Ofensywa" ])
         document = Nokogiri::HTML(response.body)
+        matches_header = document.at_css("th.relationship-ranking-table__matches")
+        expect(matches_header["aria-sort"]).to eq("none")
+        expect(matches_header.at_css("a")["href"]).to include("sort=matches")
+        expect(matches_header.at_css("a")["href"]).to include("sort_direction=desc")
         mobile_headers = document.css(".relationship-mobile-ranking__header span").map { |header| header.text.squish }
         expect(mobile_headers).to eq([ "#", "Duet", "Mecze", "G+A", "Wzajemne asysty" ])
         mobile_row = document.at_css(".relationship-mobile-ranking__row")

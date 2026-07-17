@@ -5791,6 +5791,24 @@ a:focus-visible {
   text-transform: uppercase;
 }
 
+.leaderboards-sort-link {
+  align-items: center;
+  color: inherit;
+  display: inline-flex;
+  gap: 0.3rem;
+  text-decoration: none;
+}
+
+.leaderboards-sort-link:hover,
+.leaderboards-sort-link:focus-visible {
+  text-decoration: underline;
+}
+
+.leaderboards-sort-indicator {
+  font-size: 0.8em;
+  opacity: 0.7;
+}
+
 .leaderboards-table td {
   background: rgba(148, 163, 184, 0.035);
   border-bottom: 1px solid rgba(148, 163, 184, 0.08);

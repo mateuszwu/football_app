@@ -74,7 +74,7 @@ RSpec.describe "Leaderboards" do
         expect(tabs["role"]).to eq("tablist")
         expect(tabs.css(".leaderboards-tab[role='tab']").size).to eq(7)
         expect(frame["data-turbo-action"]).to eq("advance")
-        expect(frame.css("a[data-turbo-frame='leaderboards_results']").size).to eq(7)
+        expect(frame.css("a[data-turbo-frame='leaderboards_results']").size).to eq(12)
         expect(response.body).not_to include(">Punkty<")
         expect(response.body).not_to include("Pending Player")
         expect(response.body).not_to include("+48111111111")
@@ -111,6 +111,16 @@ RSpec.describe "Leaderboards" do
         expect(response.body).to include("Gole/mecz")
         expect(response.body).to include("leaderboards-table__header-subvalue")
         expect(response.body).to include("leaderboards-table__mobile-subvalue")
+
+        get leaderboards_path, params: { season_id: season.id, tab: "goals", sort: "goals", sort_direction: "asc" }
+
+        sorted_goals_table = Nokogiri::HTML(response.body).at_css("table.leaderboards-table--goals")
+        sorted_goals_names = sorted_goals_table.css("tbody .leaderboard-player-cell .player-identity-pill__name").map { |name| name.text.strip }
+        goals_header = sorted_goals_table.at_css("thead th:nth-child(5)")
+        expect(sorted_goals_names).to eq([ "Piotr Lis", "Marek Kowalski", "Adam Nowak" ])
+        expect(goals_header["aria-sort"]).to eq("ascending")
+        expect(goals_header.at_css("a")["href"]).to include("sort=goals")
+        expect(goals_header.at_css("a")["href"]).to include("sort_direction=desc")
 
         get leaderboards_path, params: { season_id: season.id, tab: "assists" }
 

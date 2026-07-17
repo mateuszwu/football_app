@@ -14,6 +14,8 @@
           <span><%= t("leaderboards.season_selector") %></span>
         </div>
         <%= form.hidden_field :tab, value: active_tab %>
+        <%= form.hidden_field :sort, value: sort_column if sort_column.present? %>
+        <%= form.hidden_field :sort_direction, value: sort_direction if sort_direction.present? %>
         <%= form.label :season_id, t("leaderboards.choose_season"), class: "sr-only" %>
         <%= form.select :season_id, options_from_collection_for_select(available_seasons, :id, :name, season.id), {}, onchange: "this.form.requestSubmit()" %>
       <% end %>
@@ -53,7 +55,7 @@
       </nav>
 
       <% tab_config = leaderboard_tab_config(active_tab) %>
-      <% ranked_entries = leaderboard_ranked_entries(leaderboards, active_tab) %>
+      <% ranked_entries = leaderboard_ranked_entries(leaderboards, active_tab, sort_column:, sort_direction:) %>
 
       <section class="leaderboards-table-card">
         <div class="leaderboards-table-card__header">
@@ -74,18 +76,13 @@
               <thead>
                 <tr>
                   <% tab_config.fetch(:columns).each do |column| %>
-                    <th scope="col" class="<%= 'is-numeric' if leaderboard_numeric_column?(column) %>">
-                      <% if column == :goals && active_tab == "goals" %>
-                        <span class="leaderboards-table__header-main"><%= t("leaderboards.table.columns.goals") %></span>
-                        <span class="leaderboards-table__header-subvalue"><%= t("leaderboards.table.columns.goals_per_match") %></span>
-                      <% elsif column == :assists && active_tab == "assists" %>
-                        <span class="leaderboards-table__header-main"><%= t("leaderboards.table.columns.assists") %></span>
-                        <span class="leaderboards-table__header-subvalue"><%= t("leaderboards.table.columns.assists_per_match") %></span>
-                      <% elsif column == :goals_assists && active_tab == "goals_assists" %>
-                        <span class="leaderboards-table__header-main"><%= t("leaderboards.table.columns.goals_assists") %></span>
-                        <span class="leaderboards-table__header-subvalue"><%= t("leaderboards.table.columns.goals_assists_per_match") %></span>
+                    <th scope="col" class="<%= 'is-numeric' if leaderboard_numeric_column?(column) %>" aria-sort="<%= leaderboard_sort_aria(active_tab, column, sort_column, sort_direction) %>">
+                      <% if leaderboard_sortable_column?(active_tab, column) %>
+                        <%= leaderboard_sort_link(season:, active_tab:, column:, sort_column:, sort_direction:) do %>
+                          <%= leaderboard_column_header(column, active_tab) %>
+                        <% end %>
                       <% else %>
-                        <%= t("leaderboards.table.columns.#{column}") %>
+                        <%= leaderboard_column_header(column, active_tab) %>
                       <% end %>
                     </th>
                   <% end %>

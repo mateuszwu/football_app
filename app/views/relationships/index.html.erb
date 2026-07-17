@@ -143,6 +143,8 @@
   <%= form_with url: relationships_path, method: :get, local: true, class: "relationships-controls", data: { turbo_frame: "relationships_results" } do |form| %>
     <%= form.hidden_field :tab, value: active_tab %>
     <%= form.hidden_field :player_id, value: player_id if player_id.present? %>
+    <%= form.hidden_field :sort, value: sort_column if sort_column.present? %>
+    <%= form.hidden_field :sort_direction, value: sort_direction if sort_direction.present? %>
 
     <div class="relationships-control">
       <%= form.label :direction, t("relationships.controls.direction") %>
@@ -177,6 +179,8 @@
       </div>
 
       <% if combination_ranking.any? %>
+        <% sorted_combination_ranking = relationship_sorted_ranking(combination_ranking, sort_column:, sort_direction:) %>
+        <% relationship_sort_context = { season:, active_tab:, direction:, limit:, metric:, minimum_shared_matches:, player_filter:, player_id: } %>
         <div class="leaderboards-table-wrap">
           <table class="leaderboards-table relationship-duo-table relationship-ranking-table">
             <colgroup>
@@ -190,15 +194,15 @@
             <thead>
               <tr>
                 <th class="relationship-ranking-table__rank"><%= t("relationships.table.position") %></th>
-                <th class="relationship-ranking-table__duet"><%= relationship_combination_label(active_tab) %></th>
-                <th class="relationship-ranking-table__matches"><%= t("relationships.table.matches") %></th>
-                <th class="relationship-ranking-table__record"><%= t("relationships.table.record") %></th>
-                <th class="relationship-ranking-table__win-rate"><%= t("relationships.table.win_rate") %></th>
-                <th class="relationship-ranking-table__offense"><%= t("relationships.table.offense") %></th>
+                <th class="relationship-ranking-table__duet" aria-sort="<%= relationship_sort_aria("combination", sort_column, sort_direction) %>"><%= relationship_sort_link(column: "combination", label: relationship_combination_label(active_tab), sort_column:, sort_direction:, **relationship_sort_context) %></th>
+                <th class="relationship-ranking-table__matches" aria-sort="<%= relationship_sort_aria("matches", sort_column, sort_direction) %>"><%= relationship_sort_link(column: "matches", label: t("relationships.table.matches"), sort_column:, sort_direction:, **relationship_sort_context) %></th>
+                <th class="relationship-ranking-table__record" aria-sort="<%= relationship_sort_aria("record", sort_column, sort_direction) %>"><%= relationship_sort_link(column: "record", label: t("relationships.table.record"), sort_column:, sort_direction:, **relationship_sort_context) %></th>
+                <th class="relationship-ranking-table__win-rate" aria-sort="<%= relationship_sort_aria("win_rate", sort_column, sort_direction) %>"><%= relationship_sort_link(column: "win_rate", label: t("relationships.table.win_rate"), sort_column:, sort_direction:, **relationship_sort_context) %></th>
+                <th class="relationship-ranking-table__offense" aria-sort="<%= relationship_sort_aria("offense", sort_column, sort_direction) %>"><%= relationship_sort_link(column: "offense", label: t("relationships.table.offense"), sort_column:, sort_direction:, **relationship_sort_context) %></th>
               </tr>
             </thead>
             <tbody>
-              <% combination_ranking.each_with_index do |result, index| %>
+              <% sorted_combination_ranking.each_with_index do |result, index| %>
                 <tr>
                   <td class="relationship-ranking-table__rank"><%= leaderboard_rank_badge(result.rank || index + 1) %></td>
                   <td class="relationship-ranking-table__duet">
@@ -235,15 +239,15 @@
         </div>
 
         <div class="relationship-mobile-ranking" aria-label="<%= t("relationships.ranking.title.#{active_tab}") %>">
-          <div class="relationship-mobile-ranking__header" aria-hidden="true">
+          <div class="relationship-mobile-ranking__header">
             <span><%= t("relationships.table.position") %></span>
-            <span><%= relationship_combination_label(active_tab) %></span>
-            <span><%= t("relationships.table.matches") %></span>
-            <span>G+A</span>
-            <span><%= t("relationships.table.mutual_assists_mobile") %></span>
+            <span><%= relationship_sort_link(column: "combination", label: relationship_combination_label(active_tab), sort_column:, sort_direction:, **relationship_sort_context) %></span>
+            <span><%= relationship_sort_link(column: "matches", label: t("relationships.table.matches"), sort_column:, sort_direction:, **relationship_sort_context) %></span>
+            <span><%= relationship_sort_link(column: "offense", label: "G+A", sort_column:, sort_direction:, **relationship_sort_context) %></span>
+            <span><%= relationship_sort_link(column: "mutual_assists", label: t("relationships.table.mutual_assists_mobile"), sort_column:, sort_direction:, **relationship_sort_context) %></span>
           </div>
 
-          <% combination_ranking.each_with_index do |result, index| %>
+          <% sorted_combination_ranking.each_with_index do |result, index| %>
             <article class="relationship-mobile-ranking__row">
               <div class="relationship-mobile-ranking__rank">
                 <%= leaderboard_rank_badge(result.rank || index + 1) %>
