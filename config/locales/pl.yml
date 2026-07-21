@@ -1053,7 +1053,7 @@ pl:
         lost_after_first_goal: "Brak wygranej mimo pierwszego gola"
         player: "Zawodnik"
         first_goals: "Pierwsze gole"
-        matches: "Mecze"
+        matches: "Mecze rozegrane"
         first_goal_rate: "% meczów z pierwszym golem"
         win_rate_after_first_goal: "Win rate po pierwszym golu"
       comebacks:

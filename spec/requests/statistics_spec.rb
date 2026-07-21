@@ -51,6 +51,7 @@ RSpec.describe "Statistics" do
         expect(first_goal_table.css(".player-identity-pill").size).to eq(1)
         expect(first_goal_table.css(".player-identity-pill__icon").size).to eq(1)
         expect(first_goal_table.css(".stats-player-link")).to be_empty
+        expect(first_goal_table.css("thead th").map { |header| header.text.strip }).to include("Mecze rozegrane")
         expect(response.body).to include("stats-first-goal-table-wrap")
 
         get "/statistics", params: { season_id: season.id, tab: "records" }

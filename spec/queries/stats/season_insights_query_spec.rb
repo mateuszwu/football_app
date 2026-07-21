@@ -46,6 +46,9 @@ RSpec.describe Stats::SeasonInsightsQuery do
         expect(result.dig(:tempo, :average_match_duration)).to eq(360)
         expect(result.dig(:first_goal, :matches_count)).to eq(2)
         expect(result.dig(:first_goal, :first_goal_win_rate)).to eq(50)
+        first_goal_rows = result.dig(:first_goal, :player_rows).index_by { |row| row.fetch(:player).name }
+        expect(first_goal_rows.fetch("Adam Demo")).to include(first_goals: 1, matches: 2, first_goal_rate: 50)
+        expect(first_goal_rows.fetch("Bartek Demo")).to include(first_goals: 1, matches: 2, first_goal_rate: 50)
         expect(result.dig(:comebacks, :threshold_rows).find { |row| row.fetch(:deficit) == "0:2" }).to include(comeback_wins: 1)
         expect(result.dig(:score_states, :rows).map { |row| row.fetch(:state) }).to include("2:0", "4:0")
         expect(result.dig(:sidebar, :most_common_scenario)).to be_nil
@@ -120,7 +123,8 @@ RSpec.describe Stats::SeasonInsightsQuery do
 
         expect(rows.map { |row| row.fetch(:player).name }).to eq([ "Zed Demo", "Adam Demo", "Bartek Demo", "Cezary Demo" ])
         expect(rows.map { |row| row.fetch(:first_goals) }).to eq([ 2, 2, 1, 1 ])
-        expect(rows.map { |row| row.fetch(:first_goal_rate) }).to eq([ 33, 33, 17, 17 ])
+        expect(rows.map { |row| row.fetch(:matches) }).to eq([ 2, 2, 1, 1 ])
+        expect(rows.map { |row| row.fetch(:first_goal_rate) }).to eq([ 100, 100, 100, 100 ])
         expect(rows.map { |row| row.fetch(:win_rate_after_first_goal) }).to eq([ 100, 0, 100, 100 ])
       end
 

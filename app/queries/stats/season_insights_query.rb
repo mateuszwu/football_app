@@ -64,6 +64,19 @@ module Stats
       @first_goal_events ||= completed_timelines.filter_map { |timeline| timeline.summary.fetch(:first_goal_event) }
     end
 
+    def matches_played_by_player
+      @matches_played_by_player ||= begin
+        team_ids = completed_timelines.flat_map do |timeline|
+          [ timeline.match.home_team_id, timeline.match.away_team_id ]
+        end
+        TeamPlayer
+          .where(team_id: team_ids)
+          .pluck(:team_id, :player_id)
+          .uniq
+          .each_with_object(Hash.new(0)) { |(_team_id, player_id), counts| counts[player_id] += 1 }
+      end
+    end
+
     def closing_goal_events
       @closing_goal_events ||= completed_timelines.filter_map { |timeline| timeline.summary.fetch(:closing_goal_event) }
     end
@@ -282,12 +295,13 @@ module Stats
 
     def first_goal_player_row(player, events)
       wins = events.count { |event| winner_for(event) == event.fetch(:scoring_team) }
+      matches = matches_played_by_player.fetch(player.id, 0)
 
       {
         player:,
         first_goals: events.count,
-        matches: events.count,
-        first_goal_rate: percentage(events.count, completed_timelines.count),
+        matches:,
+        first_goal_rate: percentage(events.count, matches),
         win_rate_after_first_goal: percentage(wins, events.count)
       }
     end
