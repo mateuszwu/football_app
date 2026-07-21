@@ -19,6 +19,7 @@ RSpec.describe MatchDays::ImportFromPayload do
             {
               started_at: "2026-06-19 19:00",
               finished_at: "2026-06-19 19:30",
+              all_roster_players_on_pitch: true,
               teams: [
                 { name: "Team Red", players: [ "adam", "jan" ], captain: "jan" },
                 { name: "Team Blue", players: [ "marek", "piotr" ], captain: "piotr" }
@@ -59,6 +60,7 @@ RSpec.describe MatchDays::ImportFromPayload do
         first_match = result.matches.first
         second_match = result.matches.second
         expect(first_match).to be_finished
+        expect(first_match).to be_all_roster_players_on_pitch
         expect(first_match.home_team.players).to contain_exactly(adam, jan)
         expect(first_match.away_team.players).to contain_exactly(marek, piotr)
         expect(first_match.home_team.captain).to eq(jan)
@@ -74,6 +76,7 @@ RSpec.describe MatchDays::ImportFromPayload do
         )
 
         expect(second_match).to be_in_progress
+        expect(second_match).not_to be_all_roster_players_on_pitch
         expect(second_match.home_team.players).to contain_exactly(adam, marek)
         expect(second_match.away_team.players).to contain_exactly(jan, piotr)
         expect(second_match.home_team.captain).to eq(marek)
@@ -91,6 +94,7 @@ RSpec.describe MatchDays::ImportFromPayload do
         second_player = create(:player, name: "Second", nickname: "second", phone: "+48999999998", approval_status: "approved", active: true)
         payload = {
           played_on: "2026-06-19",
+          all_roster_players_on_pitch: true,
           teams: [
             { name: "Team A", players: [ "first" ] },
             { name: "Team B", players: [ "second" ] }
@@ -110,6 +114,7 @@ RSpec.describe MatchDays::ImportFromPayload do
         expect(result.matches.size).to eq(1)
         expect(result.match_day.status).to eq("in_progress")
         expect(result.match).to be_in_progress
+        expect(result.match).to be_all_roster_players_on_pitch
         expect(result.match.started_at).to eq(Time.zone.parse("2026-06-19 18:00:00"))
         expect(result.match.finished_at).to be_nil
         expect(first_player.reload).to be_present

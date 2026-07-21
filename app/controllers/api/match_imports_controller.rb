@@ -23,12 +23,14 @@ module Api
         :played_on,
         :started_at,
         :finished_at,
+        :all_roster_players_on_pitch,
         original_teams: [ :name, :captain, { players: [] } ],
         teams: [ :name, :captain, { players: [] } ],
         goals: %i[team scorer assistant scored_at own_goal],
         matches: [
           :started_at,
           :finished_at,
+          :all_roster_players_on_pitch,
           {
             teams: [ :name, :captain, { players: [] } ],
             goals: %i[team scorer assistant scored_at own_goal]
@@ -53,7 +55,8 @@ module Api
         score: {
           home: match.home_score,
           away: match.away_score
-        }
+        },
+        all_roster_players_on_pitch: match.all_roster_players_on_pitch?
       }
     end
   end

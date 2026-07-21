@@ -70,22 +70,61 @@ RSpec.describe Ratings::ProcessMatchElo do
       expect(favored_player.reload.elo).to be < 1192
     end
 
-    it "uses larger-team advantage in the expected score" do
+    it "does not use a roster-size advantage when a substitute is rotating" do
+      season = create(:season, elo_k_value: 16.0)
+      match_day = create(:match_day, season:, status: "finished")
+      team_setup = create(:team_setup, match_day:)
+      larger_team = create(:team, team_setup:, team_type: Team::TEAM_TYPE_MATCH)
+      smaller_team = create(:team, team_setup:, team_type: Team::TEAM_TYPE_MATCH)
+      larger_players = Array.new(7) { create(:player, elo: 1000) }
+      smaller_players = Array.new(6) { create(:player, elo: 1000) }
+      larger_players.each { |player| create(:team_player, team: larger_team, player:) }
+      smaller_players.each { |player| create(:team_player, team: smaller_team, player:) }
+      match = create(
+        :match,
+        match_day:,
+        home_team: larger_team,
+        away_team: smaller_team,
+        all_roster_players_on_pitch: false,
+        home_score: 1,
+        away_score: 1,
+        started_at: Time.zone.now,
+        finished_at: Time.zone.now
+      )
+
+      described_class.call(match:, season:)
+
+      expect(larger_players.map { |player| player.reload.elo }).to all(eq(1000))
+      expect(smaller_players.map { |player| player.reload.elo }).to all(eq(1000))
+      expect(PlayerRatingChange.where(match:).pluck(:player_advantage_elo)).to all(eq(BigDecimal("40.0")))
+    end
+
+    it "applies the configured advantage when all players are on the pitch" do
       season = create(:season, elo_k_value: 16.0, player_advantage_elo: 40.0)
       match_day = create(:match_day, season:, status: "finished")
       team_setup = create(:team_setup, match_day:)
       larger_team = create(:team, team_setup:, team_type: Team::TEAM_TYPE_MATCH)
       smaller_team = create(:team, team_setup:, team_type: Team::TEAM_TYPE_MATCH)
-      larger_players = Array.new(2) { create(:player, elo: 1000) }
-      smaller_player = create(:player, elo: 1000)
+      larger_players = Array.new(7) { create(:player, elo: 1000) }
+      smaller_players = Array.new(6) { create(:player, elo: 1000) }
       larger_players.each { |player| create(:team_player, team: larger_team, player:) }
-      create(:team_player, team: smaller_team, player: smaller_player)
-      match = create(:match, match_day:, home_team: larger_team, away_team: smaller_team, home_score: 1, away_score: 1, started_at: Time.zone.now, finished_at: Time.zone.now)
+      smaller_players.each { |player| create(:team_player, team: smaller_team, player:) }
+      match = create(
+        :match,
+        match_day:,
+        home_team: larger_team,
+        away_team: smaller_team,
+        all_roster_players_on_pitch: true,
+        home_score: 1,
+        away_score: 1,
+        started_at: Time.zone.now,
+        finished_at: Time.zone.now
+      )
 
       described_class.call(match:, season:)
 
       expect(larger_players.map { |player| player.reload.elo }).to all(eq(999))
-      expect(smaller_player.reload.elo).to eq(1001)
+      expect(smaller_players.map { |player| player.reload.elo }).to all(eq(1001))
     end
 
     it "does not process the same match twice" do

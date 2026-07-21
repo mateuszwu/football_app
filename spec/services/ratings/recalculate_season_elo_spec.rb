@@ -84,6 +84,7 @@ RSpec.describe Ratings::RecalculateSeasonElo do
         match_day: match_day,
         home_team: team_a,
         away_team: team_b,
+        all_roster_players_on_pitch: false,
         home_score: 1,
         away_score: 1,
         started_at: Time.zone.parse("2026-06-03 18:00:00"),
@@ -130,7 +131,7 @@ RSpec.describe Ratings::RecalculateSeasonElo do
       expect(PlayerSeasonStat.find_by!(player: player_b, season: season).elo).to eq(994)
     end
 
-    it "applies a 40 Elo advantage for each extra player" do
+    it "does not apply an Elo advantage for unequal team rosters" do
       season = create(:season, initial_elo: 1000, elo_k_factor: 32)
       match_day = create(:match_day, season: season, status: "finished", played_on: Date.new(2026, 6, 5))
       team_setup = create(:team_setup, match_day: match_day)
@@ -156,9 +157,37 @@ RSpec.describe Ratings::RecalculateSeasonElo do
 
       Ratings::RecalculateSeasonElo.call(season: season)
 
-      expect(home_player_one.reload.elo).to eq(999)
-      expect(home_player_two.reload.elo).to eq(999)
-      expect(away_player.reload.elo).to eq(1001)
+      expect(home_player_one.reload.elo).to eq(1000)
+      expect(home_player_two.reload.elo).to eq(1000)
+      expect(away_player.reload.elo).to eq(1000)
+    end
+
+    it "applies the player-count advantage during recalculation when all players are on the pitch" do
+      season = create(:season, initial_elo: 1000, elo_k_value: 16.0, player_advantage_elo: 40.0)
+      match_day = create(:match_day, season:, status: "finished", played_on: Date.new(2026, 6, 5))
+      team_setup = create(:team_setup, match_day:)
+      larger_team = create(:team, team_setup:, team_type: Team::TEAM_TYPE_MATCH)
+      smaller_team = create(:team, team_setup:, team_type: Team::TEAM_TYPE_MATCH)
+      larger_players = Array.new(2) { create(:player) }
+      smaller_player = create(:player)
+      larger_players.each { |player| create(:team_player, team: larger_team, player:) }
+      create(:team_player, team: smaller_team, player: smaller_player)
+      create(
+        :match,
+        match_day:,
+        home_team: larger_team,
+        away_team: smaller_team,
+        all_roster_players_on_pitch: true,
+        home_score: 1,
+        away_score: 1,
+        started_at: Time.zone.parse("2026-06-05 18:00:00"),
+        finished_at: Time.zone.parse("2026-06-05 18:50:00")
+      )
+
+      Ratings::RecalculateSeasonElo.call(season:)
+
+      expect(larger_players.map { |player| player.reload.elo }).to all(eq(999))
+      expect(smaller_player.reload.elo).to eq(1001)
     end
 
     it "rebuilds Elo even when a match was processed before and keeps match order stable by created_at fallback" do

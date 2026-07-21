@@ -15,6 +15,7 @@ RSpec.describe "API match imports" do
           payload = {
             season_id: season.id,
             played_on: "2026-06-19",
+            all_roster_players_on_pitch: true,
             original_teams: [
               { name: "Original A", players: [ "adam", "jan" ], captain: "adam" },
               { name: "Original B", players: [ "marek" ], captain: "marek" }
@@ -33,6 +34,7 @@ RSpec.describe "API match imports" do
               },
               {
                 started_at: "2026-06-19 19:35",
+                all_roster_players_on_pitch: false,
                 teams: [
                   { name: "Team A", players: [ "adam", "marek" ], captain: "marek" },
                   { name: "Team B", players: [ "jan" ], captain: "jan" }
@@ -57,16 +59,20 @@ RSpec.describe "API match imports" do
               "match_id" => matches.first.id,
               "match_url" => match_url(matches.first),
               "status" => "finished",
-              "score" => { "home" => 1, "away" => 0 }
+              "score" => { "home" => 1, "away" => 0 },
+              "all_roster_players_on_pitch" => true
             },
             {
               "match_id" => matches.second.id,
               "match_url" => match_url(matches.second),
               "status" => "in_progress",
-              "score" => { "home" => 0, "away" => 1 }
+              "score" => { "home" => 0, "away" => 1 },
+              "all_roster_players_on_pitch" => false
             }
           )
           expect(matches.first.match_day.season).to eq(season)
+          expect(matches.first).to be_all_roster_players_on_pitch
+          expect(matches.second).not_to be_all_roster_players_on_pitch
           expect(matches.first.home_team.players.map(&:nickname)).to eq([ "adam" ])
           expect(matches.first.away_team.players.map(&:nickname)).to eq([ "jan" ])
           expect(matches.first.home_team.captain.nickname).to eq("adam")

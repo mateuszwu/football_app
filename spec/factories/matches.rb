@@ -5,8 +5,9 @@ FactoryBot.define do
     association :away_team, factory: :team
     home_score { 0 }
     away_score { 0 }
-    status { Match::STATUS_PENDING }
-    started_at { nil }
+      status { Match::STATUS_PENDING }
+      all_roster_players_on_pitch { false }
+      started_at { nil }
     finished_at { nil }
   end
 end

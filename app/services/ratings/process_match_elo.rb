@@ -14,8 +14,20 @@ module Ratings
       return false unless processable_match?
 
       Match.transaction do
-        home_result = CalculateTeamElo.call(players: home_players, opponent_players: away_players, elo_map: elo_map, season: season)
-        away_result = CalculateTeamElo.call(players: away_players, opponent_players: home_players, elo_map: elo_map, season: season)
+        home_result = CalculateTeamElo.call(
+          players: home_players,
+          opponent_players: away_players,
+          elo_map:,
+          season:,
+          all_roster_players_on_pitch: match.all_roster_players_on_pitch?
+        )
+        away_result = CalculateTeamElo.call(
+          players: away_players,
+          opponent_players: home_players,
+          elo_map:,
+          season:,
+          all_roster_players_on_pitch: match.all_roster_players_on_pitch?
+        )
 
         apply_team_delta(match.home_team, home_players, away_result.effective_elo, match_score(match.home_team), home_result.effective_elo)
         apply_team_delta(match.away_team, away_players, home_result.effective_elo, match_score(match.away_team), away_result.effective_elo)

@@ -72,23 +72,38 @@ module MatchDays
 
     def normalize_matches
       if payload[:matches].present?
-        Array(payload[:matches]).each { |match_payload| matches_data << normalize_match(match_payload) }
+        Array(payload[:matches]).each do |match_payload|
+          matches_data << normalize_match(
+            match_payload,
+            default_all_roster_players_on_pitch: payload[:all_roster_players_on_pitch]
+          )
+        end
         return
       end
 
       matches_data << normalize_match(
-        started_at: payload[:started_at],
-        finished_at: payload[:finished_at],
-        teams: payload[:teams],
-        goals: payload[:goals]
+        {
+          started_at: payload[:started_at],
+          finished_at: payload[:finished_at],
+          all_roster_players_on_pitch: payload[:all_roster_players_on_pitch],
+          teams: payload[:teams],
+          goals: payload[:goals]
+        }
       )
     end
 
-    def normalize_match(match_payload)
+    def normalize_match(match_payload, default_all_roster_players_on_pitch: nil)
       match_data = match_payload.to_h.symbolize_keys
+      all_roster_players_on_pitch = if match_data.key?(:all_roster_players_on_pitch)
+        match_data[:all_roster_players_on_pitch]
+      else
+        default_all_roster_players_on_pitch
+      end
+
       {
         started_at: match_data[:started_at],
         finished_at: match_data[:finished_at],
+        all_roster_players_on_pitch: ActiveModel::Type::Boolean.new.cast(all_roster_players_on_pitch) || false,
         teams: Array(match_data[:teams]).map { |team| normalize_team(team) },
         goals: Array(match_data[:goals]).map { |goal| normalize_goal(goal) }
       }
@@ -204,7 +219,8 @@ module MatchDays
       match = match_day.matches.create!(
         team_setup:,
         home_team: match_teams.first,
-        away_team: match_teams.second
+        away_team: match_teams.second,
+        all_roster_players_on_pitch: match_data[:all_roster_players_on_pitch]
       )
       match_teams.each { |team| team.update!(match:) }
 

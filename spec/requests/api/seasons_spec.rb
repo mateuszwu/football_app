@@ -42,7 +42,8 @@ RSpec.describe "API seasons" do
             "status" => "active",
             "initial_elo" => 1000,
             "elo_k_factor" => 24,
-            "elo_k_value" => "24.0"
+            "elo_k_value" => "24.0",
+            "player_advantage_elo" => "40.0"
           )
           expect(season).to have_attributes(
             elo_k_value: BigDecimal("24.0"),
