@@ -70,6 +70,10 @@ module LeaderboardsHelper
     LEADERBOARD_TABS
   end
 
+  def leaderboard_attendance_filter_tab?(active_tab)
+    %w[goals assists goals_assists].include?(active_tab.to_s)
+  end
+
   def leaderboard_tab_config(active_tab)
     leaderboard_tabs.fetch(active_tab) { leaderboard_tabs.fetch("elo") }
   end
@@ -110,13 +114,14 @@ module LeaderboardsHelper
     end
   end
 
-  def leaderboard_sort_link(season:, active_tab:, column:, sort_column:, sort_direction:)
+  def leaderboard_sort_link(season:, active_tab:, column:, sort_column:, sort_direction:, attendance_percent: nil)
     next_direction = leaderboard_next_sort_direction(column, sort_column, sort_direction)
     path = leaderboards_path(
       season_id: season.id,
       tab: active_tab,
       sort: column,
-      sort_direction: next_direction
+      sort_direction: next_direction,
+      attendance_percent:
     )
 
     link_label = strip_tags(leaderboard_column_header(column, active_tab)).squish

@@ -16,6 +16,7 @@
         <%= form.hidden_field :tab, value: active_tab %>
         <%= form.hidden_field :sort, value: sort_column if sort_column.present? %>
         <%= form.hidden_field :sort_direction, value: sort_direction if sort_direction.present? %>
+        <%= form.hidden_field :attendance_percent, value: attendance_percent %>
         <%= form.label :season_id, t("leaderboards.choose_season"), class: "sr-only" %>
         <%= form.select :season_id, options_from_collection_for_select(available_seasons, :id, :name, season.id), {}, onchange: "this.form.requestSubmit()" %>
       <% end %>
@@ -47,7 +48,7 @@
     <%= turbo_frame_tag "leaderboards_results", data: { turbo_action: "advance" } do %>
       <nav class="leaderboards-tabs leaderboards-tabs--responsive" aria-label="<%= t("leaderboards.title") %>" role="tablist">
         <% leaderboard_tabs.each do |tab_key, tab_config| %>
-          <%= link_to leaderboards_path(season_id: season.id, tab: tab_key), class: "leaderboards-tab #{'leaderboards-tab--active' if active_tab == tab_key}", role: "tab", aria: { selected: active_tab == tab_key, current: ("page" if active_tab == tab_key) }.compact, data: { turbo_frame: "leaderboards_results" } do %>
+          <%= link_to leaderboards_path(season_id: season.id, tab: tab_key, attendance_percent:, sort: sort_column, sort_direction: sort_direction), class: "leaderboards-tab #{'leaderboards-tab--active' if active_tab == tab_key}", role: "tab", aria: { selected: active_tab == tab_key, current: ("page" if active_tab == tab_key) }.compact, data: { turbo_frame: "leaderboards_results" } do %>
             <%= safe_lucide_icon(tab_config.fetch(:icon), fallback: tab_config.fetch(:fallback), class_name: "ui-icon ui-icon--sm") %>
             <span><%= t("leaderboards.tabs.#{tab_key}") %></span>
           <% end %>
@@ -63,6 +64,19 @@
             <h2><%= t("leaderboards.table.title.#{active_tab}") %></h2>
             <p><%= t("leaderboards.table.description.#{active_tab}") %></p>
           </div>
+          <% if leaderboard_attendance_filter_tab?(active_tab) %>
+            <%= form_with url: leaderboards_path, method: :get, local: true, class: "leaderboards-attendance-filter", data: { turbo_frame: "leaderboards_results" } do |form| %>
+              <%= form.hidden_field :season_id, value: season.id %>
+              <%= form.hidden_field :tab, value: active_tab %>
+              <%= form.hidden_field :sort, value: sort_column if sort_column.present? %>
+              <%= form.hidden_field :sort_direction, value: sort_direction if sort_direction.present? %>
+              <div class="leaderboards-attendance-filter__control">
+                <%= form.label :attendance_percent, t("leaderboards.attendance_filter.label") %>
+                <%= form.select :attendance_percent, options_for_select(Seasons::PublicLeaderboardQuery::ATTENDANCE_PERCENT_OPTIONS.map { |percent| [ "#{percent}%", percent ] }, attendance_percent), {}, onchange: "this.form.requestSubmit()" %>
+              </div>
+              <span class="leaderboards-attendance-filter__summary"><%= t("leaderboards.attendance_filter.minimum_matches", minimum_matches: leaderboards.minimum_matches, season_matches_count: leaderboards.season_matches_count) %></span>
+            <% end %>
+          <% end %>
         </div>
 
         <% if ranked_entries.any? %>
@@ -78,7 +92,7 @@
                   <% tab_config.fetch(:columns).each do |column| %>
                     <th scope="col" class="<%= 'is-numeric' if leaderboard_numeric_column?(column) %>" aria-sort="<%= leaderboard_sort_aria(active_tab, column, sort_column, sort_direction) %>">
                       <% if leaderboard_sortable_column?(active_tab, column) %>
-                        <%= leaderboard_sort_link(season:, active_tab:, column:, sort_column:, sort_direction:) do %>
+                        <%= leaderboard_sort_link(season:, active_tab:, column:, sort_column:, sort_direction:, attendance_percent:) do %>
                           <%= leaderboard_column_header(column, active_tab) %>
                         <% end %>
                       <% else %>

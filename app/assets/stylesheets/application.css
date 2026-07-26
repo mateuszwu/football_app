@@ -5740,6 +5740,44 @@ a:focus-visible {
   padding: 1rem 1.1rem;
 }
 
+.leaderboards-attendance-filter {
+  align-items: end;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  justify-content: flex-end;
+}
+
+.leaderboards-attendance-filter__control {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.leaderboards-attendance-filter__control label {
+  color: #94a3b8;
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.leaderboards-attendance-filter select {
+  background: var(--dark-bg-elevated);
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 12px;
+  color: var(--text-primary);
+  font-weight: 800;
+  min-height: 2.5rem;
+  padding: 0.55rem 0.75rem;
+}
+
+.leaderboards-attendance-filter__summary {
+  align-self: center;
+  color: #cbd5e1;
+  font-size: 0.8rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
 .leaderboards-table-card__header h2 {
   color: var(--text-primary);
   font-size: 1.05rem;

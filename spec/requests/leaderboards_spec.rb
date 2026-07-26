@@ -39,6 +39,8 @@ RSpec.describe "Leaderboards" do
         expect(response.body).to include("G+A")
         expect(response.body).to include("Bilans")
         expect(response.body).to include("G+A/mecz")
+        expect(response.body).to include("Minimalna frekwencja")
+        expect(response.body).to include("Minimum 0 z 1 meczów")
         expect(response.body).to include("Adam Nowak")
         expect(response.body).to include("Marek Kowalski")
         expect(response.body).to include("Piotr Lis")
@@ -49,10 +51,13 @@ RSpec.describe "Leaderboards" do
         goals_assists_table = Nokogiri::HTML(response.body).at_css("table.leaderboards-table--goals_assists")
         goals_assists_header = goals_assists_table.at_css("thead th:nth-child(5)")
         goals_assists_cell = goals_assists_table.at_css("tbody tr td:nth-child(5)")
+        attendance_select = Nokogiri::HTML(response.body).at_css("select[name='attendance_percent']")
         expect(goals_assists_header.css(".leaderboards-table__header-main").text.strip).to eq("G+A")
         expect(goals_assists_header.css(".leaderboards-table__header-subvalue").text.strip).to eq("G+A/mecz")
         expect(goals_assists_cell.css(".leaderboards-table__cell-main").text.strip).to eq("7")
         expect(goals_assists_cell.css(".leaderboards-table__mobile-subvalue").text.strip).to eq("7")
+        expect(attendance_select.css("option").map(&:text)).to eq(%w[0% 10% 15% 20% 25% 30% 50%])
+        expect(attendance_select.at_css("option[selected]")["value"]).to eq("25")
         expect(response.body).to include("leaderboards-table__col--position")
         expect(response.body).to include("leaderboards-table__col--player")
         expect(response.body).to include("leaderboards-table__col--role")
@@ -135,6 +140,51 @@ RSpec.describe "Leaderboards" do
         expect(response).to have_http_status(:ok)
         expect(response.body.scan("<col ").size).to eq(5)
         expect(response.body).to include("Głosy MVP")
+      end
+
+      it "preserves the active sort when an attendance filter is applied" do
+        season = create(:season, status: Season::STATUS_ACTIVE)
+        eligible_player = create(:player, name: "Eligible Player", approval_status: "approved", active: true)
+        second_eligible_player = create(:player, name: "Second Eligible", approval_status: "approved", active: true)
+        below_threshold_player = create(:player, name: "Below Player", approval_status: "approved", active: true)
+
+        10.times do |index|
+          match_day = create(:match_day, season:, played_on: Date.new(2026, 1, 1) + index)
+          team_setup = create(:team_setup, match_day:)
+          home_team = create(:team, team_setup:, team_type: Team::TEAM_TYPE_MATCH)
+          away_team = create(:team, team_setup:, team_type: Team::TEAM_TYPE_MATCH)
+          create(:match, match_day:, home_team:, away_team:, started_at: 1.hour.ago, finished_at: 30.minutes.ago)
+          create(:team_player, team: home_team, player: eligible_player) if index < 2
+          create(:team_player, team: away_team, player: second_eligible_player) if index < 2
+          create(:team_player, team: home_team, player: below_threshold_player) if index.zero?
+        end
+
+        create(:player_season_stat, season:, player: eligible_player, goals: 5)
+        create(:player_season_stat, season:, player: second_eligible_player, goals: 2)
+        create(:player_season_stat, season:, player: below_threshold_player, goals: 1)
+
+        get leaderboards_path, params: {
+          season_id: season.id,
+          tab: "goals",
+          attendance_percent: 25,
+          sort: "goals",
+          sort_direction: "asc"
+        }
+
+        expect(response).to have_http_status(:ok)
+        goals_table = Nokogiri::HTML(response.body).at_css("table.leaderboards-table--goals")
+        sorted_names = goals_table.css("tbody .leaderboard-player-cell .player-identity-pill__name").map { |name| name.text.strip }
+        goals_header = goals_table.at_css("thead th:nth-child(5)")
+
+        expect(sorted_names).to eq([ "Second Eligible", "Eligible Player" ])
+        expect(goals_table.text).not_to include("Below Player")
+        expect(goals_header["aria-sort"]).to eq("ascending")
+        expect(goals_header.at_css("a")["href"]).to include("attendance_percent=25")
+        document = Nokogiri::HTML(response.body)
+        attendance_filter = document.at_css("form.leaderboards-attendance-filter")
+        expect(document.at_css("select[name='attendance_percent'] option[selected]")["value"]).to eq("25")
+        expect(attendance_filter.at_css("input[name='sort']")["value"]).to eq("goals")
+        expect(attendance_filter.at_css("input[name='sort_direction']")["value"]).to eq("asc")
       end
 
       it "renders player identity pills on every ranking tab" do

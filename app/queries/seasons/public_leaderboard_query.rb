@@ -1,5 +1,8 @@
 module Seasons
   class PublicLeaderboardQuery
+    DEFAULT_ATTENDANCE_PERCENT = 25
+    ATTENDANCE_PERCENT_OPTIONS = [ 0, 10, 15, 20, 25, 30, 50 ].freeze
+
     Leaderboards = Struct.new(
       :top_scorers,
       :top_assistants,
@@ -8,6 +11,9 @@ module Seasons
       :elo_ranking,
       :goals_assists_ranking,
       :record_ranking,
+      :attendance_percent,
+      :season_matches_count,
+      :minimum_matches,
       keyword_init: true
     ) do
       def ranked_top_scorers
@@ -45,24 +51,33 @@ module Seasons
       end
     end
 
-    def self.call(season:)
-      new(season:).call
+    def self.call(season:, attendance_percent: DEFAULT_ATTENDANCE_PERCENT)
+      new(season:, attendance_percent:).call
     end
 
-    def initialize(season:)
+    def self.normalize_attendance_percent(value)
+      return DEFAULT_ATTENDANCE_PERCENT if value.blank?
+
+      Integer(value.to_s, 10).clamp(0, 100)
+    rescue ArgumentError, TypeError
+      DEFAULT_ATTENDANCE_PERCENT
+    end
+
+    def initialize(season:, attendance_percent: DEFAULT_ATTENDANCE_PERCENT)
       @season = season
+      @attendance_percent = self.class.normalize_attendance_percent(attendance_percent)
     end
 
     def call
       Leaderboards.new(
-        top_scorers: leaderboard_scope
+        top_scorers: attendance_filtered_leaderboard_scope
           .order(goals: :desc)
           .order(Arel.sql("goals_per_match_value DESC"))
           .order(assists: :desc)
           .order(Arel.sql("matches_played_count ASC"))
           .order("players.name": :asc)
           .to_a,
-        top_assistants: leaderboard_scope
+        top_assistants: attendance_filtered_leaderboard_scope
           .order(assists: :desc)
           .order(Arel.sql("assists_per_match_value DESC"))
           .order(goals: :desc)
@@ -86,7 +101,7 @@ module Seasons
           .order(Arel.sql("COALESCE(last_elo_delta_value, 0) DESC"))
           .order("players.name": :asc)
           .to_a,
-        goals_assists_ranking: leaderboard_scope
+        goals_assists_ranking: attendance_filtered_leaderboard_scope
           .order(Arel.sql("(player_season_stats.goals + player_season_stats.assists) DESC"))
           .order(Arel.sql("goals_assists_per_match_value DESC"))
           .order(goals: :desc)
@@ -100,13 +115,27 @@ module Seasons
           .order(Arel.sql("goal_difference_value DESC"))
           .order(Arel.sql("matches_played_count DESC"))
           .order("players.name": :asc)
-          .to_a
+          .to_a,
+        attendance_percent:,
+        season_matches_count:,
+        minimum_matches:
       )
     end
 
     private
 
-    attr_reader :season
+    attr_reader :season, :attendance_percent
+
+    def season_matches_count
+      @season_matches_count ||= season.match_days
+        .joins(:matches)
+        .where(matches: { status: Match::STATUS_FINISHED })
+        .count
+    end
+
+    def minimum_matches
+      @minimum_matches ||= (season_matches_count * attendance_percent / 100.0).floor
+    end
 
     def leaderboard_scope
       @leaderboard_scope ||= season.player_season_stats
@@ -115,6 +144,36 @@ module Seasons
                                   .joins(:player)
                                   .merge(Player.approved.active)
                                   .includes(:player)
+    end
+
+    def attendance_filtered_leaderboard_scope
+      @attendance_filtered_leaderboard_scope ||= leaderboard_scope.where(attendance_filter_condition)
+    end
+
+    def attendance_filter_condition
+      Arel::Nodes::Grouping.new(matches_count_subquery.ast).gteq(minimum_matches)
+    end
+
+    def matches_count_subquery
+      player_season_stats_table = PlayerSeasonStat.arel_table
+      team_players_table = TeamPlayer.arel_table
+      matches_table = Match.arel_table
+      match_days_table = MatchDay.arel_table
+
+      team_players_table
+        .project(team_players_table[:id].count)
+        .join(matches_table)
+        .on(
+          matches_table[:home_team_id].eq(team_players_table[:team_id])
+            .or(matches_table[:away_team_id].eq(team_players_table[:team_id]))
+        )
+        .join(match_days_table)
+        .on(match_days_table[:id].eq(matches_table[:match_day_id]))
+        .where(
+          team_players_table[:player_id].eq(player_season_stats_table[:player_id])
+            .and(match_days_table[:season_id].eq(player_season_stats_table[:season_id]))
+            .and(matches_table[:status].eq(Match::STATUS_FINISHED))
+        )
     end
 
     def leaderboard_metric_selects

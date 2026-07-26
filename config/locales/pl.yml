@@ -439,6 +439,9 @@ pl:
     subtitle: "Porównuj formę zawodników w aktywnym sezonie: ELO, gole, asysty, G+A, głosy i bilans meczów."
     season_selector: "Sezon"
     choose_season: "Wybierz sezon"
+    attendance_filter:
+      label: "Minimalna frekwencja"
+      minimum_matches: "Minimum %{minimum_matches} z %{season_matches_count} meczów"
     no_seasons_title: "Brak sezonów"
     no_seasons_body: "Rankingi pojawią się po utworzeniu pierwszego sezonu."
     elo: "ELO"

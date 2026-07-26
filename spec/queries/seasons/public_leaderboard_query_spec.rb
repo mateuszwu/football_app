@@ -60,5 +60,69 @@ RSpec.describe Seasons::PublicLeaderboardQuery do
       expect(result.ranked_top_mvp).to eq([])
       expect(result.ranked_top_def).to eq([])
     end
+
+    it "uses the default 25% attendance and includes the exact threshold" do
+      season = create(:season)
+      threshold_player = create(:player, name: "At Threshold", approval_status: "approved", active: true)
+      below_threshold_player = create(:player, name: "Below Threshold", approval_status: "approved", active: true)
+
+      10.times do |index|
+        match_day = create(:match_day, season:, played_on: Date.new(2026, 1, 1) + index)
+        team_setup = create(:team_setup, match_day:)
+        home_team = create(:team, team_setup:, team_type: Team::TEAM_TYPE_MATCH)
+        away_team = create(:team, team_setup:, team_type: Team::TEAM_TYPE_MATCH)
+        create(:match, match_day:, home_team:, away_team:, started_at: 1.hour.ago, finished_at: 30.minutes.ago)
+        create(:team_player, team: home_team, player: threshold_player) if index < 2
+        create(:team_player, team: away_team, player: below_threshold_player) if index.zero?
+      end
+
+      create(:player_season_stat, season:, player: threshold_player, goals: 5, assists: 3)
+      create(:player_season_stat, season:, player: below_threshold_player, goals: 10, assists: 10)
+
+      result = described_class.call(season:)
+
+      expect(result.attendance_percent).to eq(25)
+      expect(result.season_matches_count).to eq(10)
+      expect(result.minimum_matches).to eq(2)
+      expect(result.top_scorers.map { |stat| stat.player.name }).to eq([ "At Threshold" ])
+      expect(result.top_assistants.map { |stat| stat.player.name }).to eq([ "At Threshold" ])
+      expect(result.goals_assists_ranking.map { |stat| stat.player.name }).to eq([ "At Threshold" ])
+    end
+
+    it "shows all offensive ranking players when attendance is 0%" do
+      season = create(:season)
+      player = create(:player, name: "No Appearance", approval_status: "approved", active: true)
+      match_day = create(:match_day, season:)
+      team_setup = create(:team_setup, match_day:)
+      home_team = create(:team, team_setup:, team_type: Team::TEAM_TYPE_MATCH)
+      away_team = create(:team, team_setup:, team_type: Team::TEAM_TYPE_MATCH)
+      create(:match, match_day:, home_team:, away_team:, started_at: 1.hour.ago, finished_at: 30.minutes.ago)
+      create(:player_season_stat, season:, player:, goals: 2, assists: 1)
+
+      result = described_class.call(season:, attendance_percent: 0)
+
+      expect(result.minimum_matches).to eq(0)
+      expect(result.top_scorers.map { |stat| stat.player.name }).to include("No Appearance")
+      expect(result.top_assistants.map { |stat| stat.player.name }).to include("No Appearance")
+      expect(result.goals_assists_ranking.map { |stat| stat.player.name }).to include("No Appearance")
+    end
+
+    it "sets the minimum to zero for a season without matches" do
+      season = create(:season)
+      player = create(:player, name: "No Matches", approval_status: "approved", active: true)
+      create(:player_season_stat, season:, player:, goals: 2, assists: 1)
+
+      result = described_class.call(season:)
+
+      expect(result.season_matches_count).to eq(0)
+      expect(result.minimum_matches).to eq(0)
+      expect(result.top_scorers.map { |stat| stat.player.name }).to eq([ "No Matches" ])
+    end
+
+    it "clamps attendance values to the 0 to 100 range" do
+      expect(described_class.normalize_attendance_percent(-10)).to eq(0)
+      expect(described_class.normalize_attendance_percent(150)).to eq(100)
+      expect(described_class.normalize_attendance_percent("invalid")).to eq(25)
+    end
   end
 end
