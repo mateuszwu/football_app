@@ -8,20 +8,39 @@ RSpec.describe Matches::FinishMatch do
       team_setup = create(:team_setup, match_day:)
       home_team = create(:team, team_setup:, team_type: Team::TEAM_TYPE_MATCH)
       away_team = create(:team, team_setup:, team_type: Team::TEAM_TYPE_MATCH)
-      scorer = create(:player, global_performance_score: 0.0)
-      assistant = create(:player, global_performance_score: 0.0)
+      scorer = create(:player, global_performance_score: 0.0, approval_status: "approved", active: true)
+      assistant = create(:player, global_performance_score: 0.0, approval_status: "approved", active: true)
+      opponent = create(:player, global_performance_score: 0.0, approval_status: "approved", active: true)
+      [ scorer, assistant, opponent ].each { |player| create(:match_day_player, match_day:, player:) }
       scorer_team_player = create(:team_player, team: home_team, player: scorer)
       assistant_team_player = create(:team_player, team: home_team, player: assistant)
-      create(:team_player, team: away_team, player: create(:player, global_performance_score: 0.0))
+      create(:team_player, team: away_team, player: opponent)
       match = create(:match, match_day:, home_team:, away_team:, home_score: 1, away_score: 0, started_at: Time.zone.parse("2026-06-12 19:00:00"))
       create(:match_goal, match:, scoring_team: home_team, scorer_team_player:, assistant_team_player:, scored_at: Time.zone.parse("2026-06-12 19:10:00"))
 
       result = described_class.call(match:, finished_at: Time.zone.parse("2026-06-12 19:50:00"))
+      ranking = Synergy::CombinationRankingQuery.call(
+        season:,
+        combination_size: 2,
+        direction: "best",
+        limit: 20,
+        minimum_shared_matches: 1
+      )
+      pair = ranking.find { |entry| entry.players.map(&:id).sort == [ scorer.id, assistant.id ].sort }
 
       expect(result).to be(true)
       expect(match.reload.performance_processed_at).to be_present
       expect(PlayerSeasonStat.find_by!(player: scorer, season: season).performance_score).to eq(BigDecimal("1.2"))
       expect(PlayerSeasonStat.find_by!(player: assistant, season: season).performance_score).to eq(BigDecimal("0.7"))
+      expect(pair).to have_attributes(
+        shared_matches_count: 1,
+        wins: 1,
+        draws: 0,
+        losses: 0,
+        goals: 1,
+        assists: 1,
+        mutual_assists: 1
+      )
     end
 
     it "stores loss and win results when the away team wins" do

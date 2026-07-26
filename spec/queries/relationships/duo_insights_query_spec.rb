@@ -175,7 +175,7 @@ RSpec.describe Relationships::DuoInsightsQuery do
     end
 
     context "when internal fallbacks are evaluated" do
-      it "supports offensive match-day fallback eligibility and ignores non-shared matches" do
+      it "supports offensive match-day fallback eligibility" do
         query = described_class.new(season: nil, players: [])
         summary = Relationships::DuoInsightsQuery::Summary.new(
           shared_match_days_count: 2,
@@ -184,14 +184,32 @@ RSpec.describe Relationships::DuoInsightsQuery do
           assists: 1,
           mutual_assists: 1
         )
-        home_team = build_stubbed(:team)
-        away_team = build_stubbed(:team)
-        match = build_stubbed(:match, home_team:, away_team:)
 
         expect(query.send(:eligible_for_offensive_duo?, summary, match_level_available: false)).to be(true)
         expect(query.send(:eligible_for_offensive_duo?, summary, match_level_available: true)).to be(false)
-        expect(query.send(:shared_match_for, match:, shared_team_ids: [])).to be_nil
       end
     end
+
+    it "keeps the persisted read query count constant as the number of pairs grows" do
+      season = create(:season)
+      players = create_list(:player, 12, approval_status: "approved", active: true)
+      match_day = create(:match_day, season:)
+      players.each { |player| create(:match_day_player, match_day:, player:) }
+      Relationships::RebuildSeasonPairStats.call(season:)
+
+      query_count = count_sql_queries { described_class.call(season:) }
+
+      expect(query_count).to be <= 4
+    end
+  end
+
+  def count_sql_queries(&)
+    count = 0
+    subscriber = lambda do |_name, _started, _finished, _unique_id, payload|
+      count += 1 unless payload[:name].in?(%w[SCHEMA CACHE TRANSACTION])
+    end
+
+    ActiveSupport::Notifications.subscribed(subscriber, "sql.active_record", &)
+    count
   end
 end

@@ -327,5 +327,63 @@ RSpec.describe Synergy::CombinationRankingQuery do
         expect(result.first.goal_difference).to eq(0)
       end
     end
+
+    it "aggregates records and offense for active trio rankings" do
+      season = create(:season)
+      adam = create(:player, name: "Adam Trio", approval_status: "approved", active: true)
+      bartek = create(:player, name: "Bartek Trio", approval_status: "approved", active: true)
+      cezary = create(:player, name: "Cezary Trio", approval_status: "approved", active: true)
+      opponent = create(:player, name: "Opponent Trio", approval_status: "approved", active: true)
+      match_day = create(:match_day, season:, status: "finished")
+      team_setup = create(:team_setup, match_day:)
+
+      home_team = create(:team, team_setup:, team_type: Team::TEAM_TYPE_MATCH)
+      away_team = create(:team, team_setup:, team_type: Team::TEAM_TYPE_MATCH)
+      adam_team_player = create(:team_player, team: home_team, player: adam)
+      bartek_team_player = create(:team_player, team: home_team, player: bartek)
+      cezary_team_player = create(:team_player, team: home_team, player: cezary)
+      create(:team_player, team: away_team, player: opponent)
+      home_win = create(:match, match_day:, home_team:, away_team:, home_score: 2, away_score: 1, finished_at: 3.hours.ago)
+      create(:match_goal, match: home_win, scoring_team: home_team, scorer_team_player: adam_team_player, assistant_team_player: bartek_team_player)
+      create(:match_goal, match: home_win, scoring_team: home_team, scorer_team_player: cezary_team_player)
+
+      draw_home_team = create(:team, team_setup:, team_type: Team::TEAM_TYPE_MATCH)
+      draw_away_team = create(:team, team_setup:, team_type: Team::TEAM_TYPE_MATCH)
+      create(:team_player, team: draw_home_team, player: opponent)
+      draw_adam = create(:team_player, team: draw_away_team, player: adam)
+      create(:team_player, team: draw_away_team, player: bartek)
+      draw_cezary = create(:team_player, team: draw_away_team, player: cezary)
+      draw = create(:match, match_day:, home_team: draw_home_team, away_team: draw_away_team, home_score: 1, away_score: 1, finished_at: 2.hours.ago)
+      create(:match_goal, match: draw, scoring_team: draw_away_team, scorer_team_player: draw_adam, assistant_team_player: draw_cezary)
+
+      loss_home_team = create(:team, team_setup:, team_type: Team::TEAM_TYPE_MATCH)
+      loss_away_team = create(:team, team_setup:, team_type: Team::TEAM_TYPE_MATCH)
+      create(:team_player, team: loss_home_team, player: opponent)
+      create(:team_player, team: loss_away_team, player: adam)
+      create(:team_player, team: loss_away_team, player: bartek)
+      create(:team_player, team: loss_away_team, player: cezary)
+      create(:match, match_day:, home_team: loss_home_team, away_team: loss_away_team, home_score: 2, away_score: 0, finished_at: 1.hour.ago)
+
+      result = described_class.call(
+        season:,
+        combination_size: 3,
+        direction: "best",
+        limit: 20,
+        minimum_shared_matches: 1
+      )
+
+      expect(result.one?).to be(true)
+      expect(result.first.players).to contain_exactly(adam, bartek, cezary)
+      expect(result.first).to have_attributes(
+        shared_matches_count: 3,
+        wins: 1,
+        draws: 1,
+        losses: 1,
+        goals: 3,
+        assists: 2,
+        mutual_assists: 2,
+        goal_difference: -1
+      )
+    end
   end
 end

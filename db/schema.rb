@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_20_100100) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_25_120000) do
   create_table "match_day_players", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.integer "match_day_id", null: false
@@ -181,6 +181,29 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_20_100100) do
     t.index ["role_code"], name: "index_players_on_role_code"
   end
 
+  create_table "season_pair_stats", force: :cascade do |t|
+    t.integer "assists", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.integer "draws", default: 0, null: false
+    t.integer "goal_difference", default: 0, null: false
+    t.integer "goals", default: 0, null: false
+    t.integer "losses", default: 0, null: false
+    t.integer "mutual_assists", default: 0, null: false
+    t.integer "player_one_id", null: false
+    t.integer "player_two_id", null: false
+    t.integer "season_id", null: false
+    t.integer "shared_match_days_count", default: 0, null: false
+    t.integer "shared_matches_count", default: 0, null: false
+    t.datetime "updated_at", null: false
+    t.integer "wins", default: 0, null: false
+    t.index ["player_one_id"], name: "index_season_pair_stats_on_player_one_id"
+    t.index ["player_two_id"], name: "index_season_pair_stats_on_player_two_id"
+    t.index ["season_id", "player_one_id", "player_two_id"], name: "index_season_pair_stats_on_season_and_players", unique: true
+    t.index ["season_id", "shared_matches_count"], name: "index_season_pair_stats_on_season_id_and_shared_matches_count"
+    t.index ["season_id"], name: "index_season_pair_stats_on_season_id"
+    t.check_constraint "player_one_id < player_two_id", name: "season_pair_stats_players_ordered"
+  end
+
   create_table "seasons", force: :cascade do |t|
     t.decimal "assist_points", precision: 6, scale: 2, default: "0.8", null: false
     t.datetime "created_at", null: false
@@ -197,6 +220,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_20_100100) do
     t.decimal "mvp_max_points", precision: 6, scale: 2, default: "4.0", null: false
     t.integer "mvp_vote_bonus", default: 10, null: false
     t.string "name", null: false
+    t.datetime "pair_stats_generated_at"
     t.decimal "player_advantage_elo", precision: 6, scale: 2, default: "40.0", null: false
     t.decimal "season_elo_carryover_factor", precision: 4, scale: 2, default: "0.5", null: false
     t.date "starts_on", null: false
@@ -284,6 +308,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_20_100100) do
   add_foreign_key "player_rating_changes", "seasons"
   add_foreign_key "player_season_stats", "players"
   add_foreign_key "player_season_stats", "seasons"
+  add_foreign_key "season_pair_stats", "players", column: "player_one_id"
+  add_foreign_key "season_pair_stats", "players", column: "player_two_id"
+  add_foreign_key "season_pair_stats", "seasons"
   add_foreign_key "team_players", "players"
   add_foreign_key "team_players", "teams"
   add_foreign_key "team_setups", "match_days"

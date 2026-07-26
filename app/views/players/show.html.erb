@@ -1,6 +1,8 @@
 <% content_for :title, "#{player.name} - #{t("app.name")}" %>
-<% content_for :head do %>
-  <%= javascript_include_tag "/vendor/chart.umd.js", "data-turbo-track": "reload" %>
+<% if %w[overview stats charts elo].include?(profile.active_tab) %>
+  <% content_for :head do %>
+    <%= javascript_include_tag "/vendor/chart.umd.js", "data-turbo-track": "reload" %>
+  <% end %>
 <% end %>
 
 <section class="player-profile-page">

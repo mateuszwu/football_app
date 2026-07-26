@@ -16,6 +16,7 @@ class CreateMatchDay
       save_manual_teams!
       match_day.sync_setup_status!
       Voting::GenerateMatchDayVoteTokens.call(match_day:)
+      Relationships::RebuildSeasonPairStats.call(season: match_day.season)
     end
 
     true

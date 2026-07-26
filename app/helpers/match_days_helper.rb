@@ -24,14 +24,4 @@ module MatchDaysHelper
   def match_day_player_link(player, class_name: nil)
     match_player_profile_link(player, class_name:)
   end
-
-  def match_day_event_text(event)
-    if event.own_goal
-      t("match_days.show.match_card.own_goal", player: event.scorer.name)
-    elsif event.assister.present?
-      t("match_days.show.match_card.goal_with_assist", player: event.scorer.name, assistant: event.assister.name)
-    else
-      t("match_days.show.match_card.goal", player: event.scorer.name)
-    end
-  end
 end

@@ -46,8 +46,8 @@ Rails.application.configure do
   # Don't log any deprecations.
   config.active_support.report_deprecations = false
 
-  # Keep expensive public analytics results warm between requests on Render.
-  config.cache_store = :memory_store, { size: 64.megabytes }
+  # Bound in-process cache memory on small Render instances.
+  config.cache_store = :memory_store, { size: 16.megabytes }
 
   # Replace the default in-process and non-durable queuing backend for Active Job.
   # config.active_job.queue_adapter = :resque

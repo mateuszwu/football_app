@@ -26,11 +26,13 @@ module PublicStats
     end
 
     def call
+      rows = snapshot_rows
+
       [
         "public-stats",
         season&.id || "all",
-        timestamp_part,
-        count_part
+        timestamp_part(rows),
+        count_part(rows)
       ].join("/")
     end
 
@@ -38,16 +40,32 @@ module PublicStats
 
     attr_reader :season
 
-    def timestamp_part
-      timestamps.compact.max&.utc&.to_fs(:number) || "empty"
+    def timestamp_part(rows)
+      rows
+        .filter_map { |row| Time.zone.parse(row.fetch("tracked_timestamp")) if row["tracked_timestamp"].present? }
+        .max
+        &.utc
+        &.to_fs(:number) || "empty"
     end
 
-    def count_part
-      tracked_scopes.sum(&:count)
+    def count_part(rows)
+      rows.sum { |row| row.fetch("tracked_count").to_i }
     end
 
-    def timestamps
-      tracked_scopes.map { |scope| scope.maximum(:updated_at) }
+    def snapshot_rows
+      queries = tracked_scopes.map do |scope|
+        table_name = scope.klass.quoted_table_name
+
+        scope
+          .unscope(:select, :order, :limit, :offset)
+          .select(
+            Arel.sql("COUNT(*) AS tracked_count"),
+            Arel.sql("MAX(#{table_name}.updated_at) AS tracked_timestamp")
+          )
+          .to_sql
+      end
+
+      ActiveRecord::Base.connection.select_all(queries.join(" UNION ALL ")).to_a
     end
 
     def tracked_scopes

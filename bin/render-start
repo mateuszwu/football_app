@@ -5,4 +5,5 @@ export RAILS_ENV="${RAILS_ENV:-production}"
 export RACK_ENV="$RAILS_ENV"
 
 bundle exec rails db:prepare
-exec bundle exec puma -t "${RAILS_MIN_THREADS:-5}:${RAILS_MAX_THREADS:-5}" -p "${PORT:-3000}" -e "$RAILS_ENV"
+bundle exec rails relationships:rebuild_pair_stats
+exec bundle exec puma -t "${RAILS_MIN_THREADS:-1}:${RAILS_MAX_THREADS:-2}" -p "${PORT:-3000}" -e "$RAILS_ENV"

@@ -30,18 +30,18 @@ module Synergy
     MIN_EDGE_WIDTH = 1
     MAX_EDGE_WIDTH = 10
 
-    def self.call(season: nil, minimum_shared_matches: 1, player_filter: nil, player_id: nil, limit: 50, metric: "shared_matches")
-      new(season:, minimum_shared_matches:, player_filter:, player_id:, limit:, metric:).call
+    def self.call(season: nil, minimum_shared_matches: 1, player_filter: nil, player_id: nil, limit: 50, metric: "shared_matches", pair_stats: nil)
+      new(season:, minimum_shared_matches:, player_filter:, player_id:, limit:, metric:, pair_stats:).call
     end
 
-    def initialize(season:, minimum_shared_matches:, player_filter:, limit:, metric:, player_id: nil)
+    def initialize(season:, minimum_shared_matches:, player_filter:, limit:, metric:, player_id: nil, pair_stats: nil)
       @season = season
       @minimum_shared_matches = [ minimum_shared_matches.to_i, 1 ].max
       @player_filter = player_filter.to_s.strip.downcase
       @player_id = player_id.to_i if player_id.present?
       @limit = LIMITS.include?(limit.to_i) ? limit.to_i : 50
       @metric = METRICS.include?(metric.to_s) ? metric.to_s : "shared_matches"
-      @visible_players = Player.approved.active.index_by(&:id)
+      @pair_stats = pair_stats
     end
 
     def call
@@ -63,7 +63,7 @@ module Synergy
 
     private
 
-    attr_reader :season, :minimum_shared_matches, :player_filter, :player_id, :limit, :metric, :visible_players
+    attr_reader :season, :minimum_shared_matches, :player_filter, :player_id, :limit, :metric, :pair_stats
 
     def ranked_edges
       edges = aggregate_edges.values
@@ -75,75 +75,16 @@ module Synergy
     end
 
     def aggregate_edges
-      finished_matches.each_with_object({}) do |match, edges|
-        aggregate_team_edges(match:, team: match.home_team, edges:)
-        aggregate_team_edges(match:, team: match.away_team, edges:)
-      end
-    end
-
-    def aggregate_team_edges(match:, team:, edges:)
-      team_players = visible_team_players(team)
-      return if team_players.size < 2
-
-      team_players.combination(2) do |pair_team_players|
-        player_ids = pair_team_players.map(&:player_id).sort
-        edge = edges[player_ids] ||= build_edge(player_ids)
-
-        edge.shared_matches += 1
-        edge.goals += goals_for_pair(match:, team:, player_ids:)
-        edge.assists += assists_for_pair(match:, team:, player_ids:)
-        update_record(edge:, match:, team:)
-      end
-    end
-
-    def finished_matches
-      scope = Match
-        .where(status: Match::STATUS_FINISHED)
-        .includes(
-          home_team: { team_players: :player },
-          away_team: { team_players: :player },
-          active_match_goals: [ { scorer_team_player: :player }, { assistant_team_player: :player } ]
+      (pair_stats || Relationships::PairStatsQuery.call(season:)).each_with_object({}) do |pair_stat, edges|
+        edges[pair_stat.players.map(&:id).sort] = EdgeResult.new(
+          players: pair_stat.players,
+          shared_matches: pair_stat.shared_matches_count,
+          wins: pair_stat.wins,
+          draws: pair_stat.draws,
+          losses: pair_stat.losses,
+          goals: pair_stat.goals,
+          assists: pair_stat.assists
         )
-      scope = scope.joins(:match_day).where(match_days: { season_id: season.id }) if season.present?
-
-      scope
-    end
-
-    def visible_team_players(team)
-      team.team_players.select { |team_player| visible_players.key?(team_player.player_id) }
-    end
-
-    def build_edge(player_ids)
-      EdgeResult.new(
-        players: player_ids.filter_map { |player_id| visible_players[player_id] },
-        shared_matches: 0,
-        wins: 0,
-        draws: 0,
-        losses: 0,
-        goals: 0,
-        assists: 0
-      )
-    end
-
-    def update_record(edge:, match:, team:)
-      if match.draw?
-        edge.draws += 1
-      elsif match.winner == team
-        edge.wins += 1
-      else
-        edge.losses += 1
-      end
-    end
-
-    def goals_for_pair(match:, team:, player_ids:)
-      match.active_match_goals.count do |goal|
-        goal.scoring_team_id == team.id && player_ids.include?(goal.scorer_team_player.player_id)
-      end
-    end
-
-    def assists_for_pair(match:, team:, player_ids:)
-      match.active_match_goals.count do |goal|
-        goal.scoring_team_id == team.id && goal.assistant_team_player.present? && player_ids.include?(goal.assistant_team_player.player_id)
       end
     end
 

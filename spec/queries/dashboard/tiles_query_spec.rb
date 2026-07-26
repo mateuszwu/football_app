@@ -94,8 +94,11 @@ RSpec.describe Dashboard::TilesQuery do
         create(:player_season_stat, season:, player: second_player, elo: 1010, goals: 1, assists: 4, def_votes_count: 3)
         create(:player_season_stat, season:, player: third_player, elo: 990)
 
-        result = described_class.call(admin_signed_in: true)
+        Relationships::RebuildSeasonPairStats.call(season:)
+        result = nil
+        query_count = count_sql_queries { result = described_class.call(admin_signed_in: true) }
 
+        expect(query_count).to be <= 30
         expect(result.current_season).to eq(season)
         expect(result.nearest_match_day).to eq(match_day)
         expect(result.day_balance.match_day).to eq(match_day)
@@ -122,5 +125,15 @@ RSpec.describe Dashboard::TilesQuery do
         expect(result.best_duo_summary.assists).to eq(1)
       end
     end
+  end
+
+  def count_sql_queries(&)
+    count = 0
+    subscriber = lambda do |_name, _started, _finished, _unique_id, payload|
+      count += 1 unless payload[:name].in?(%w[SCHEMA CACHE TRANSACTION])
+    end
+
+    ActiveSupport::Notifications.subscribed(subscriber, "sql.active_record", &)
+    count
   end
 end

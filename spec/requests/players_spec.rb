@@ -417,6 +417,27 @@ RSpec.describe "Players" do
         expect(response.body).not_to include("Historia zmian ELO")
       end
 
+      {
+        "stats" => "Skuteczność",
+        "matches" => "Forma z ostatnich 5 meczów",
+        "charts" => "Gole narastająco",
+        "awards" => "Historia wyróżnień"
+      }.each do |tab, expected_heading|
+        it "renders the #{tab} tab content without rendering another tab as active" do
+          player = create(:player, name: "Adam #{tab.capitalize}", approval_status: "approved", active: true)
+
+          get "/players/#{player.id}", params: { tab: }
+
+          document = Nokogiri::HTML(response.body)
+          active_tabs = document.css('[role="tab"][aria-selected="true"]')
+
+          expect(response).to have_http_status(:ok)
+          expect(response.body).to include(expected_heading)
+          expect(active_tabs.one?).to be(true)
+          expect(active_tabs.first["href"]).to include("tab=#{tab}")
+        end
+      end
+
       it "renders direct mutual assists on the synergy tab" do
         season = create(:season, name: "Summer 2026")
         adam = create(:player, name: "Adam Nowak", nickname: "adam", phone: "+48111111111", approval_status: "approved", active: true)

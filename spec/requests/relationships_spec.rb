@@ -212,6 +212,8 @@ RSpec.describe "Relationships" do
       end
 
       it "renders the fives tab as an active scalable ranking tab" do
+        expect(Synergy::GraphDataQuery).not_to receive(:call)
+
         get "/relationships", params: { tab: "fives" }
 
         expect(response).to have_http_status(:ok)
@@ -237,6 +239,8 @@ RSpec.describe "Relationships" do
           match = create(:match, match_day:, home_team:, away_team:, home_score: 1, away_score: 0, finished_at: index.days.ago)
           create(:match_goal, match:, scoring_team: home_team, scorer_team_player: adam_team_player, assistant_team_player: marek_team_player)
         end
+
+        expect(Synergy::CombinationRankingQuery).not_to receive(:call)
 
         get "/relationships", params: {
           tab: "graph",

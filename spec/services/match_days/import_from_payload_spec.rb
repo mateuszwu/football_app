@@ -47,6 +47,14 @@ RSpec.describe MatchDays::ImportFromPayload do
           season:,
           available_players: Player.approved.active.order(:name)
         )
+        ranking = Synergy::CombinationRankingQuery.call(
+          season:,
+          combination_size: 2,
+          direction: "best",
+          limit: 20,
+          minimum_shared_matches: 1
+        )
+        imported_finished_pair = ranking.find { |entry| entry.players.map(&:id).sort == [ adam.id, jan.id ].sort }
 
         expect(result).to be_success
         expect(result.match_day.played_on).to eq(Date.new(2026, 6, 19))
@@ -84,6 +92,13 @@ RSpec.describe MatchDays::ImportFromPayload do
         expect(second_match.home_score).to eq(0)
         expect(second_match.away_score).to eq(1)
         expect(second_match.match_goals.order(:scored_at).map { |goal| goal.scorer.nickname }).to eq([ "jan" ])
+        expect(imported_finished_pair).to have_attributes(
+          shared_matches_count: 1,
+          draws: 1,
+          goals: 1,
+          assists: 1,
+          mutual_assists: 1
+        )
       end
     end
 

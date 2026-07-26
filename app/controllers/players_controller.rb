@@ -1,7 +1,11 @@
 class PlayersController < ApplicationController
   def index
-    directory = Rails.cache.fetch([ "players-directory", directory_cache_key, PublicStats::CacheKey.global ], expires_in: 5.minutes) do
+    directory = if params[:q].to_s.strip.present?
       Players::DirectoryQuery.call(params:)
+    else
+      Rails.cache.fetch([ "players-directory", directory_cache_key, PublicStats::CacheKey.global ], expires_in: 5.minutes) do
+        Players::DirectoryQuery.call(params:)
+      end
     end
 
     render :index, locals: { directory: }

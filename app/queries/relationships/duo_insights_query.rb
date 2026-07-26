@@ -82,30 +82,23 @@ module Relationships
     attr_reader :season, :players
 
     def summaries
-      visible_player_ids = players.map(&:id)
-
-      Players::BestDuoLeaderboardQuery.call(season:)
-        .select { |duo| visible_player_ids.include?(duo.player_one.id) && visible_player_ids.include?(duo.player_two.id) }
-        .map { |duo| build_summary(duo) }
+      Relationships::PairStatsQuery.call(season:, players:).map { |pair_stats| build_summary(pair_stats) }
     end
 
-    def build_summary(duo)
-      shared_matches = shared_matches_for(duo)
-      goals, assists = offensive_totals_for(duo:, shared_matches:)
-      mutual_assists = mutual_assists_for(duo:, shared_matches:)
-      wins, draws, losses = record_for(shared_matches)
+    def build_summary(pair_stats)
+      player_a, player_b = pair_stats.players.sort_by(&:name)
 
       Summary.new(
-        player_a: duo.player_one,
-        player_b: duo.player_two,
-        shared_match_days_count: duo.shared_match_days_count,
-        shared_matches_count: shared_matches.count,
-        wins:,
-        draws:,
-        losses:,
-        goals:,
-        assists:,
-        mutual_assists:
+        player_a:,
+        player_b:,
+        shared_match_days_count: pair_stats.shared_match_days_count,
+        shared_matches_count: pair_stats.shared_matches_count,
+        wins: pair_stats.wins,
+        draws: pair_stats.draws,
+        losses: pair_stats.losses,
+        goals: pair_stats.goals,
+        assists: pair_stats.assists,
+        mutual_assists: pair_stats.mutual_assists
       )
     end
 
@@ -175,95 +168,6 @@ module Relationships
       return summary.shared_matches_count.to_i if match_level_available
 
       summary.shared_count
-    end
-
-    def shared_matches_for(duo)
-      shared_team_ids = shared_team_ids_for(duo)
-      return [] if shared_team_ids.empty?
-
-      scope = Match
-        .where(status: Match::STATUS_FINISHED)
-        .where("home_team_id IN (:team_ids) OR away_team_id IN (:team_ids)", team_ids: shared_team_ids)
-        .includes(:home_team, :away_team)
-      scope = scope.joins(:match_day).where(match_days: { season_id: season.id }) if season.present?
-
-      scope.filter_map { |match| shared_match_for(match:, shared_team_ids:) }
-    end
-
-    def shared_team_ids_for(duo)
-      scope = Team
-        .joins(:team_players)
-        .joins(team_setup: :match_day)
-        .where(team_type: Team::TEAM_TYPE_MATCH)
-        .where(team_players: { player_id: [ duo.player_one.id, duo.player_two.id ] })
-        .group("teams.id")
-        .having("COUNT(DISTINCT team_players.player_id) = 2")
-      scope = scope.where(match_days: { season_id: season.id }) if season.present?
-
-      scope.pluck(:id)
-    end
-
-    def shared_match_for(match:, shared_team_ids:)
-      shared_team = if shared_team_ids.include?(match.home_team_id)
-        match.home_team
-      elsif shared_team_ids.include?(match.away_team_id)
-        match.away_team
-      end
-
-      return nil if shared_team.blank?
-
-      [ match, shared_team ]
-    end
-
-    def record_for(shared_matches)
-      shared_matches.each_with_object([ 0, 0, 0 ]) do |(match, shared_team), record|
-        if match.draw?
-          record[1] += 1
-        elsif match.winner == shared_team
-          record[0] += 1
-        else
-          record[2] += 1
-        end
-      end
-    end
-
-    def offensive_totals_for(duo:, shared_matches:)
-      match_ids = shared_matches.map { |match, _team| match.id }
-      return [ 0, 0 ] if match_ids.empty?
-
-      player_ids = [ duo.player_one.id, duo.player_two.id ]
-      goals = MatchGoal
-        .active
-        .joins(:scorer_team_player)
-        .where(match_id: match_ids)
-        .where(team_players: { player_id: player_ids })
-        .count
-      assists = MatchGoal
-        .active
-        .joins(:assistant_team_player)
-        .where(match_id: match_ids)
-        .where(team_players: { player_id: player_ids })
-        .count
-
-      [ goals, assists ]
-    end
-
-    def mutual_assists_for(duo:, shared_matches:)
-      match_ids = shared_matches.map { |match, _team| match.id }
-      return 0 if match_ids.empty?
-
-      player_ids = [ duo.player_one.id, duo.player_two.id ]
-
-      MatchGoal
-        .active
-        .includes(:scorer_team_player, :assistant_team_player)
-        .where(match_id: match_ids)
-        .to_a
-        .count do |goal|
-          goal.assistant_team_player.present? &&
-            player_ids.include?(goal.scorer_team_player.player_id) &&
-            player_ids.include?(goal.assistant_team_player.player_id)
-        end
     end
   end
 end

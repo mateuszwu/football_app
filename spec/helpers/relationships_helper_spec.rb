@@ -147,29 +147,4 @@ RSpec.describe RelationshipsHelper do
       expect(result).to be_nil
     end
   end
-
-  describe "#relationship_graph_layout" do
-    it "centers a single player in the graph" do
-      player = build_stubbed(:player)
-
-      result = helper.relationship_graph_layout(players: [ player ], edges: [], width: 600, height: 400)
-
-      expect(result.nodes.first.x).to eq(300)
-      expect(result.nodes.first.y).to eq(200)
-    end
-
-    it "uses the minimum graph stroke width for a single-strength connection" do
-      player_one = build_stubbed(:player)
-      player_two = build_stubbed(:player)
-      edge = Players::BestDuoLeaderboardQuery::Duo.new(
-        player_one:,
-        player_two:,
-        shared_match_days_count: 1
-      )
-
-      result = helper.relationship_graph_layout(players: [ player_one, player_two ], edges: [ edge ])
-
-      expect(result.edges.first.stroke_width).to eq(3.0)
-    end
-  end
 end

@@ -29,6 +29,8 @@ RSpec.describe UpdateMatchDay do
         expect(match_day.players).to contain_exactly(new_player)
         expect(match_day.match_day_players.first.match_day_vote_token).to be_present
         expect(MatchDayVoteToken.find_by(token: "original-token")).to be_nil
+        expect(season.reload.pair_stats_generated_at).to be_present
+        expect(other_season.reload.pair_stats_generated_at).to be_present
       end
 
       it "replaces manual baseline teams" do

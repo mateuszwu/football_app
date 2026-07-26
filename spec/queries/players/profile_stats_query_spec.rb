@@ -2,7 +2,7 @@ require "rails_helper"
 
 RSpec.describe Players::ProfileStatsQuery do
   describe ".call" do
-    it "returns season-scoped profile stats, charts, awards, pagination, and player-filtered synergy links" do
+    it "returns season-scoped overview stats, charts, awards, and player-filtered synergy links" do
       player = create(:player, name: "Adam Nowak", approval_status: "approved", active: true, elo: 1000)
       partner = create(:player, name: "Bartek Demo", approval_status: "approved", active: true)
       voter = create(:player, name: "Voter Demo", approval_status: "approved", active: true)
@@ -81,11 +81,16 @@ RSpec.describe Players::ProfileStatsQuery do
         score: [ 0, 1 ]
       )
 
-      result = described_class.call(player:, season:, tab: "matches", page: 1, per_page: 1)
+      Relationships::RebuildSeasonPairStats.call(season:)
+      result = nil
+      query_count = count_sql_queries do
+        result = described_class.call(player:, season:, tab: "overview", page: 1, per_page: 1)
+      end
 
+      expect(query_count).to be <= 30
       expect(result.season).to eq(season)
       expect(result.available_seasons).to include(season, older_season)
-      expect(result.active_tab).to eq("matches")
+      expect(result.active_tab).to eq("overview")
       expect(result.summary).to include(
         current_elo: 1040,
         matches: 1,
@@ -93,8 +98,6 @@ RSpec.describe Players::ProfileStatsQuery do
         assists: 0,
         own_goals: 1,
         goals_assists: 1,
-        mvp: 1,
-        def: 0,
         wins: 1,
         draws: 0,
         losses: 0,
@@ -117,8 +120,6 @@ RSpec.describe Players::ProfileStatsQuery do
         elo_after: 1032,
         award_types: [ "MVP" ]
       )
-      expect(result.paginated_matches.items).to eq([ result.matches.first ])
-      expect(result.paginated_matches.total_pages).to eq(1)
       expect(result.awards.first).to have_attributes(match_day: finished_match.match_day, award_type: "MVP", votes_count: 1)
       expect(result.chart_data.fetch(:elo).fetch(:datasets).first.fetch(:data)).to eq([ 1040, 1032 ])
       expect(result.chart_data.fetch(:elo).fetch(:datasets).first.fetch(:segmentByDelta)).to be(true)
@@ -126,11 +127,36 @@ RSpec.describe Players::ProfileStatsQuery do
       expect(result.chart_data.fetch(:elo).fetch(:datasets).first.fetch(:pointBackgroundColor)).to eq([ "#22C55E", "#EF4444" ])
       expect(result.chart_data.fetch(:elo).fetch(:points_meta).first.fetch(:result_label)).to eq("Wygrana")
       expect(result.chart_data.fetch(:record).fetch(:datasets).first.fetch(:backgroundColor)).to eq([ "#22C55E", "#94A3B8", "#EF4444" ])
-      expect(result.chart_data.fetch(:cumulative_goals).fetch(:datasets).first.fetch(:data)).to eq([ 1 ])
+      expect(result.chart_data.fetch(:cumulative_goals_assists).fetch(:datasets).first.fetch(:data)).to eq([ 1 ])
       expect(result.synergy.fetch(:best_partner).players).to contain_exactly(player, partner)
       expect(result.synergy.fetch(:graph_path)).to include("player_id=#{player.id}")
       expect(result.synergy.fetch(:graph_path)).to include("player_filter=Adam+Nowak")
       expect(result.synergy.fetch(:graph_path)).to include("minimum_shared_matches=1")
+    end
+
+    it "loads only match-tab data and skips hidden chart and synergy queries" do
+      player = create(:player, approval_status: "approved", active: true)
+      opponent = create(:player, approval_status: "approved", active: true)
+      season = create(:season)
+      match = create_finished_match(
+        season:,
+        played_on: Date.new(2026, 7, 1),
+        home_players: [ player ],
+        away_players: [ opponent ],
+        score: [ 1, 0 ]
+      )
+
+      expect(Synergy::CombinationRankingQuery).not_to receive(:call)
+      expect(Synergy::GraphDataQuery).not_to receive(:call)
+
+      result = described_class.call(player:, season:, tab: "matches", page: 1, per_page: 1)
+
+      expect(result.matches.map(&:match)).to eq([ match ])
+      expect(result.paginated_matches.items).to eq(result.matches)
+      expect(result.chart_data).to eq({})
+      expect(result.synergy).to eq({})
+      expect(result.elo).to eq({})
+      expect(result.cumulative).to eq([])
     end
 
     it "calculates record percentages and best win streak from chronological match results" do
@@ -196,5 +222,15 @@ RSpec.describe Players::ProfileStatsQuery do
       mvp_player:,
       def_player:
     )
+  end
+
+  def count_sql_queries(&)
+    count = 0
+    subscriber = lambda do |_name, _started, _finished, _unique_id, payload|
+      count += 1 unless payload[:name].in?(%w[SCHEMA CACHE TRANSACTION])
+    end
+
+    ActiveSupport::Notifications.subscribed(subscriber, "sql.active_record", &)
+    count
   end
 end

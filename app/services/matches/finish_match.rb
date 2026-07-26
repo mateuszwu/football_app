@@ -16,6 +16,7 @@ module Matches
         update_team_results!
         match.update!(finished_at: finished_at)
         Ratings::ApplyMatchPerformance.call(match:)
+        Relationships::RebuildSeasonPairStats.call(season: match.match_day.season)
         match.match_day.update!(status: "finished") if all_match_day_matches_finished?
       end
 

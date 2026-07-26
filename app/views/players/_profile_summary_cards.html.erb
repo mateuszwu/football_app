@@ -1,19 +1,25 @@
-<div class="player-profile-summary-grid">
-  <% [
+<% summary_cards = [
     [ "current_elo", profile.summary.fetch(:current_elo) || "—" ],
     [ "matches", profile.summary.fetch(:matches) ],
     [ "goals", profile.summary.fetch(:goals) ],
     [ "assists", profile.summary.fetch(:assists) ],
     [ "own_goals", profile.summary.fetch(:own_goals) ],
     [ "goals_assists", profile.summary.fetch(:goals_assists) ],
-    [ "best_win_streak", profile.summary.fetch(:best_win_streak) ],
+    [ "best_win_streak", profile.summary.fetch(:best_win_streak) ]
+  ] %>
+<% if local_assigns[:extended] %>
+  <% summary_cards.concat([
     [ "mvp", profile.summary.fetch(:mvp) ],
     [ "def", profile.summary.fetch(:def) ],
     [ "wins", profile.summary.fetch(:wins) ],
     [ "draws", profile.summary.fetch(:draws) ],
     [ "losses", profile.summary.fetch(:losses) ],
     [ "win_rate", "#{profile.summary.fetch(:win_rate)}%" ]
-  ].first(local_assigns[:extended] ? 13 : 7).each do |key, value| %>
+  ]) %>
+<% end %>
+
+<div class="player-profile-summary-grid">
+  <% summary_cards.each do |key, value| %>
     <article class="player-profile-stat-card">
       <span><%= t("players.profile.summary.#{key}") %></span>
       <strong><%= value %></strong>

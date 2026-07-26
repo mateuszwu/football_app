@@ -33,11 +33,11 @@ module Synergy
     VALID_LIMITS = [ 20, 50 ].freeze
     VALID_COMBINATION_SIZES = (2..5).freeze
 
-    def self.call(season: nil, combination_size: 2, direction: "best", limit: 20, minimum_shared_matches: 3, player_filter: nil, player_id: nil)
-      new(season:, combination_size:, direction:, limit:, minimum_shared_matches:, player_filter:, player_id:).call
+    def self.call(season: nil, combination_size: 2, direction: "best", limit: 20, minimum_shared_matches: 3, player_filter: nil, player_id: nil, pair_stats: nil)
+      new(season:, combination_size:, direction:, limit:, minimum_shared_matches:, player_filter:, player_id:, pair_stats:).call
     end
 
-    def initialize(season:, combination_size:, direction:, limit:, minimum_shared_matches:, player_filter:, player_id: nil)
+    def initialize(season:, combination_size:, direction:, limit:, minimum_shared_matches:, player_filter:, player_id: nil, pair_stats: nil)
       @season = season
       @combination_size = normalize_combination_size(combination_size)
       @direction = VALID_DIRECTIONS.include?(direction.to_s) ? direction.to_s : "best"
@@ -45,7 +45,8 @@ module Synergy
       @minimum_shared_matches = [ minimum_shared_matches.to_i, 1 ].max
       @player_filter = player_filter.to_s.strip.downcase
       @player_id = player_id.to_i if player_id.present?
-      @visible_players = Player.approved.active.index_by(&:id)
+      @pair_stats = pair_stats
+      @visible_players = pair_stats.nil? ? Player.approved.active.index_by(&:id) : pair_stats.flat_map(&:players).index_by(&:id)
     end
 
     def call
@@ -54,15 +55,37 @@ module Synergy
 
     private
 
-    attr_reader :season, :combination_size, :direction, :limit, :minimum_shared_matches, :player_filter, :player_id, :visible_players
+    attr_reader :season, :combination_size, :direction, :limit, :minimum_shared_matches, :player_filter, :player_id, :pair_stats, :visible_players
 
     def ranked_results
-      results = aggregate_combinations.values
+      results = unfiltered_results
         .select { |result| result.shared_matches_count >= minimum_shared_matches }
         .select { |result| player_id_matches?(result) }
         .select { |result| player_filter_matches?(result) }
 
       results.sort_by { |result| sort_key_for(result) }
+    end
+
+    def unfiltered_results
+      return persisted_pair_results if combination_size == 2
+
+      aggregate_combinations.values
+    end
+
+    def persisted_pair_results
+      (pair_stats || Relationships::PairStatsQuery.call(season:, players: visible_players.values)).map do |pair_stat|
+        Result.new(
+          players: pair_stat.players,
+          shared_matches_count: pair_stat.shared_matches_count,
+          wins: pair_stat.wins,
+          draws: pair_stat.draws,
+          losses: pair_stat.losses,
+          goals: pair_stat.goals,
+          assists: pair_stat.assists,
+          mutual_assists: pair_stat.mutual_assists,
+          goal_difference: pair_stat.goal_difference
+        )
+      end
     end
 
     def aggregate_combinations

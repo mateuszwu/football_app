@@ -10,12 +10,15 @@ class UpdateMatchDay
   end
 
   def call
+    original_season_id = match_day.season_id
+
     MatchDay.transaction do
       match_day.update!(match_day_attributes)
       sync_match_day_players!
       save_manual_teams!
       match_day.sync_setup_status!
       Voting::GenerateMatchDayVoteTokens.call(match_day:)
+      rebuild_pair_stats(original_season_id:)
     end
 
     true
@@ -26,6 +29,12 @@ class UpdateMatchDay
   private
 
   attr_reader :available_players, :match_day, :params
+
+  def rebuild_pair_stats(original_season_id:)
+    Season.where(id: [ original_season_id, match_day.season_id ].uniq).find_each do |season|
+      Relationships::RebuildSeasonPairStats.call(season:)
+    end
+  end
 
   def selected_player_ids
     available_players.where(id: params.fetch(:player_ids, []).reject(&:blank?)).pluck(:id)

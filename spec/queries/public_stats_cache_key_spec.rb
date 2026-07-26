@@ -30,5 +30,24 @@ RSpec.describe PublicStats::CacheKey do
 
       expect(described_class.global).not_to eq(initial_key)
     end
+
+    it "reads the complete cache snapshot in one SQL query" do
+      create(:player, approval_status: "approved")
+      described_class.global
+
+      query_count = count_sql_queries { described_class.global }
+
+      expect(query_count).to eq(1)
+    end
+  end
+
+  def count_sql_queries(&)
+    count = 0
+    subscriber = lambda do |_name, _started, _finished, _unique_id, payload|
+      count += 1 unless payload[:name].in?(%w[SCHEMA CACHE TRANSACTION])
+    end
+
+    ActiveSupport::Notifications.subscribed(subscriber, "sql.active_record", &)
+    count
   end
 end

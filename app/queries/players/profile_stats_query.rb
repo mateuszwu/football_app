@@ -64,14 +64,14 @@ module Players
         available_seasons:,
         active_tab: tab,
         summary:,
-        record:,
-        elo:,
-        cumulative: cumulative_rows,
-        matches: match_entries,
-        recent_matches: match_entries.first(5),
-        paginated_matches: paginate(match_entries),
-        awards:,
-        synergy:,
+        record: record_tab? ? record : {},
+        elo: elo_tab? ? elo : {},
+        cumulative: cumulative_tab? ? cumulative_rows : [],
+        matches: matches_tab? ? match_entries : [],
+        recent_matches: recent_matches_tab? ? match_entries.first(5) : [],
+        paginated_matches: tab == "matches" ? paginate(match_entries) : empty_pagination,
+        awards: awards_tab? ? awards : [],
+        synergy: synergy_tab? ? synergy : {},
         chart_data:
       )
     end
@@ -87,7 +87,7 @@ module Players
     def season_ids
       @season_ids ||= (
         player.match_days.distinct.pluck(:season_id) +
-        player_matches_unscope.map { |match| match.match_day.season_id } +
+        player_match_scope.joins(:match_day).distinct.pluck("match_days.season_id") +
         player.player_season_stats.distinct.pluck(:season_id) +
         player.player_rating_changes.distinct.pluck(:season_id)
       ).compact.uniq
@@ -102,32 +102,46 @@ module Players
     end
 
     def summary
-      @summary ||= {
+      @summary ||= begin
+        result = {
         current_elo: season_stat&.elo || player.elo,
         matches: match_entries.count,
         goals: goals_count,
         assists: assists_count,
         own_goals: own_goals_count,
-        goals_assists: goals_count + assists_count,
-        mvp: awards.count { |award| award.award_type == "MVP" },
-        def: awards.count { |award| award.award_type == "DEF" },
-        wins: record.fetch(:wins),
-        draws: record.fetch(:draws),
-        losses: record.fetch(:losses),
-        win_rate: record.fetch(:win_rate),
-        draw_rate: record.fetch(:draw_rate),
-        loss_rate: record.fetch(:loss_rate),
-        best_win_streak:,
-        goals_per_match: rate(goals_count),
-        assists_per_match: rate(assists_count),
-        goals_assists_per_match: rate(goals_count + assists_count),
-        matches_with_goal: match_entries.count { |entry| entry.goals.positive? },
-        matches_with_assist: match_entries.count { |entry| entry.assists.positive? },
-        matches_with_goals_assists: match_entries.count { |entry| entry.goals_assists.positive? },
-        latest_match: match_entries.first,
-        latest_award: awards.first,
-        season_rank:
-      }
+        goals_assists: goals_count + assists_count
+        }
+
+        if %w[overview stats].include?(tab)
+          result.merge!(
+            wins: record.fetch(:wins),
+            draws: record.fetch(:draws),
+            losses: record.fetch(:losses),
+            win_rate: record.fetch(:win_rate),
+            draw_rate: record.fetch(:draw_rate),
+            loss_rate: record.fetch(:loss_rate),
+            best_win_streak:,
+            goals_per_match: rate(goals_count),
+            assists_per_match: rate(assists_count),
+            goals_assists_per_match: rate(goals_count + assists_count),
+            matches_with_goal: match_entries.count { |entry| entry.goals.positive? },
+            matches_with_assist: match_entries.count { |entry| entry.assists.positive? },
+            matches_with_goals_assists: match_entries.count { |entry| entry.goals_assists.positive? },
+            latest_match: match_entries.first,
+            season_rank:
+          )
+        end
+
+        if %w[stats awards].include?(tab)
+          result.merge!(
+            mvp: awards.count { |award| award.award_type == "MVP" },
+            def: awards.count { |award| award.award_type == "DEF" }
+          )
+        end
+
+        result[:latest_award] = awards.first if %w[overview awards].include?(tab)
+        result
+      end
     end
 
     def record
@@ -185,7 +199,7 @@ module Players
         next if team.blank?
 
         opponent = match.home_team_id == team.id ? match.away_team : match.home_team
-        rating_change = rating_change_for(match)
+        rating_change = rating_change_for(match) if match_rating_tab?
         snapshot = player_team_snapshot(match)
 
         MatchEntry.new(
@@ -203,29 +217,28 @@ module Players
           elo_before: rating_change&.old_elo_score || snapshot&.elo_before,
           elo_delta: rating_change&.elo_delta || snapshot&.elo_delta,
           elo_after: rating_change&.new_elo_score || snapshot&.elo_after,
-          award_types: award_types_for(match.match_day)
+          award_types: match_awards_tab? ? award_types_for(match.match_day) : []
         )
       end.sort_by { |entry| [ entry.date, entry.match.started_at || entry.match.finished_at || Time.zone.at(0), entry.match.id ] }.reverse
     end
 
     def player_matches
       @player_matches ||= begin
-        scope = player_matches_unscope
+        scope = player_match_scope
         scope = scope.joins(:match_day).where(match_days: { season_id: selected_season.id }) if selected_season
-        scope
-      end
-    end
-
-    def player_matches_unscope
-      @player_matches_unscope ||= Match
-        .joins("LEFT JOIN team_players home_profile_team_players ON home_profile_team_players.team_id = matches.home_team_id")
-        .joins("LEFT JOIN team_players away_profile_team_players ON away_profile_team_players.team_id = matches.away_team_id")
-        .includes(
+        scope.preload(
           :match_day,
           home_team: { team_players: :player },
           away_team: { team_players: :player },
           active_match_goals: [ { scorer_team_player: :player }, { assistant_team_player: :player } ]
         )
+      end
+    end
+
+    def player_match_scope
+      Match
+        .joins("LEFT JOIN team_players home_profile_team_players ON home_profile_team_players.team_id = matches.home_team_id")
+        .joins("LEFT JOIN team_players away_profile_team_players ON away_profile_team_players.team_id = matches.away_team_id")
         .where(status: Match::STATUS_FINISHED)
         .where("home_profile_team_players.player_id = :player_id OR away_profile_team_players.player_id = :player_id", player_id: player.id)
         .distinct
@@ -267,7 +280,16 @@ module Players
       @rating_changes ||= begin
         scope = player.player_rating_changes.where(source_type: PlayerRatingChange::SOURCE_TYPE_MATCH)
         scope = scope.where(season: selected_season) if selected_season
-        scope.includes(:match, :match_day).order(:created_at, :id).to_a
+        scope
+          .includes(
+            :match_day,
+            match: [
+              { home_team: :team_players },
+              { away_team: :team_players }
+            ]
+          )
+          .order(:created_at, :id)
+          .to_a
       end
     end
 
@@ -437,9 +459,33 @@ module Players
 
     def synergy
       @synergy ||= begin
-        duos = Synergy::CombinationRankingQuery.call(season: selected_season, combination_size: 2, direction: "best", limit: 50, minimum_shared_matches: 1, player_id: player.id)
-        worst = Synergy::CombinationRankingQuery.call(season: selected_season, combination_size: 2, direction: "worst", limit: 50, minimum_shared_matches: 1, player_id: player.id)
-        graph_data = Synergy::GraphDataQuery.call(season: selected_season, minimum_shared_matches: 1, player_id: player.id, limit: 20, metric: "shared_matches")
+        pair_stats = Relationships::PairStatsQuery.call(season: selected_season)
+        duos = Synergy::CombinationRankingQuery.call(
+          season: selected_season,
+          combination_size: 2,
+          direction: "best",
+          limit: 50,
+          minimum_shared_matches: 1,
+          player_id: player.id,
+          pair_stats:
+        )
+        worst = Synergy::CombinationRankingQuery.call(
+          season: selected_season,
+          combination_size: 2,
+          direction: "worst",
+          limit: 50,
+          minimum_shared_matches: 1,
+          player_id: player.id,
+          pair_stats:
+        )
+        graph_data = Synergy::GraphDataQuery.call(
+          season: selected_season,
+          minimum_shared_matches: 1,
+          player_id: player.id,
+          limit: 20,
+          metric: "shared_matches",
+          pair_stats:
+        )
 
         {
           entries: duos,
@@ -460,8 +506,31 @@ module Players
     end
 
     def chart_data
-      @chart_data ||= {
-        elo: {
+      @chart_data ||= case tab
+      when "overview"
+        {
+          elo: elo_chart_data,
+          record: record_chart_data,
+          cumulative_goals_assists: cumulative_goals_assists_chart_data
+        }
+      when "stats"
+        { record: record_chart_data }
+      when "charts"
+        {
+          record: record_chart_data,
+          cumulative_goals: line_chart_for("Gole", :cumulative_goals, "#7CFF3A"),
+          cumulative_assists: line_chart_for("Asysty", :cumulative_assists, "#38BDF8"),
+          cumulative_goals_assists: cumulative_goals_assists_chart_data
+        }
+      when "elo"
+        { elo: elo_chart_data }
+      else
+        {}
+      end
+    end
+
+    def elo_chart_data
+      {
           labels: elo_points.map { |point| point.fetch(:label) },
           datasets: [
             {
@@ -477,8 +546,11 @@ module Players
             }
           ],
           points_meta: elo_points
-        },
-        record: {
+      }
+    end
+
+    def record_chart_data
+      {
           labels: [ "Wygrane", "Remisy", "Porażki" ],
           values: [ record.fetch(:wins), record.fetch(:draws), record.fetch(:losses) ],
           datasets: [
@@ -488,17 +560,17 @@ module Players
               borderColor: "#0B1728"
             }
           ]
-        },
-        cumulative_goals: line_chart_for("Gole", :cumulative_goals, "#7CFF3A"),
-        cumulative_assists: line_chart_for("Asysty", :cumulative_assists, "#38BDF8"),
-        cumulative_goals_assists: {
-          labels: cumulative_rows.map { |row| row.fetch(:label) },
-          datasets: [
-            line_dataset_for("Gole", :cumulative_goals, "#7CFF3A"),
-            line_dataset_for("Asysty", :cumulative_assists, "#38BDF8"),
-            line_dataset_for("G+A", :cumulative_goals_assists, "#FACC15")
-          ]
-        }
+      }
+    end
+
+    def cumulative_goals_assists_chart_data
+      {
+        labels: cumulative_rows.map { |row| row.fetch(:label) },
+        datasets: [
+          line_dataset_for("Gole", :cumulative_goals, "#7CFF3A"),
+          line_dataset_for("Asysty", :cumulative_assists, "#38BDF8"),
+          line_dataset_for("G+A", :cumulative_goals_assists, "#FACC15")
+        ]
       }
     end
 
@@ -541,6 +613,54 @@ module Players
         prev_page: current_page > 1 ? current_page - 1 : nil,
         next_page: current_page < total_pages ? current_page + 1 : nil
       )
+    end
+
+    def empty_pagination
+      Pagination.new(
+        items: [],
+        page: 1,
+        per_page:,
+        total_count: 0,
+        total_pages: 0,
+        prev_page: nil,
+        next_page: nil
+      )
+    end
+
+    def record_tab?
+      %w[overview stats charts].include?(tab)
+    end
+
+    def elo_tab?
+      %w[overview stats elo].include?(tab)
+    end
+
+    def cumulative_tab?
+      %w[overview charts].include?(tab)
+    end
+
+    def matches_tab?
+      %w[overview matches].include?(tab)
+    end
+
+    def recent_matches_tab?
+      %w[overview matches].include?(tab)
+    end
+
+    def awards_tab?
+      %w[overview stats matches awards].include?(tab)
+    end
+
+    def match_awards_tab?
+      %w[overview matches].include?(tab)
+    end
+
+    def match_rating_tab?
+      %w[overview matches].include?(tab)
+    end
+
+    def synergy_tab?
+      %w[overview synergy].include?(tab)
     end
   end
 end
