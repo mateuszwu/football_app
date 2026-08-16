@@ -1,0 +1,259 @@
+#!/usr/bin/env ruby
+
+require "fileutils"
+require "open3"
+require "pathname"
+require "tmpdir"
+
+class ProductionDatabaseSync
+  class Error < StandardError; end
+
+  DEFAULT_COMMIT_MESSAGE = "chore(human-0): refresh production SQLite database"
+
+  def initialize(arguments, environment: ENV, output: $stdout)
+    @arguments = arguments.dup
+    @environment = environment
+    @output = output
+    @amend = false
+    @fetch = true
+  end
+
+  def call
+    parse_arguments!
+    return print_help if @help
+
+    load_configuration
+    validate_configuration!
+    ensure_clean_worktree!
+    fetch_branches! if @fetch
+    switch_to_database_branch!
+    refresh_database_branch!
+    create_database_snapshot!
+    commit_snapshot!
+  rescue Error => error
+    warn "Błąd: #{error.message}"
+    warn "Backup poprzedniej bazy: #{@backup_path}" if @backup_path
+    1
+  end
+
+  private
+
+  def parse_arguments!
+    @arguments.each do |argument|
+      case argument
+      when "--amend" then @amend = true
+      when "--no-fetch" then @fetch = false
+      when "--help", "-h" then @help = true
+      else raise Error, "nieznany argument: #{argument}"
+      end
+    end
+  end
+
+  def load_configuration
+    @root = Pathname(capture!("git", "rev-parse", "--show-toplevel").strip)
+    @remote = @environment.fetch("FOOTBALL_APP_REMOTE", "origin")
+    @main_branch = @environment.fetch("FOOTBALL_APP_MAIN_BRANCH", "main")
+    @database_branch = @environment.fetch("FOOTBALL_APP_DB_BRANCH", "with_db")
+    @development_db = database_path("FOOTBALL_APP_DEVELOPMENT_DB", "storage/development.sqlite3")
+    @production_db = database_path("FOOTBALL_APP_PRODUCTION_DB", "storage/production.sqlite3")
+    @production_db_relative = @production_db.relative_path_from(@root).to_s
+    @commit_message = @environment.fetch("FOOTBALL_APP_DB_COMMIT_MESSAGE", DEFAULT_COMMIT_MESSAGE)
+  end
+
+  def validate_configuration!
+    ensure_command!("git")
+    ensure_command!("sqlite3")
+    ensure_branch_name!(@main_branch)
+    ensure_branch_name!(@database_branch)
+    ensure_path_within_repository!(@development_db)
+    ensure_path_within_repository!(@production_db)
+    raise Error, "brak bazy development: #{@development_db}" unless @development_db.file?
+  end
+
+  def ensure_command!(command)
+    executable = @environment.fetch("PATH", "").split(File::PATH_SEPARATOR).any? do |directory|
+      candidate = File.join(directory, command)
+      File.file?(candidate) && File.executable?(candidate)
+    end
+    raise Error, "brak wymaganej komendy: #{command}" unless executable
+  end
+
+  def ensure_branch_name!(branch)
+    run!("git", "check-ref-format", "--branch", branch)
+  rescue Error
+    raise Error, "nieprawidłowa nazwa gałęzi: #{branch}"
+  end
+
+  def ensure_path_within_repository!(path)
+    root_prefix = "#{@root.expand_path}#{File::SEPARATOR}"
+    return if path.expand_path.to_s.start_with?(root_prefix)
+
+    raise Error, "ścieżka bazy musi znajdować się w repozytorium: #{path}"
+  end
+
+  def ensure_clean_worktree!
+    status = capture!("git", "status", "--porcelain", "--untracked-files=all")
+    return if status.empty?
+
+    raise Error, "drzewo robocze nie jest czyste; zatwierdź albo odłóż zmiany przed synchronizacją"
+  end
+
+  def fetch_branches!
+    puts_step "Pobieram aktualne gałęzie z #{@remote}"
+    run!("git", "fetch", @remote, @main_branch, @database_branch)
+  end
+
+  def switch_to_database_branch!
+    puts_step "Przełączam na #{@database_branch}"
+
+    if run?("git", "show-ref", "--verify", "--quiet", "refs/heads/#{@database_branch}")
+      run!("git", "switch", @database_branch)
+    else
+      run!("git", "switch", "--track", "-c", @database_branch, "#{@remote}/#{@database_branch}")
+    end
+  end
+
+  def refresh_database_branch!
+    if remote_branch_exists?(@database_branch)
+      puts_step "Aktualizuję #{@database_branch} względem #{@remote}/#{@database_branch}"
+      run!("git", "rebase", "#{@remote}/#{@database_branch}")
+    end
+
+    base = remote_branch_exists?(@main_branch) ? "#{@remote}/#{@main_branch}" : @main_branch
+    puts_step "Rebase #{@database_branch} na #{base}"
+    run!("git", "rebase", base)
+  end
+
+  def remote_branch_exists?(branch)
+    run?("git", "show-ref", "--verify", "--quiet", "refs/remotes/#{@remote}/#{branch}")
+  end
+
+  def create_database_snapshot!
+    temporary_directory = Pathname(Dir.mktmpdir("football-app-db-sync-"))
+    snapshot_path = temporary_directory.join("production.sqlite3")
+    backup_current_database!(temporary_directory) if @production_db.file?
+
+    puts_step "Tworzę spójny snapshot bazy development"
+    sqlite_backup!(@development_db, snapshot_path)
+    validate_database!(snapshot_path)
+
+    FileUtils.mkdir_p(@production_db.dirname)
+    FileUtils.mv(snapshot_path, @production_db)
+    validate_database!(@production_db)
+    ensure_matching_databases!
+  end
+
+  def backup_current_database!(temporary_directory)
+    @backup_path = temporary_directory.join("production-before-sync.sqlite3")
+    sqlite_backup!(@production_db, @backup_path)
+  end
+
+  def sqlite_backup!(source, destination)
+    run!("sqlite3", source.to_s, ".backup #{sqlite_quote(destination)}")
+  end
+
+  def validate_database!(database)
+    integrity = capture!("sqlite3", database.to_s, "PRAGMA integrity_check;").strip
+    raise Error, "kontrola integralności nie powiodła się dla #{database}" unless integrity == "ok"
+
+    foreign_key_errors = capture!("sqlite3", database.to_s, "PRAGMA foreign_key_check;").strip
+    return if foreign_key_errors.empty?
+
+    raise Error, "baza zawiera naruszenia kluczy obcych: #{foreign_key_errors}"
+  end
+
+  def ensure_matching_databases!
+    development_hash = capture!("sqlite3", @development_db.to_s, ".sha3sum --schema").strip
+    production_hash = capture!("sqlite3", @production_db.to_s, ".sha3sum --schema").strip
+    return if development_hash == production_hash
+
+    raise Error, "snapshot produkcyjny różni się od bazy development"
+  end
+
+  def commit_snapshot!
+    run!("git", "add", "--force", "--", @production_db_relative)
+
+    unless staged_database_change?
+      puts_step "Baza produkcyjna jest już identyczna; commit nie jest potrzebny"
+      print_backup_path
+      return 0
+    end
+
+    if @amend
+      ensure_amend_is_safe!
+      run!("git", "commit", "--amend", "--no-edit")
+      puts_step "Zmieniono ostatni commit. Push użyje: git push --force-with-lease #{@remote} #{@database_branch}"
+    else
+      run!("git", "commit", "-m", @commit_message)
+      puts_step "Utworzono commit. Push użyje: git push #{@remote} #{@database_branch}"
+    end
+
+    print_backup_path
+    0
+  end
+
+  def staged_database_change?
+    !run?("git", "diff", "--cached", "--quiet", "--", @production_db_relative)
+  end
+
+  def ensure_amend_is_safe!
+    changed_paths = capture!("git", "diff-tree", "--root", "--no-commit-id", "--name-only", "-r", "HEAD").lines.map(&:strip)
+    return if changed_paths == [ @production_db_relative ]
+
+    raise Error, "--amend jest dozwolony tylko wtedy, gdy ostatni commit zmieniał wyłącznie #{@production_db_relative}"
+  end
+
+  def database_path(environment_key, default)
+    configured_path = Pathname(@environment.fetch(environment_key, default))
+    configured_path.absolute? ? configured_path : @root.join(configured_path)
+  end
+
+  def sqlite_quote(path)
+    escaped_path = path.to_s.gsub("\\", "\\\\").gsub('"', '\\"')
+    "\"#{escaped_path}\""
+  end
+
+  def run!(*command)
+    success = system(*command, chdir: @root)
+    raise Error, "komenda nie powiodła się: #{command.join(' ')}" unless success
+  rescue Errno::ENOENT
+    raise Error, "brak wymaganej komendy: #{command.first}"
+  end
+
+  def run?(*command)
+    system(*command, chdir: @root, out: File::NULL, err: File::NULL)
+  end
+
+  def capture!(*command)
+    output, status = Open3.capture2e(*command, chdir: @root || Dir.pwd)
+    raise Error, "komenda nie powiodła się: #{command.join(' ')}\n#{output.strip}" unless status.success?
+
+    output
+  rescue Errno::ENOENT
+    raise Error, "brak wymaganej komendy: #{command.first}"
+  end
+
+  def puts_step(message)
+    @output.puts "== #{message} =="
+  end
+
+  def print_backup_path
+    @output.puts "Backup poprzedniej bazy: #{@backup_path}" if @backup_path
+  end
+
+  def print_help
+    @output.puts <<~HELP
+      Użycie: bin/sync-production-db [--amend] [--no-fetch]
+
+      Przełącza repozytorium na with_db, aktualizuje gałąź względem main,
+      tworzy spójny snapshot storage/development.sqlite3 jako
+      storage/production.sqlite3, sprawdza integralność i tworzy commit.
+
+        --amend     zmień ostatni commit, jeśli zawierał wyłącznie bazę produkcyjną
+        --no-fetch  użyj lokalnych referencji bez git fetch
+    HELP
+    0
+  end
+end
+
+exit ProductionDatabaseSync.new(ARGV).call

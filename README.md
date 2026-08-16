@@ -155,6 +155,18 @@ Show framework and runtime versions:
 bin/rails about
 ```
 
+Synchronize the development SQLite database to the dedicated `with_db` branch:
+
+```sh
+bin/sync-production-db
+```
+
+The command requires a clean working tree, fetches `main` and `with_db`, rebases
+`with_db` onto the current remote `main`, creates and verifies an online SQLite
+backup, and commits `storage/production.sqlite3`. To replace the previous
+database-only commit instead, run `bin/sync-production-db --amend`. The command
+prints the appropriate push command but does not push automatically.
+
 ## Git Ignore Policy
 
 The repository ignores local macOS files, editor state, Bundler local config, logs, temporary files, local SQLite databases, runtime storage, generated assets, and Rails credentials master keys.
@@ -166,3 +178,6 @@ Do not commit:
 - `storage/*` runtime files
 - `tmp/*` cache/runtime files
 - `log/*` logs
+
+The tracked `storage/production.sqlite3` snapshot on the dedicated `with_db`
+branch is the sole exception to the storage rule.
