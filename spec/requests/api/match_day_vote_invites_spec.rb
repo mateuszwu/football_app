@@ -1,6 +1,61 @@
 require "rails_helper"
 
 RSpec.describe "API match day vote invites" do
+  describe "GET /api/vote_invites" do
+    context "when the active season has finished match days" do
+      it "returns invites for the latest finished match day" do
+        begin
+          original_api_token = ENV["FOOTBALL_APP_API_TOKEN"]
+          ENV["FOOTBALL_APP_API_TOKEN"] = "secret-token"
+          headers = { "Authorization" => "Bearer secret-token" }
+          season = create(:season, status: Season::STATUS_ACTIVE)
+          create(:match_day, season:, played_on: Date.new(2026, 6, 5), status: "finished")
+          latest_match_day = create(:match_day, season:, played_on: Date.new(2026, 6, 12), status: "finished")
+          create(:match_day, season:, played_on: Date.new(2026, 6, 19), status: "ready")
+          player = create(:player, name: "Latest Player", nickname: "latest", phone: "+48111111111", active: true)
+          match_day_player = create(:match_day_player, match_day: latest_match_day, player:)
+
+          get "/api/vote_invites", headers: headers
+
+          expect(response).to have_http_status(:ok)
+          expect(match_day_player.reload.match_day_vote_token).to be_present
+          expect(response.parsed_body.dig("vote_invites", 0, "name")).to eq("Latest Player")
+          expect(response.parsed_body.dig("vote_invites", 0, "sms_body")).to include(
+            "/votes/#{match_day_player.match_day_vote_token.token}"
+          )
+        ensure
+          if original_api_token.nil?
+            ENV.delete("FOOTBALL_APP_API_TOKEN")
+          else
+            ENV["FOOTBALL_APP_API_TOKEN"] = original_api_token
+          end
+        end
+      end
+    end
+
+    context "when the active season has no finished match day" do
+      it "returns not found" do
+        begin
+          original_api_token = ENV["FOOTBALL_APP_API_TOKEN"]
+          ENV["FOOTBALL_APP_API_TOKEN"] = "secret-token"
+          headers = { "Authorization" => "Bearer secret-token" }
+          season = create(:season, status: Season::STATUS_ACTIVE)
+          create(:match_day, season:, status: "ready")
+
+          get "/api/vote_invites", headers: headers
+
+          expect(response).to have_http_status(:not_found)
+        ensure
+          if original_api_token.nil?
+            ENV.delete("FOOTBALL_APP_API_TOKEN")
+          else
+            ENV["FOOTBALL_APP_API_TOKEN"] = original_api_token
+          end
+        end
+      end
+    end
+  end
+
   describe "GET /api/match_days/:id/vote_invites" do
     context "when the bearer token is valid" do
       it "returns phones and individual vote links for the match day players" do

@@ -16,7 +16,6 @@ RSpec.describe Voting::GenerateMatchDayVoteTokens do
         expect(first_match_day_player.reload.match_day_vote_token).to be_present
         expect(second_match_day_player.reload.match_day_vote_token).to be_present
         expect(first_match_day_player.match_day_vote_token.token).not_to eq(second_match_day_player.match_day_vote_token.token)
-        expect(first_match_day_player.match_day_vote_token.expires_at).to be_present
       end
     end
 
@@ -27,7 +26,7 @@ RSpec.describe Voting::GenerateMatchDayVoteTokens do
         second_player = create(:player, name: "Second", nickname: "second", phone: "+48999999998", approval_status: "approved", active: true)
         first_match_day_player = create(:match_day_player, match_day: match_day, player: first_player)
         second_match_day_player = create(:match_day_player, match_day: match_day, player: second_player)
-        existing_token = first_match_day_player.create_match_day_vote_token!(token: "existing-token", expires_at: 48.hours.from_now)
+        existing_token = first_match_day_player.create_match_day_vote_token!(token: "existing-token")
 
         result = described_class.call(match_day: match_day)
 
@@ -35,18 +34,6 @@ RSpec.describe Voting::GenerateMatchDayVoteTokens do
         expect(first_match_day_player.reload.match_day_vote_token).to eq(existing_token)
         expect(second_match_day_player.reload.match_day_vote_token).to be_present
         expect(second_match_day_player.match_day_vote_token.token).not_to eq("existing-token")
-      end
-    end
-
-    context "when a custom expiry is provided" do
-      it "stores that expiry on generated tokens" do
-        match_day = create(:match_day)
-        match_day_player = create(:match_day_player, match_day:, player: create(:player, approval_status: "approved", active: true))
-        expires_at = Time.zone.parse("2026-06-15 20:00:00")
-
-        described_class.call(match_day:, expires_at:)
-
-        expect(match_day_player.reload.match_day_vote_token.expires_at).to eq(expires_at)
       end
     end
 

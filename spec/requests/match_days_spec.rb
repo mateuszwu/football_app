@@ -90,6 +90,8 @@ RSpec.describe "Match days" do
         away_score_after: 1
       )
       voter_match_day_player = create(:match_day_player, match_day:, player: bartek)
+      create(:match_day_player, match_day:, player: adam)
+      create(:match_day_player, match_day:, player: celina)
       vote_token = create(:match_day_vote_token, match_day_player: voter_match_day_player)
       MatchDayVote.create!(match_day_vote_token: vote_token, mvp_player: adam, def_player: celina)
 

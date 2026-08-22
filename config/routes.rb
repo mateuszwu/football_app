@@ -20,6 +20,7 @@ Rails.application.routes.draw do
     resources :match_imports, only: :create
     resources :players, only: :create
     resources :seasons, only: :create
+    get :vote_invites, to: "match_day_vote_invites#show"
 
     resources :match_days, only: [] do
       member do

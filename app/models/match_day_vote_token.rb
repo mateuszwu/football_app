@@ -4,14 +4,15 @@ class MatchDayVoteToken < ApplicationRecord
 
   validates :match_day_player_id, uniqueness: true
   validates :token, presence: true, uniqueness: true
-  validates :expires_at, presence: true
 
   def used?
     used_at.present?
   end
 
-  def expired?(reference_time = Time.current)
-    expires_at <= reference_time
+  def expired?
+    match_day = match_day_player.match_day
+
+    match_day != match_day.season.latest_finished_match_day
   end
 
   def mark_used!

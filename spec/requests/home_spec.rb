@@ -280,7 +280,7 @@ RSpec.describe "Home page" do
         player = create(:player, name: "Kuba Bratek", nickname: "kuba", approval_status: "approved", active: true)
         match_day = create(:match_day, season:, played_on: Date.current, status: "finished")
         match_day_player = create(:match_day_player, match_day:, player:)
-        create(:match_day_vote_token, match_day_player:, expires_at: 1.day.from_now)
+        create(:match_day_vote_token, match_day_player:)
         create(:player_season_stat, season:, player:, elo: 1000, mvp_votes_count: 0, def_votes_count: 0)
 
         get root_path

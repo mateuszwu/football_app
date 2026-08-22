@@ -1,19 +1,18 @@
 module Voting
   class GenerateMatchDayVoteTokens
-    def self.call(match_day:, expires_at: 48.hours.from_now)
-      new(match_day:, expires_at:).call
+    def self.call(match_day:)
+      new(match_day:).call
     end
 
-    def initialize(match_day:, expires_at:)
+    def initialize(match_day:)
       @match_day = match_day
-      @expires_at = expires_at
     end
 
     def call
       match_day.match_day_players.includes(:match_day_vote_token).find_each do |match_day_player|
         next if match_day_player.match_day_vote_token.present?
 
-        match_day_player.create_match_day_vote_token!(token: generate_token, expires_at:)
+        match_day_player.create_match_day_vote_token!(token: generate_token)
       end
 
       true
@@ -21,7 +20,7 @@ module Voting
 
     private
 
-    attr_reader :match_day, :expires_at
+    attr_reader :match_day
 
     def generate_token
       loop do

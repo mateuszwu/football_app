@@ -96,7 +96,7 @@ FOOTBALL_APP_API_TOKEN="change-me"
 In Apple Shortcuts:
 
 1. Add a "Get Contents of URL" action.
-2. Set the URL to `https://your-app.example.com/api/vote_invites`.
+2. Set the URL to `https://your-app.example.com/api/vote_invites`. The endpoint automatically selects the latest finished Match Day in the active season.
 3. Set the method to `GET`.
 4. Add the request header `Authorization` with value `Bearer change-me`.
 5. Parse the JSON response.
@@ -109,14 +109,15 @@ The response shape is:
 {
   "vote_invites": [
     {
+      "name": "Player One",
       "phone": "+48123456789",
-      "sms_body": "Czesc player1, zaglosuj na MVP i DEF po dzisiejszym meczu."
+      "sms_body": "Czesc Player One, zaglosuj na MVP i DEF: https://your-app.example.com/votes/player-token"
     }
   ]
 }
 ```
 
-The bearer token protects the API endpoint used by the Shortcut. It is not a player vote access token. Player-specific vote tokens and vote URLs are not implemented yet; when they are added, the response should include the tokenized voting URL and `sms_body` should include that URL.
+The bearer token protects the API endpoint used by the Shortcut. It is not a player vote access token. Each `sms_body` contains a player-specific, single-use voting URL. Voting remains open for the latest finished Match Day until a newer Match Day is finished in the same season.
 
 ## Common Commands
 
@@ -134,6 +135,8 @@ Run security checks:
 bin/brakeman
 bin/bundler-audit
 ```
+
+`bin/bundler-audit` refreshes the local advisory database before scanning, matching the clean GitHub Actions runner behavior.
 
 Run the Rails style checker:
 

@@ -7,7 +7,7 @@ RSpec.describe "Votes" do
         voter = create(:player, name: "Voter", nickname: "voter", phone: "+48111111111", approval_status: "approved", active: true)
         mvp_candidate = create(:player, name: "Adam Nowak", nickname: "adam", phone: "+48222222222", approval_status: "approved", active: true)
         def_candidate = create(:player, name: "Marek Kowalski", nickname: "marek", phone: "+48333333333", approval_status: "approved", active: true)
-        match_day = create(:match_day, played_on: Date.new(2026, 6, 5))
+        match_day = create(:match_day, played_on: Date.new(2026, 6, 5), status: "finished")
         voter_match_day_player = create(:match_day_player, match_day: match_day, player: voter)
         create(:match_day_player, match_day: match_day, player: mvp_candidate)
         create(:match_day_player, match_day: match_day, player: def_candidate)
@@ -33,7 +33,7 @@ RSpec.describe "Votes" do
       it "does not include the voter in selectable players" do
         voter = create(:player, name: "Voter Full Name", nickname: "voter", phone: "+48111111111", approval_status: "approved", active: true)
         candidate = create(:player, name: "Adam Nowak", nickname: "adam", phone: "+48222222222", approval_status: "approved", active: true)
-        match_day = create(:match_day, played_on: Date.new(2026, 6, 5))
+        match_day = create(:match_day, played_on: Date.new(2026, 6, 5), status: "finished")
         voter_match_day_player = create(:match_day_player, match_day: match_day, player: voter)
         create(:match_day_player, match_day: match_day, player: candidate)
         vote_token = create(:match_day_vote_token, match_day_player: voter_match_day_player, token: "vote-token")
@@ -47,7 +47,7 @@ RSpec.describe "Votes" do
 
       it "redirects used tokens to the thank you page" do
         voter = create(:player, name: "Voter", nickname: "voter", phone: "+48111111111", approval_status: "approved", active: true)
-        match_day = create(:match_day, played_on: Date.new(2026, 6, 5))
+        match_day = create(:match_day, played_on: Date.new(2026, 6, 5), status: "finished")
         voter_match_day_player = create(:match_day_player, match_day: match_day, player: voter)
         vote_token = create(:match_day_vote_token, match_day_player: voter_match_day_player, token: "vote-token", used_at: Time.zone.parse("2026-06-05 21:30:00"))
 
@@ -65,12 +65,13 @@ RSpec.describe "Votes" do
       end
     end
 
-    context "when the vote token is expired" do
-      it "returns not found" do
+    context "when a newer match day has finished" do
+      it "returns not found for the previous match day token" do
         voter = create(:player, name: "Voter", nickname: "voter", phone: "+48111111111", approval_status: "approved", active: true)
-        match_day = create(:match_day, played_on: Date.new(2026, 6, 5))
+        match_day = create(:match_day, played_on: Date.new(2026, 6, 5), status: "finished")
         voter_match_day_player = create(:match_day_player, match_day: match_day, player: voter)
-        vote_token = create(:match_day_vote_token, match_day_player: voter_match_day_player, token: "vote-token", expires_at: 1.minute.ago)
+        vote_token = create(:match_day_vote_token, match_day_player: voter_match_day_player, token: "vote-token")
+        create(:match_day, season: match_day.season, played_on: Date.new(2026, 6, 12), status: "finished")
 
         get "/votes/#{vote_token.token}"
 
@@ -83,7 +84,7 @@ RSpec.describe "Votes" do
     context "when the vote token exists" do
       it "renders the public thank you page without private phone data" do
         voter = create(:player, name: "Voter", nickname: "voter", phone: "+48111111111", approval_status: "approved", active: true)
-        match_day = create(:match_day, played_on: Date.new(2026, 6, 5))
+        match_day = create(:match_day, played_on: Date.new(2026, 6, 5), status: "finished")
         voter_match_day_player = create(:match_day_player, match_day: match_day, player: voter)
         vote_token = create(:match_day_vote_token, match_day_player: voter_match_day_player, token: "vote-token")
 
@@ -116,7 +117,7 @@ RSpec.describe "Votes" do
         voter = create(:player, approval_status: "approved", active: true, global_performance_score: 0.0)
         mvp_candidate = create(:player, name: "Adam Nowak", nickname: "adam", phone: "+48222222222", approval_status: "approved", active: true, global_performance_score: 0.0)
         def_candidate = create(:player, name: "Marek Kowalski", nickname: "marek", phone: "+48333333333", approval_status: "approved", active: true, global_performance_score: 0.0)
-        match_day = create(:match_day, season: season)
+        match_day = create(:match_day, season:, status: "finished")
         voter_match_day_player = create(:match_day_player, match_day: match_day, player: voter)
         create(:match_day_player, match_day: match_day, player: mvp_candidate)
         create(:match_day_player, match_day: match_day, player: def_candidate)
@@ -154,7 +155,7 @@ RSpec.describe "Votes" do
       it "allows the same non-voter to be selected for MVP and DEF" do
         voter = create(:player, name: "Voter", nickname: "voter", phone: "+48111111111", approval_status: "approved", active: true)
         selected_player = create(:player, name: "Adam Nowak", nickname: "adam", phone: "+48222222222", approval_status: "approved", active: true)
-        match_day = create(:match_day)
+        match_day = create(:match_day, status: "finished")
         voter_match_day_player = create(:match_day_player, match_day: match_day, player: voter)
         create(:match_day_player, match_day: match_day, player: selected_player)
         vote_token = create(:match_day_vote_token, match_day_player: voter_match_day_player, token: "vote-token")
@@ -179,7 +180,7 @@ RSpec.describe "Votes" do
         original_mvp = create(:player, name: "Original MVP", nickname: "original-mvp", phone: "+48222222222", approval_status: "approved", active: true)
         original_def = create(:player, name: "Original DEF", nickname: "original-def", phone: "+48333333333", approval_status: "approved", active: true)
         new_choice = create(:player, name: "New Choice", nickname: "new-choice", phone: "+48444444444", approval_status: "approved", active: true)
-        match_day = create(:match_day)
+        match_day = create(:match_day, status: "finished")
         voter_match_day_player = create(:match_day_player, match_day: match_day, player: voter)
         create(:match_day_player, match_day: match_day, player: original_mvp)
         create(:match_day_player, match_day: match_day, player: original_def)
@@ -202,13 +203,14 @@ RSpec.describe "Votes" do
         expect(vote_token.used_at).to eq(Time.zone.parse("2026-06-05 21:30:00"))
       end
 
-      it "returns not found for expired tokens" do
+      it "returns not found for tokens superseded by a newer finished match day" do
         voter = create(:player, approval_status: "approved", active: true)
         candidate = create(:player, name: "Adam Nowak", nickname: "adam", phone: "+48222222222", approval_status: "approved", active: true)
-        match_day = create(:match_day)
+        match_day = create(:match_day, status: "finished")
         voter_match_day_player = create(:match_day_player, match_day: match_day, player: voter)
         create(:match_day_player, match_day: match_day, player: candidate)
-        vote_token = create(:match_day_vote_token, match_day_player: voter_match_day_player, token: "vote-token", expires_at: 1.minute.ago)
+        vote_token = create(:match_day_vote_token, match_day_player: voter_match_day_player, token: "vote-token")
+        create(:match_day, season: match_day.season, played_on: Date.new(2026, 6, 12), status: "finished")
 
         post "/votes/#{vote_token.token}", params: {
           match_day_vote: {
@@ -227,7 +229,7 @@ RSpec.describe "Votes" do
       it "re-renders the form with errors" do
         voter = create(:player, approval_status: "approved", active: true)
         candidate = create(:player, name: "Adam Nowak", nickname: "adam", phone: "+48222222222", approval_status: "approved", active: true)
-        match_day = create(:match_day)
+        match_day = create(:match_day, status: "finished")
         voter_match_day_player = create(:match_day_player, match_day: match_day, player: voter)
         create(:match_day_player, match_day: match_day, player: candidate)
         vote_token = create(:match_day_vote_token, match_day_player: voter_match_day_player, token: "vote-token")
@@ -248,7 +250,7 @@ RSpec.describe "Votes" do
       it "rejects self-voting selections" do
         voter = create(:player, name: "Voter", nickname: "voter", phone: "+48111111111", approval_status: "approved", active: true)
         candidate = create(:player, name: "Adam Nowak", nickname: "adam", phone: "+48222222222", approval_status: "approved", active: true)
-        match_day = create(:match_day)
+        match_day = create(:match_day, status: "finished")
         voter_match_day_player = create(:match_day_player, match_day: match_day, player: voter)
         create(:match_day_player, match_day: match_day, player: candidate)
         vote_token = create(:match_day_vote_token, match_day_player: voter_match_day_player, token: "vote-token")
@@ -262,6 +264,28 @@ RSpec.describe "Votes" do
 
         expect(response).to have_http_status(:unprocessable_content)
         expect(response.body).to include("Mvp player cannot be the voter")
+        expect(vote_token.reload.match_day_vote).to be_nil
+        expect(vote_token.used_at).to be_nil
+      end
+
+      it "rejects players outside the match day" do
+        voter = create(:player, name: "Voter", nickname: "voter", approval_status: "approved", active: true)
+        present_candidate = create(:player, name: "Present Candidate", nickname: "present", approval_status: "approved", active: true)
+        outside_candidate = create(:player, name: "Outside Candidate", nickname: "outside", approval_status: "approved", active: true)
+        match_day = create(:match_day, status: "finished")
+        voter_match_day_player = create(:match_day_player, match_day:, player: voter)
+        create(:match_day_player, match_day:, player: present_candidate)
+        vote_token = create(:match_day_vote_token, match_day_player: voter_match_day_player, token: "vote-token")
+
+        post "/votes/#{vote_token.token}", params: {
+          match_day_vote: {
+            mvp_player_id: outside_candidate.id,
+            def_player_id: present_candidate.id
+          }
+        }
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(response.body).to include("Mvp player must belong to the match day")
         expect(vote_token.reload.match_day_vote).to be_nil
         expect(vote_token.used_at).to be_nil
       end

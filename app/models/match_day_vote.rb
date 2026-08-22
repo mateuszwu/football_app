@@ -8,6 +8,7 @@ class MatchDayVote < ApplicationRecord
   validates :match_day_vote_token_id, uniqueness: true
   validates :submitted_at, presence: true
   validate :selected_players_are_not_the_voter
+  validate :selected_players_belong_to_match_day
 
   private
 
@@ -23,6 +24,17 @@ class MatchDayVote < ApplicationRecord
     if def_player_id.present? && def_player_id == voter_id
       errors.add(:def_player_id, "cannot be the voter")
     end
+  end
+
+  def selected_players_belong_to_match_day
+    return if match_day_vote_token.blank? || match_day_vote_token.match_day_player.blank?
+
+    match_day = match_day_vote_token.match_day_player.match_day
+    selected_player_ids = [ mvp_player_id, def_player_id ].compact.uniq
+    match_day_player_ids = match_day.match_day_players.where(player_id: selected_player_ids).pluck(:player_id)
+
+    errors.add(:mvp_player_id, "must belong to the match day") if mvp_player_id.present? && match_day_player_ids.exclude?(mvp_player_id)
+    errors.add(:def_player_id, "must belong to the match day") if def_player_id.present? && match_day_player_ids.exclude?(def_player_id)
   end
 
   def set_submitted_at

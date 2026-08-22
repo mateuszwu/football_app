@@ -10,7 +10,7 @@ RSpec.describe UpdateMatchDay do
         new_player = create(:player, name: "New Player", nickname: "new", phone: "+48987654321", approval_status: "approved", active: true)
         match_day = create(:match_day, season:, played_on: Date.new(2026, 6, 5))
         original_match_day_player = create(:match_day_player, match_day:, player: original_player)
-        original_match_day_player.create_match_day_vote_token!(token: "original-token", expires_at: 48.hours.from_now)
+        original_match_day_player.create_match_day_vote_token!(token: "original-token")
         params = {
           season_id: other_season.id,
           played_on: Date.new(2026, 6, 12),

@@ -34,12 +34,11 @@ RSpec.describe Dashboard::TilesQuery do
           create(:match_day_player, match_day:, player:)
         end
         token_match_day_player = MatchDayPlayer.find_by!(match_day:, player: first_player)
-        create(:match_day_vote_token, match_day_player: token_match_day_player, expires_at: 2.days.from_now)
+        create(:match_day_vote_token, match_day_player: token_match_day_player)
         cast_vote_match_day_player = MatchDayPlayer.find_by!(match_day:, player: second_player)
         create(
           :match_day_vote_token,
           match_day_player: cast_vote_match_day_player,
-          expires_at: 1.day.ago,
           used_at: 1.hour.ago
         )
 

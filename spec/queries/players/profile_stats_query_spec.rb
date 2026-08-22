@@ -215,6 +215,9 @@ RSpec.describe Players::ProfileStatsQuery do
 
   def create_award_vote(match_day:, voter:, mvp_player:, def_player:)
     match_day_player = create(:match_day_player, match_day:, player: voter)
+    [ mvp_player, def_player ].uniq.each do |player|
+      create(:match_day_player, match_day:, player:)
+    end
     token = create(:match_day_vote_token, match_day_player:)
 
     MatchDayVote.create!(

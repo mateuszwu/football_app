@@ -122,9 +122,12 @@ module Dashboard
     def open_vote_tokens_count
       return 0 if current_season.blank?
 
+      match_day = current_season.latest_finished_match_day
+      return 0 if match_day.blank?
+
       vote_tokens_scope
         .where(used_at: nil)
-        .where("match_day_vote_tokens.expires_at > ?", Time.current)
+        .where(match_day_players: { match_day_id: match_day.id })
         .count
     end
 
