@@ -52,6 +52,10 @@ class Season < ApplicationRecord
     match_days.order(played_on: :desc, id: :desc)
   end
 
+  def last_played_match_day_on
+    match_days.finished.maximum(:played_on)
+  end
+
   def appearances_leaderboard
     Player
       .joins(match_day_players: :match_day)

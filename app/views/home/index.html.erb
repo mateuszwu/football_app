@@ -33,7 +33,8 @@
                 </div>
                 <div class="dashboard-metric">
                   <span><%= t("dashboard.labels.end") %></span>
-                  <strong><%= dashboard.current_season.ends_on ? l(dashboard.current_season.ends_on, format: :short) : t("common.no_end_date") %></strong>
+                  <% last_played_match_day_on = dashboard.current_season.last_played_match_day_on %>
+                  <strong><%= last_played_match_day_on ? l(last_played_match_day_on, format: :short) : t("common.no_end_date") %></strong>
                 </div>
               </div>
               <div class="dashboard-metrics dashboard-metrics--three">

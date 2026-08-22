@@ -159,6 +159,26 @@ RSpec.describe "Home page" do
         expect(response.body).to include("Summer 2026")
         expect(response.body).to include(season_path(season))
       end
+
+      it "renders the latest finished match day date as the season end" do
+        season = create(
+          :season,
+          name: "Summer 2026",
+          status: Season::STATUS_ACTIVE,
+          ends_on: Date.new(2026, 8, 31)
+        )
+        create(:match_day, season:, played_on: Date.new(2026, 6, 5), status: "finished")
+        create(:match_day, season:, played_on: Date.new(2026, 6, 12), status: "finished")
+        create(:match_day, season:, played_on: Date.new(2026, 6, 19), status: "ready")
+
+        get root_path
+
+        expect(response).to have_http_status(:ok)
+        active_season_tile = response.body[/<article class="dashboard-tile dashboard-tile--span-4" id="active_season">.*?<\/article>/m]
+        expect(active_season_tile).to include("12.06.2026")
+        expect(active_season_tile).not_to include("19.06.2026")
+        expect(active_season_tile).not_to include("31.08.2026")
+      end
     end
 
     context "when dashboard statistics exist" do

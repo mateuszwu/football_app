@@ -264,6 +264,33 @@ RSpec.describe Season do
     end
   end
 
+  describe "#last_played_match_day_on" do
+    context "when the season has finished and unfinished match days" do
+      it "returns the date of the latest finished match day" do
+        season = create(:season)
+        create(:match_day, season:, played_on: Date.new(2026, 6, 5), status: "finished")
+        create(:match_day, season:, played_on: Date.new(2026, 6, 12), status: "finished")
+        create(:match_day, season:, played_on: Date.new(2026, 6, 19), status: "ready")
+        create(:match_day, season: create(:season), played_on: Date.new(2026, 6, 26), status: "finished")
+
+        result = season.last_played_match_day_on
+
+        expect(result).to eq(Date.new(2026, 6, 12))
+      end
+    end
+
+    context "when the season has no finished match days" do
+      it "returns nil" do
+        season = create(:season)
+        create(:match_day, season:, played_on: Date.new(2026, 6, 19), status: "in_progress")
+
+        result = season.last_played_match_day_on
+
+        expect(result).to be_nil
+      end
+    end
+  end
+
   describe "#appearances_leaderboard" do
     context "when players have different appearance counts" do
       it "returns players ranked by season appearances" do
