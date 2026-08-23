@@ -170,17 +170,24 @@
                     <th class="is-numeric"><%= t("statistics.index.comebacks.situations") %></th>
                     <th class="is-numeric"><%= t("statistics.index.comebacks.comeback_wins") %></th>
                     <th class="is-numeric"><%= t("statistics.index.comebacks.comeback_rate") %></th>
-                    <th><%= t("statistics.index.comebacks.best_example") %></th>
+                    <th><%= t("statistics.index.comebacks.example_match") %></th>
                   </tr>
                 </thead>
                 <tbody>
                   <% insights.dig(:comebacks, :threshold_rows).each do |row| %>
+                    <% example = row.fetch(:examples).sample %>
                     <tr>
                       <td><%= row.fetch(:deficit) %></td>
                       <td class="is-numeric"><%= row.fetch(:situations) %></td>
                       <td class="is-numeric"><%= row.fetch(:comeback_wins) %></td>
                       <td class="is-numeric"><%= statistics_format_percentage(row.fetch(:comeback_rate)) %></td>
-                      <td><%= row.fetch(:best_example)&.fetch(:subject) || "-" %></td>
+                      <td>
+                        <% if example.present? %>
+                          <%= link_to example.fetch(:subject), example.fetch(:path), class: "statistics-match-link" %>
+                        <% else %>
+                          -
+                        <% end %>
+                      </td>
                     </tr>
                   <% end %>
                 </tbody>
@@ -255,7 +262,13 @@
                   <tbody>
                     <% insights.fetch(:clutch_players).each do |row| %>
                       <tr>
-                        <td><%= link_to row.fetch(:player).name, player_path(row.fetch(:player)), class: "stats-player-link" %></td>
+                        <td>
+                          <%= render "shared/player_identity_pill",
+                            player: row.fetch(:player),
+                            size: :xs,
+                            variant: :compact,
+                            max_width: "100%" %>
+                        </td>
                         <td class="is-numeric"><%= row.fetch(:opening_goals) %></td>
                         <td class="is-numeric"><%= row.fetch(:closing_goals) %></td>
                         <td class="is-numeric"><%= row.fetch(:go_ahead_goals) %></td>

@@ -328,6 +328,100 @@ RSpec.describe Synergy::CombinationRankingQuery do
       end
     end
 
+    it "uses more shared matches to break equal win rate ties" do
+      large_sample_one = build_stubbed(:player, name: "Large Sample One")
+      large_sample_two = build_stubbed(:player, name: "Large Sample Two")
+      small_sample_one = build_stubbed(:player, name: "Small Sample One")
+      small_sample_two = build_stubbed(:player, name: "Small Sample Two")
+      small_sample = Relationships::PairStatsQuery::Result.new(
+        player_one: small_sample_one,
+        player_two: small_sample_two,
+        shared_matches_count: 5,
+        wins: 4,
+        draws: 0,
+        losses: 1,
+        goals: 0,
+        assists: 0,
+        mutual_assists: 0,
+        goal_difference: 1
+      )
+      large_sample = Relationships::PairStatsQuery::Result.new(
+        player_one: large_sample_one,
+        player_two: large_sample_two,
+        shared_matches_count: 20,
+        wins: 16,
+        draws: 0,
+        losses: 4,
+        goals: 0,
+        assists: 0,
+        mutual_assists: 0,
+        goal_difference: 4
+      )
+
+      result = described_class.call(
+        combination_size: 2,
+        direction: "best",
+        limit: 20,
+        minimum_shared_matches: 1,
+        pair_stats: [ small_sample, large_sample ],
+        sort_column: "win_rate",
+        sort_direction: "desc"
+      )
+
+      expect(result.map(&:win_rate)).to eq([ 80, 80 ])
+      expect(result.first.players).to contain_exactly(large_sample_one, large_sample_two)
+      expect(result.second.players).to contain_exactly(small_sample_one, small_sample_two)
+      expect(result.map(&:rank)).to eq([ 1, 2 ])
+    end
+
+    it "sorts every candidate before applying the result limit" do
+      filler_stats = 20.times.map do |index|
+        player_one = build_stubbed(:player, name: "Filler #{index} One")
+        player_two = build_stubbed(:player, name: "Filler #{index} Two")
+
+        Relationships::PairStatsQuery::Result.new(
+          player_one:,
+          player_two:,
+          shared_matches_count: 3,
+          wins: 3,
+          draws: 0,
+          losses: 0,
+          goals: 0,
+          assists: 0,
+          mutual_assists: 0,
+          goal_difference: 1
+        )
+      end
+      most_played_one = build_stubbed(:player, name: "Most Played One")
+      most_played_two = build_stubbed(:player, name: "Most Played Two")
+      most_played = Relationships::PairStatsQuery::Result.new(
+        player_one: most_played_one,
+        player_two: most_played_two,
+        shared_matches_count: 30,
+        wins: 0,
+        draws: 0,
+        losses: 30,
+        goals: 0,
+        assists: 0,
+        mutual_assists: 0,
+        goal_difference: -30
+      )
+
+      result = described_class.call(
+        combination_size: 2,
+        direction: "best",
+        limit: 20,
+        minimum_shared_matches: 1,
+        pair_stats: filler_stats + [ most_played ],
+        sort_column: "matches",
+        sort_direction: "desc"
+      )
+
+      expect(result.size).to eq(20)
+      expect(result.first.players).to contain_exactly(most_played_one, most_played_two)
+      expect(result.first.shared_matches_count).to eq(30)
+    end
+
     it "aggregates records and offense for active trio rankings" do
       season = create(:season)
       adam = create(:player, name: "Adam Trio", approval_status: "approved", active: true)

@@ -32,12 +32,14 @@ module Synergy
     VALID_DIRECTIONS = %w[best worst].freeze
     VALID_LIMITS = [ 20, 50 ].freeze
     VALID_COMBINATION_SIZES = (2..5).freeze
+    VALID_SORT_COLUMNS = %w[combination matches record win_rate offense mutual_assists].freeze
+    VALID_SORT_DIRECTIONS = %w[asc desc].freeze
 
-    def self.call(season: nil, combination_size: 2, direction: "best", limit: 20, minimum_shared_matches: 3, player_filter: nil, player_id: nil, pair_stats: nil)
-      new(season:, combination_size:, direction:, limit:, minimum_shared_matches:, player_filter:, player_id:, pair_stats:).call
+    def self.call(season: nil, combination_size: 2, direction: "best", limit: 20, minimum_shared_matches: 3, player_filter: nil, player_id: nil, pair_stats: nil, sort_column: nil, sort_direction: nil)
+      new(season:, combination_size:, direction:, limit:, minimum_shared_matches:, player_filter:, player_id:, pair_stats:, sort_column:, sort_direction:).call
     end
 
-    def initialize(season:, combination_size:, direction:, limit:, minimum_shared_matches:, player_filter:, player_id: nil, pair_stats: nil)
+    def initialize(season:, combination_size:, direction:, limit:, minimum_shared_matches:, player_filter:, player_id: nil, pair_stats: nil, sort_column: nil, sort_direction: nil)
       @season = season
       @combination_size = normalize_combination_size(combination_size)
       @direction = VALID_DIRECTIONS.include?(direction.to_s) ? direction.to_s : "best"
@@ -47,6 +49,8 @@ module Synergy
       @player_id = player_id.to_i if player_id.present?
       @pair_stats = pair_stats
       @visible_players = pair_stats.nil? ? Player.approved.active.index_by(&:id) : pair_stats.flat_map(&:players).index_by(&:id)
+      @sort_column = sort_column.to_s if VALID_SORT_COLUMNS.include?(sort_column.to_s)
+      @sort_direction = sort_direction.to_s if VALID_SORT_DIRECTIONS.include?(sort_direction.to_s)
     end
 
     def call
@@ -55,7 +59,8 @@ module Synergy
 
     private
 
-    attr_reader :season, :combination_size, :direction, :limit, :minimum_shared_matches, :player_filter, :player_id, :pair_stats, :visible_players
+    attr_reader :season, :combination_size, :direction, :limit, :minimum_shared_matches, :player_filter, :player_id, :pair_stats, :visible_players,
+      :sort_column, :sort_direction
 
     def ranked_results
       results = unfiltered_results
@@ -63,7 +68,9 @@ module Synergy
         .select { |result| player_id_matches?(result) }
         .select { |result| player_filter_matches?(result) }
 
-      results.sort_by { |result| sort_key_for(result) }
+      return results.sort_by { |result| default_sort_key_for(result) } unless selected_sort?
+
+      results.sort { |left, right| compare_selected_sort(left, right) }
     end
 
     def unfiltered_results
@@ -196,7 +203,7 @@ module Synergy
       result.players.any? { |player| player.id == player_id }
     end
 
-    def sort_key_for(result)
+    def default_sort_key_for(result)
       if direction == "worst"
         [ result.win_rate.to_i, -result.losses, -result.shared_matches_count, result.goals_assists, result.mutual_assists, player_names_for(result) ]
       else
@@ -205,6 +212,7 @@ module Synergy
     end
 
     def ranking_key_for(result)
+      return selected_ranking_key_for(result) if selected_sort?
       return [ result.overall_score, result.shared_matches_count, result.mutual_assists, result.win_rate.to_i, result.goals_assists ] if direction == "best"
 
       [
@@ -216,6 +224,49 @@ module Synergy
         result.goals_assists,
         result.mutual_assists
       ]
+    end
+
+    def compare_selected_sort(left, right)
+      comparison = selected_sort_value(left) <=> selected_sort_value(right)
+      comparison = -comparison if sort_direction == "desc"
+      return comparison unless comparison.zero?
+
+      selected_tie_breaker_key_for(left) <=> selected_tie_breaker_key_for(right)
+    end
+
+    def selected_sort_value(result)
+      case sort_column
+      when "combination"
+        player_names_for(result).downcase
+      when "matches"
+        result.shared_matches_count.to_i
+      when "record"
+        [ result.wins.to_i, result.draws.to_i, -result.losses.to_i ]
+      when "win_rate"
+        result.win_rate.to_f
+      when "offense"
+        [ result.goals_assists.to_i, result.mutual_assists.to_i ]
+      when "mutual_assists"
+        result.mutual_assists.to_i
+      end
+    end
+
+    def selected_tie_breaker_key_for(result)
+      if sort_column == "win_rate"
+        [ -result.shared_matches_count.to_i, -result.overall_score, player_names_for(result) ]
+      else
+        default_sort_key_for(result)
+      end
+    end
+
+    def selected_ranking_key_for(result)
+      return [ result.win_rate.to_f, result.shared_matches_count.to_i ] if sort_column == "win_rate"
+
+      selected_sort_value(result)
+    end
+
+    def selected_sort?
+      sort_column.present? && sort_direction.present?
     end
 
     def assign_ranks(results)

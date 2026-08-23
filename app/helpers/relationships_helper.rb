@@ -100,29 +100,6 @@ module RelationshipsHelper
     end
   end
 
-  def relationship_sorted_ranking(combination_ranking, sort_column:, sort_direction:)
-    column = relationship_sort_column(sort_column)
-    direction = relationship_sort_direction(sort_direction)
-    return combination_ranking if column.blank? || direction.blank?
-
-    sorted_results = combination_ranking.sort_by { |result| relationship_sort_value(result, column) }
-    sorted_results.reverse! if direction == "desc"
-
-    previous_value = nil
-    previous_rank = nil
-
-    sorted_results.each_with_index.map do |result, index|
-      value = relationship_sort_value(result, column)
-      rank = value == previous_value ? previous_rank : index + 1
-      previous_value = value
-      previous_rank = rank
-
-      ranked_result = result.dup
-      ranked_result.rank = rank
-      ranked_result
-    end
-  end
-
   def relationship_sort_link(column:, label:, sort_column:, sort_direction:, season:, active_tab:, direction:, limit:, metric:, minimum_shared_matches:, player_filter:, player_id:)
     next_direction = relationship_next_sort_direction(column, sort_column, sort_direction)
     path = relationships_path(
@@ -172,23 +149,6 @@ module RelationshipsHelper
     indicator = sort_direction.to_s == "asc" ? "↑" : "↓"
 
     tag.span(indicator, class: "leaderboards-sort-indicator", aria: { hidden: true })
-  end
-
-  def relationship_sort_value(result, column)
-    case column.to_s
-    when "combination"
-      result.players.map { |player| player.name.to_s.downcase }.join(" + ")
-    when "matches"
-      result.shared_matches_count.to_i
-    when "record"
-      [ result.wins.to_i, result.draws.to_i, -result.losses.to_i ]
-    when "win_rate"
-      result.win_rate.to_f
-    when "offense"
-      [ result.goals_assists.to_i, result.mutual_assists.to_i ]
-    when "mutual_assists"
-      result.mutual_assists.to_i
-    end
   end
 
   def relationship_summary_card(key, summary, primary_metric, icon, fallback, tooltip_key)

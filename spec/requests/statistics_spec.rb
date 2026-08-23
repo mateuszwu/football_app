@@ -63,6 +63,42 @@ RSpec.describe "Statistics" do
         expect(response.body).to include("Największa dominacja")
         expect(response.body).to include("+5 / 5:0")
         expect(response.body).to include(match_path(match))
+
+        get "/statistics", params: { season_id: season.id, tab: "clutch" }
+
+        expect(response).to have_http_status(:ok)
+        clutch_table = Nokogiri::HTML(response.body).at_css("table.stats-records-table")
+        expect(clutch_table).not_to be_nil
+        expect(clutch_table.css(".player-identity-pill").size).to eq(1)
+        expect(clutch_table.css(".player-identity-pill__icon").size).to eq(1)
+        expect(clutch_table.css(".stats-player-link")).to be_empty
+      end
+
+      it "links a randomly selected comeback example to its match" do
+        season = create(:season, name: "Summer 2026")
+        home_player = create(:player, name: "Home Demo", approval_status: "approved", active: true)
+        away_player = create(:player, name: "Away Demo", approval_status: "approved", active: true)
+        match_day = create(:match_day, season:, status: "finished", played_on: Date.new(2026, 7, 1))
+        team_setup = create(:team_setup, match_day:)
+        home_team = create(:team, team_setup:, team_type: Team::TEAM_TYPE_MATCH, name: "Zieloni")
+        away_team = create(:team, team_setup:, team_type: Team::TEAM_TYPE_MATCH, name: "Czarni")
+        home_team_player = create(:team_player, team: home_team, player: home_player)
+        away_team_player = create(:team_player, team: away_team, player: away_player)
+        start_time = Time.zone.local(2026, 7, 1, 18, 0, 0)
+        match = create(:match, match_day:, home_team:, away_team:, started_at: start_time, finished_at: start_time + 6.minutes, home_score: 5, away_score: 1)
+        create(:match_goal, match:, scoring_team: away_team, scorer_team_player: away_team_player, scored_at: start_time + 30.seconds)
+        [ 60, 90, 120, 150, 180 ].each do |seconds|
+          create(:match_goal, match:, scoring_team: home_team, scorer_team_player: home_team_player, scored_at: start_time + seconds.seconds)
+        end
+
+        get "/statistics", params: { season_id: season.id, tab: "comebacks" }
+
+        expect(response).to have_http_status(:ok)
+        table = Nokogiri::HTML(response.body).at_css("table.stats-records-table")
+        comeback_row = table.css("tbody tr").find { |row| row.at_css("td").text.strip == "0:1" }
+        example_link = comeback_row.at_css("td:nth-child(5) a.statistics-match-link")
+        expect(example_link["href"]).to eq(match_path(match))
+        expect(example_link.text.strip).to eq("2026-07-01 · ##{match.id}")
       end
     end
 

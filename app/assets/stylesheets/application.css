@@ -5402,10 +5402,6 @@ a:focus-visible {
   text-align: center;
 }
 
-.ranking-preview__row:first-child .ranking-preview__rank {
-  color: #7cff3a;
-}
-
 .ranking-preview__player {
   display: grid;
   min-width: 0;
@@ -5494,7 +5490,7 @@ a:focus-visible {
 }
 
 .dashboard-best-duo__plus {
-  color: var(--accent);
+  color: var(--text-muted);
   flex: 0 0 auto;
   font-weight: 900;
 }

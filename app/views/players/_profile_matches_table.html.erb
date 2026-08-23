@@ -12,7 +12,6 @@
         <thead>
           <tr>
             <th><%= t("players.profile.matches.date") %></th>
-            <th><%= t("players.profile.matches.match_day") %></th>
             <th><%= t("players.profile.matches.team") %></th>
             <th><%= t("players.profile.matches.score") %></th>
             <th><%= t("players.profile.matches.result") %></th>
@@ -20,7 +19,6 @@
             <th class="is-numeric"><%= t("players.profile.matches.assists") %></th>
             <th class="is-numeric"><%= t("players.profile.matches.own_goals") %></th>
             <th class="is-numeric"><%= t("players.profile.matches.elo_change") %></th>
-            <th><%= t("players.profile.matches.badges") %></th>
             <th><%= t("players.profile.matches.link") %></th>
           </tr>
         </thead>
@@ -28,7 +26,6 @@
           <% matches.each do |entry| %>
             <tr>
               <td><%= l(entry.date) %></td>
-              <td><%= entry.match_day.played_on %></td>
               <td><%= entry.team.name %></td>
               <td><%= entry.score %></td>
               <td><span class="player-profile-match-result player-profile-match-result--<%= entry.result %>"><%= player_profile_result_label(entry.result) %></span></td>
@@ -36,11 +33,6 @@
               <td class="is-numeric"><%= entry.assists %></td>
               <td class="is-numeric"><%= entry.own_goals %></td>
               <td class="is-numeric"><%= player_profile_signed_delta(entry.elo_delta) %></td>
-              <td>
-                <% entry.award_types.each do |award_type| %>
-                  <span class="player-profile-award-badge player-profile-award-badge--<%= award_type.downcase %>"><%= award_type %></span>
-                <% end %>
-              </td>
               <td><%= link_to t("players.profile.matches.view_match"), match_path(entry.match), class: "roster-card__link", data: { turbo_frame: "_top" } %></td>
             </tr>
           <% end %>

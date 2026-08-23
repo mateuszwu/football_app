@@ -60,6 +60,55 @@ RSpec.describe Stats::SeasonInsightsQuery do
         expect(result.dig(:chart_data, :match_durations, :labels)).to include("2026-07-01 · ##{first_match.id}")
       end
 
+      it "counts a scoreless loser in every recoverable deficit threshold" do
+        season = create(:season)
+        winner = create(:player, name: "Winner Demo", approval_status: "approved", active: true)
+        loser = create(:player, name: "Loser Demo", approval_status: "approved", active: true)
+        create_completed_match(
+          season:,
+          played_on: Date.new(2026, 7, 1),
+          home_player: winner,
+          away_player: loser,
+          scores: [ [ :home, 30 ], [ :home, 60 ], [ :home, 90 ], [ :home, 120 ], [ :home, 150 ] ],
+          final_score: [ 5, 0 ]
+        )
+
+        result = described_class.call(season:)
+
+        rows = result.dig(:comebacks, :threshold_rows).index_by { |row| row.fetch(:deficit) }
+        expect(rows.fetch("0:1")).to include(situations: 1, comeback_wins: 0, comeback_rate: 0)
+        expect(rows.fetch("0:2")).to include(situations: 1, comeback_wins: 0, comeback_rate: 0)
+        expect(rows.fetch("0:3")).to include(situations: 1, comeback_wins: 0, comeback_rate: 0)
+        expect(rows.fetch("0:4")).to include(situations: 1, comeback_wins: 0, comeback_rate: 0)
+      end
+
+      it "returns every matching comeback win as an example candidate" do
+        season = create(:season)
+        home_player = create(:player, name: "Home Demo", approval_status: "approved", active: true)
+        away_player = create(:player, name: "Away Demo", approval_status: "approved", active: true)
+        first_comeback = create_completed_match(
+          season:,
+          played_on: Date.new(2026, 7, 1),
+          home_player:,
+          away_player:,
+          scores: [ [ :away, 30 ], [ :home, 60 ], [ :home, 90 ], [ :home, 120 ], [ :home, 150 ], [ :home, 180 ] ],
+          final_score: [ 5, 1 ]
+        )
+        second_comeback = create_completed_match(
+          season:,
+          played_on: Date.new(2026, 7, 2),
+          home_player:,
+          away_player:,
+          scores: [ [ :home, 30 ], [ :away, 60 ], [ :away, 90 ], [ :away, 120 ], [ :away, 150 ], [ :away, 180 ] ],
+          final_score: [ 1, 5 ]
+        )
+
+        result = described_class.call(season:)
+
+        row = result.dig(:comebacks, :threshold_rows).find { |candidate| candidate.fetch(:deficit) == "0:1" }
+        expect(row.fetch(:examples).map { |example| example.fetch(:match) }).to contain_exactly(first_comeback, second_comeback)
+      end
+
       it "sorts first goal players by first goals, rate, win rate, and name" do
         season = create(:season)
         high_win_player = create(:player, name: "Zed Demo", approval_status: "approved", active: true)

@@ -138,12 +138,26 @@ RSpec.describe "Relationships" do
         create(:team_player, team: home_team, player: marek)
         create(:match, match_day:, home_team:, away_team:, home_score: 1, away_score: 0, finished_at: Time.current)
 
+        expect(Synergy::CombinationRankingQuery).to receive(:call).with(
+          season: nil,
+          combination_size: 3,
+          direction: "worst",
+          limit: 50,
+          minimum_shared_matches: 1,
+          player_filter: "Adam",
+          player_id: nil,
+          sort_column: "win_rate",
+          sort_direction: "desc"
+        ).and_call_original
+
         get "/relationships", params: {
           tab: "trios",
           direction: "worst",
           limit: 50,
           minimum_shared_matches: 1,
-          player_filter: "Adam"
+          player_filter: "Adam",
+          sort: "win_rate",
+          sort_direction: "desc"
         }
 
         expect(response).to have_http_status(:ok)
@@ -176,7 +190,7 @@ RSpec.describe "Relationships" do
           create(:match_goal, match:, scoring_team: home_team, scorer_team_player: cezary_team_player, assistant_team_player: adam_team_player)
         end
 
-        get "/relationships", params: { season_id: season.id }
+        get "/relationships", params: { season_id: season.id, minimum_shared_matches: 3 }
 
         ranks = Nokogiri::HTML(response.body).css(".relationship-ranking-table tbody tr .relationship-ranking-table__rank").map { |cell| cell.text.strip }
 
@@ -218,10 +232,21 @@ RSpec.describe "Relationships" do
 
         expect(response).to have_http_status(:ok)
         expect(response.body).to include("value=\"fives\"")
-        expect(response.body).to include("value=\"2\" min=\"1\"")
+        expect(response.body).to include("value=\"5\" min=\"1\"")
         expect(response.body).to include("Ranking piątek")
         expect(response.body).to include("Brak wyników")
         expect(response.body).not_to include("relationships-tab--disabled")
+      end
+
+      it "uses five shared matches as the default for every table ranking" do
+        %w[duos trios fours fives].each do |tab|
+          get "/relationships", params: { tab: }
+
+          document = Nokogiri::HTML(response.body)
+          minimum_input = document.at_css("input[name='minimum_shared_matches']")
+          expect(response).to have_http_status(:ok)
+          expect(minimum_input["value"]).to eq("5")
+        end
       end
 
       it "renders the Cytoscape graph tab with controls and without private phone data" do

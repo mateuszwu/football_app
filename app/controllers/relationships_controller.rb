@@ -7,10 +7,10 @@ class RelationshipsController < ApplicationController
     "graph" => 2
   }.freeze
   DEFAULT_MINIMUMS = {
-    "duos" => 3,
-    "trios" => 3,
-    "fours" => 2,
-    "fives" => 2,
+    "duos" => 5,
+    "trios" => 5,
+    "fours" => 5,
+    "fives" => 5,
     "graph" => 1
   }.freeze
   DIRECTIONS = %w[best worst].freeze
@@ -27,6 +27,8 @@ class RelationshipsController < ApplicationController
     minimum_shared_matches = normalized_minimum_shared_matches(active_tab)
     player_filter = params[:player_filter].to_s.strip
     player_id = params[:player_id].presence
+    sort_column = normalized_sort_column
+    sort_direction = normalized_sort_direction
     selected_player = Player.approved.active.find_by(id: player_id) if player_id.present?
     graph_player_filter = player_filter.presence || selected_player&.name.to_s
     duo_insights = cached_duo_insights(season)
@@ -50,7 +52,9 @@ class RelationshipsController < ApplicationController
         limit:,
         minimum_shared_matches:,
         player_filter:,
-        player_id:
+        player_id:,
+        sort_column:,
+        sort_direction:
       )
     end
 
@@ -68,8 +72,8 @@ class RelationshipsController < ApplicationController
       season:,
       tab_minimums: DEFAULT_MINIMUMS,
       duo_insights:,
-      sort_column: params[:sort].to_s.presence,
-      sort_direction: params[:sort_direction].to_s.presence
+      sort_column:,
+      sort_direction:
     }
   end
 
@@ -81,7 +85,7 @@ class RelationshipsController < ApplicationController
     end
   end
 
-  def cached_combination_ranking(season:, active_tab:, direction:, limit:, minimum_shared_matches:, player_filter:, player_id:)
+  def cached_combination_ranking(season:, active_tab:, direction:, limit:, minimum_shared_matches:, player_filter:, player_id:, sort_column:, sort_direction:)
     query = lambda do
       Synergy::CombinationRankingQuery.call(
         season:,
@@ -90,14 +94,16 @@ class RelationshipsController < ApplicationController
         limit:,
         minimum_shared_matches:,
         player_filter:,
-        player_id:
+        player_id:,
+        sort_column:,
+        sort_direction:
       )
     end
     return query.call if player_filter.present?
 
     Rails.cache.fetch([
       "relationships-combination",
-      "v3",
+      "v4",
       season&.id || "all",
       active_tab,
       direction,
@@ -105,6 +111,8 @@ class RelationshipsController < ApplicationController
       minimum_shared_matches,
       player_filter,
       player_id,
+      sort_column,
+      sort_direction,
       public_cache_key_for(season)
     ], expires_in: 10.minutes) { query.call }
   end
@@ -162,5 +170,17 @@ class RelationshipsController < ApplicationController
     minimum = params[:minimum_shared_matches].presence || DEFAULT_MINIMUMS.fetch(active_tab)
 
     minimum.to_i.clamp(1, 100)
+  end
+
+  def normalized_sort_column
+    value = params[:sort].to_s
+
+    value if Synergy::CombinationRankingQuery::VALID_SORT_COLUMNS.include?(value)
+  end
+
+  def normalized_sort_direction
+    value = params[:sort_direction].to_s
+
+    value if Synergy::CombinationRankingQuery::VALID_SORT_DIRECTIONS.include?(value)
   end
 end

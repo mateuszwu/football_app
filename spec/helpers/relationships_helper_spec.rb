@@ -98,43 +98,6 @@ RSpec.describe RelationshipsHelper do
     end
   end
 
-  describe "#relationship_sorted_ranking" do
-    it "sorts combinations by the selected column and recalculates ranks" do
-      adam = build_stubbed(:player, name: "Adam Nowak")
-      marek = build_stubbed(:player, name: "Marek Kowalski")
-      cezary = build_stubbed(:player, name: "Cezary Lis")
-      first_result = Synergy::CombinationRankingQuery::Result.new(
-        players: [ adam, marek ],
-        shared_matches_count: 3,
-        wins: 2,
-        draws: 0,
-        losses: 1,
-        goals: 4,
-        assists: 1,
-        mutual_assists: 1
-      )
-      second_result = Synergy::CombinationRankingQuery::Result.new(
-        players: [ adam, cezary ],
-        shared_matches_count: 7,
-        wins: 4,
-        draws: 1,
-        losses: 2,
-        goals: 2,
-        assists: 0,
-        mutual_assists: 0
-      )
-
-      result = helper.relationship_sorted_ranking(
-        [ first_result, second_result ],
-        sort_column: "matches",
-        sort_direction: "asc"
-      )
-
-      expect(result.map(&:shared_matches_count)).to eq([ 3, 7 ])
-      expect(result.map(&:rank)).to eq([ 1, 2 ])
-    end
-  end
-
   describe "#relationship_win_rate_label" do
     it "returns nil when the duo has no match-level record" do
       summary = Relationships::DuoInsightsQuery::Summary.new(

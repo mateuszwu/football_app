@@ -392,7 +392,13 @@ RSpec.describe "Players" do
         expect(response.body).to include("Ostatnie mecze")
         expect(response.body).to include("Bilans meczów")
         expect(response.body).to include("Zobacz mecz")
-        match_links = Nokogiri::HTML(response.body).css("a").select { |link| link.text.strip == "Zobacz mecz" }
+        document = Nokogiri::HTML(response.body)
+        match_table = document.at_css("table.player-profile-table")
+        match_headers = match_table.css("thead th").map { |header| header.text.strip }
+        expect(match_headers).to include("Data", "Drużyna")
+        expect(match_headers).not_to include("Dzień grania", "Odznaki")
+        expect(match_table.css("tbody tr:first-child td").size).to eq(match_headers.size)
+        match_links = document.css("a").select { |link| link.text.strip == "Zobacz mecz" }
         expect(match_links).not_to be_empty
         expect(match_links).to all(satisfy { |link| link["data-turbo-frame"] == "_top" })
         expect(response.body).to include("2026-05-29")

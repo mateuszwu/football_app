@@ -1065,7 +1065,7 @@ pl:
         situations: "Sytuacje"
         comeback_wins: "Wygrane po odrobieniu"
         comeback_rate: "% comebacku"
-        best_example: "Najlepszy przykład"
+        example_match: "Przykładowy mecz"
         first_goal_conceded: "Wygrane po stracie pierwszego gola"
         lead_four_zero: "Wygrane przy prowadzeniu 4:0"
       score_states:

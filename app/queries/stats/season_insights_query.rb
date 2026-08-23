@@ -267,10 +267,7 @@ module Stats
     def comeback_threshold_row(threshold)
       occurrences = completed_timelines.flat_map do |timeline|
         [ :team_a, :team_b ].filter_map do |team_key|
-          max_deficit = timeline.events
-            .select { |event| event.fetch(:scoring_team_key) == team_key }
-            .map { |event| event.fetch(:deficit_before_goal) }
-            .max.to_i
+          max_deficit = maximum_recoverable_deficit(timeline, team_key)
           next if max_deficit < threshold
 
           winner_key = timeline.summary.fetch(:winner_team) == timeline.match.home_team ? :team_a : :team_b
@@ -282,15 +279,29 @@ module Stats
         end
       end
       wins = occurrences.count { |occurrence| occurrence.fetch(:won) }
-      best = occurrences.select { |occurrence| occurrence.fetch(:won) }.max_by { |occurrence| occurrence.fetch(:max_deficit) }
+      examples = occurrences
+        .select { |occurrence| occurrence.fetch(:won) }
+        .map { |occurrence| match_card(occurrence.fetch(:timeline)) }
 
       {
         deficit: "0:#{threshold}",
         situations: occurrences.count,
         comeback_wins: wins,
         comeback_rate: percentage(wins, occurrences.count),
-        best_example: best ? match_card(best.fetch(:timeline)) : nil
+        examples:
       }
+    end
+
+    def maximum_recoverable_deficit(timeline, team_key)
+      opponent_key = team_key == :team_a ? :team_b : :team_a
+
+      timeline.events
+        .reject { |event| event.fetch(:is_closing_goal) }
+        .map do |event|
+          score = event.fetch(:score_after)
+          [ score.fetch(opponent_key) - score.fetch(team_key), 0 ].max
+        end
+        .max.to_i
     end
 
     def first_goal_player_row(player, events)

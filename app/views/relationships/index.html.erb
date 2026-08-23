@@ -179,7 +179,6 @@
       </div>
 
       <% if combination_ranking.any? %>
-        <% sorted_combination_ranking = relationship_sorted_ranking(combination_ranking, sort_column:, sort_direction:) %>
         <% relationship_sort_context = { season:, active_tab:, direction:, limit:, metric:, minimum_shared_matches:, player_filter:, player_id: } %>
         <div class="leaderboards-table-wrap">
           <table class="leaderboards-table relationship-duo-table relationship-ranking-table">
@@ -202,7 +201,7 @@
               </tr>
             </thead>
             <tbody>
-              <% sorted_combination_ranking.each_with_index do |result, index| %>
+              <% combination_ranking.each_with_index do |result, index| %>
                 <tr>
                   <td class="relationship-ranking-table__rank"><%= leaderboard_rank_badge(result.rank || index + 1) %></td>
                   <td class="relationship-ranking-table__duet">
@@ -247,7 +246,7 @@
             <span><%= relationship_sort_link(column: "mutual_assists", label: t("relationships.table.mutual_assists_mobile"), sort_column:, sort_direction:, **relationship_sort_context) %></span>
           </div>
 
-          <% sorted_combination_ranking.each_with_index do |result, index| %>
+          <% combination_ranking.each_with_index do |result, index| %>
             <article class="relationship-mobile-ranking__row">
               <div class="relationship-mobile-ranking__rank">
                 <%= leaderboard_rank_badge(result.rank || index + 1) %>
