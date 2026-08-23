@@ -138,5 +138,42 @@ RSpec.describe "Match days" do
       expect(response.body).to include("Brak danych o liderach dnia.")
       expect(response.body).to include("Brak zawodników do wyświetlenia.")
     end
+
+    it "links to and renders the complete player table" do
+      match_day = create(:match_day, played_on: Date.new(2026, 6, 19), status: "finished")
+      team_setup = create(:team_setup, match_day:)
+      home_team = create(:team, team_setup:, team_type: Team::TEAM_TYPE_MATCH)
+      away_team = create(:team, team_setup:, team_type: Team::TEAM_TYPE_MATCH)
+      players = Array.new(9) do |index|
+        player = create(:player, name: format("Player %02d", index + 1), approval_status: "approved")
+        create(:team_player, team: index.even? ? home_team : away_team, player:)
+        player
+      end
+      create(
+        :match,
+        match_day:,
+        home_team:,
+        away_team:,
+        home_score: 1,
+        away_score: 0,
+        started_at: Time.zone.parse("2026-06-19 17:00:00"),
+        finished_at: Time.zone.parse("2026-06-19 17:20:00")
+      )
+
+      get "/match_days/#{match_day.id}"
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("Player 08")
+      expect(response.body).not_to include("Player 09")
+      expect(response.body).to include("Zobacz wszystkich (9)")
+      expect(response.body).to include("/match_days/#{match_day.id}?show_all_players=1#match-day-players")
+
+      get "/match_days/#{match_day.id}", params: { show_all_players: "1" }
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include(players.last.name)
+      expect(response.body).to include("Pokaż mniej")
+      expect(response.body).to include("/match_days/#{match_day.id}#match-day-players")
+    end
   end
 end

@@ -1217,6 +1217,10 @@
   padding: 0 20px 20px;
 }
 
+.match-day-player-table__footer a {
+  color: var(--accent);
+}
+
 .match-day-season-cta {
   display: flex;
   flex-direction: column;

@@ -762,6 +762,7 @@ pl:
         player: "Zawodnik"
         matches: "Mecze"
         more: "Zobacz wszystkich (%{count})"
+        less: "Pokaż mniej"
       other_days:
         title: "Zobacz inne dni grania"
         body: "Przeglądaj mecze z pozostałych dni sezonu."

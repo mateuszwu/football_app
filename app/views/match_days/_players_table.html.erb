@@ -1,4 +1,4 @@
-<section class="match-day-card">
+<section class="match-day-card" id="match-day-players">
   <div class="match-day-card__header">
     <div>
       <h2><%= t("match_days.show.players_title") %></h2>
@@ -16,7 +16,8 @@
         <span>G+A</span>
       </div>
 
-      <% report.players_table.first(8).each do |row| %>
+      <% player_rows = show_all_players ? report.players_table : report.players_table.first(8) %>
+      <% player_rows.each do |row| %>
         <div class="match-day-player-table__row">
           <strong><%= match_day_player_link(row.player, class_name: "match-player-link") %></strong>
           <span><%= row.matches_played %></span>
@@ -29,7 +30,11 @@
 
     <% if report.players_table.size > 8 %>
       <p class="match-day-player-table__footer">
-        <%= t("match_days.show.players_table.more", count: report.players_table.size) %>
+        <% if show_all_players %>
+          <%= link_to t("match_days.show.players_table.less"), match_day_path(report.match_day, anchor: "match-day-players") %>
+        <% else %>
+          <%= link_to t("match_days.show.players_table.more", count: report.players_table.size), match_day_path(report.match_day, show_all_players: "1", anchor: "match-day-players") %>
+        <% end %>
       </p>
     <% end %>
   <% else %>

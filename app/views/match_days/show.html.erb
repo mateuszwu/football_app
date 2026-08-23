@@ -28,7 +28,7 @@
 
     <aside class="match-day-sidebar">
       <%= render "match_days/leaders_sidebar", report: %>
-      <%= render "match_days/players_table", report: %>
+      <%= render "match_days/players_table", report:, show_all_players: %>
 
       <section class="match-day-card match-day-season-cta">
         <h2><%= t("match_days.show.other_days.title") %></h2>
