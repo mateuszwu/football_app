@@ -18,7 +18,8 @@ Rails.application.routes.draw do
 
   namespace :api do
     resources :match_imports, only: :create
-    resources :players, only: :create
+    resources :players, only: %i[index create]
+    get "seasons/active", to: "seasons#active", as: :active_season
     resources :seasons, only: :create
     get :vote_invites, to: "match_day_vote_invites#show"
 

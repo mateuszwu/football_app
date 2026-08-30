@@ -1,6 +1,81 @@
 require "rails_helper"
 
 RSpec.describe "API players" do
+  describe "GET /api/players" do
+    context "when the bearer token is valid" do
+      it "returns the player catalog ordered by name" do
+        begin
+          original_api_token = ENV["FOOTBALL_APP_API_TOKEN"]
+          ENV["FOOTBALL_APP_API_TOKEN"] = "secret-token"
+          first_player = create(:player, name: "Adam API", nickname: "adam-api", approval_status: "approved", active: true)
+          second_player = create(:player, name: "Zosia API", nickname: "zosia-api", approval_status: "pending", active: false)
+          headers = { "Authorization" => "Bearer secret-token" }
+
+          get "/api/players", headers:, as: :json
+
+          expect(response).to have_http_status(:ok)
+          expect(response.parsed_body).to include("count" => 2)
+          expect(response.parsed_body["players"].map { |player| player["id"] }).to eq([ first_player.id, second_player.id ])
+          expect(response.parsed_body["players"].first).to include(
+            "name" => "Adam API",
+            "nickname" => "adam-api",
+            "approval_status" => "approved",
+            "active" => true
+          )
+          expect(response.body).not_to include(first_player.phone.to_s)
+        ensure
+          if original_api_token.nil?
+            ENV.delete("FOOTBALL_APP_API_TOKEN")
+          else
+            ENV["FOOTBALL_APP_API_TOKEN"] = original_api_token
+          end
+        end
+      end
+
+      it "filters the catalog by search and public visibility" do
+        begin
+          original_api_token = ENV["FOOTBALL_APP_API_TOKEN"]
+          ENV["FOOTBALL_APP_API_TOKEN"] = "secret-token"
+          matching_player = create(:player, name: "Piotrek (Nowy)", nickname: "piotrek-nowy", approval_status: "approved", active: true)
+          create(:player, name: "Piotr Bramkarz", nickname: "piotr-bramkarz", approval_status: "approved", active: true)
+          create(:player, name: "Piotrek Pending", nickname: "piotrek-pending", approval_status: "pending", active: true)
+          headers = { "Authorization" => "Bearer secret-token" }
+
+          get "/api/players", params: { search: "NOWY", approval_status: "approved", active: true }, headers:, as: :json
+
+          expect(response).to have_http_status(:ok)
+          expect(response.parsed_body).to include("count" => 1)
+          expect(response.parsed_body["players"].first["id"]).to eq(matching_player.id)
+        ensure
+          if original_api_token.nil?
+            ENV.delete("FOOTBALL_APP_API_TOKEN")
+          else
+            ENV["FOOTBALL_APP_API_TOKEN"] = original_api_token
+          end
+        end
+      end
+    end
+
+    context "when the bearer token is missing" do
+      it "rejects the request" do
+        begin
+          original_api_token = ENV["FOOTBALL_APP_API_TOKEN"]
+          ENV["FOOTBALL_APP_API_TOKEN"] = "secret-token"
+
+          get "/api/players", as: :json
+
+          expect(response).to have_http_status(:unauthorized)
+        ensure
+          if original_api_token.nil?
+            ENV.delete("FOOTBALL_APP_API_TOKEN")
+          else
+            ENV["FOOTBALL_APP_API_TOKEN"] = original_api_token
+          end
+        end
+      end
+    end
+  end
+
   describe "POST /api/players" do
     context "when the bearer token is valid" do
       it "creates a player from JSON and assigns missing identity" do

@@ -1,5 +1,21 @@
 module Api
   class PlayersController < BaseController
+    def index
+      players = Player.order(:name, :id)
+      players = players.where(approval_status: params[:approval_status]) if params[:approval_status].present?
+      players = players.where(active: ActiveModel::Type::Boolean.new.cast(params[:active])) if params.key?(:active)
+
+      if params[:search].present?
+        search = ActiveRecord::Base.sanitize_sql_like(params[:search].to_s.downcase)
+        players = players.where(
+          "LOWER(players.name) LIKE :search OR LOWER(players.nickname) LIKE :search",
+          search: "%#{search}%"
+        )
+      end
+
+      render json: { players: players.map { |player| player_payload(player) }, count: players.size }
+    end
+
     def create
       player = Player.new(player_params)
 

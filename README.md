@@ -119,6 +119,28 @@ The response shape is:
 
 The bearer token protects the API endpoint used by the Shortcut. It is not a player vote access token. Each `sms_body` contains a player-specific, single-use voting URL. Voting remains open for the latest finished Match Day until a newer Match Day is finished in the same season.
 
+## Match Data Import API
+
+The protected API supports a read-before-write workflow for importing match-day data:
+
+```sh
+curl -H "Authorization: Bearer $FOOTBALL_APP_API_TOKEN" \
+  "https://your-app.example.com/api/players"
+
+curl -H "Authorization: Bearer $FOOTBALL_APP_API_TOKEN" \
+  "https://your-app.example.com/api/seasons/active"
+```
+
+`GET /api/players` returns the player catalog ordered by name. Optional filters are
+`search`, `active`, and `approval_status`. `GET /api/seasons/active` returns the
+currently active season or `404` when no active season exists. Both endpoints require
+the same Bearer token as the import endpoint.
+
+After resolving player identities and receiving an explicit confirmation, send the
+match-day payload to `POST /api/match_imports`. The importer creates the match day,
+per-match rosters, goals, assists, scores, and finished-match performance data in one
+transaction.
+
 ## Common Commands
 
 Run tests:

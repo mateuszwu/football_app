@@ -1,5 +1,15 @@
 module Api
   class SeasonsController < BaseController
+    def active
+      season = Season.current_active
+
+      if season
+        render json: season_payload(season)
+      else
+        render json: { errors: [ "Active season not found" ] }, status: :not_found
+      end
+    end
+
     def create
       season = Season.new(season_params)
 
