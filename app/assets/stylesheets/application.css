@@ -185,13 +185,15 @@
 }
 
 .match-score-team__header {
-  align-items: center;
+  align-items: flex-start;
   display: flex;
+  flex-direction: column;
   gap: 12px;
 }
 
 .match-score-team--away .match-score-team__header {
-  flex-direction: row-reverse;
+  align-items: flex-end;
+  text-align: right;
 }
 
 .match-score-team h2 {
@@ -199,6 +201,50 @@
   font-size: clamp(1.35rem, 2.2vw, 2rem);
   line-height: 1.1;
   margin: 0;
+}
+
+.match-score-team__header .match-team-captain {
+  margin-top: 0;
+}
+
+.match-team-elo {
+  align-items: flex-start;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+}
+
+.match-team-elo__values {
+  align-items: baseline;
+  display: inline-flex;
+  gap: 6px;
+}
+
+.match-score-team--away .match-team-elo {
+  align-items: flex-end;
+}
+
+.match-team-elo__label {
+  color: var(--text-secondary);
+  font-size: 0.68rem;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.match-team-elo__value {
+  color: var(--accent);
+  font-size: 1.15rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.match-team-elo__arrow {
+  color: var(--text-secondary);
+  font-size: 1rem;
+  font-weight: 800;
 }
 
 .match-team-mark {
@@ -2012,7 +2058,8 @@
   }
 
   .match-score-team--away .match-score-team__header {
-    flex-direction: row;
+    align-items: center;
+    flex-direction: column;
   }
 
   .match-score-team--away .match-team-goals li,
@@ -8072,6 +8119,10 @@ a:focus-visible {
   .match-score-team__header .match-team-captain {
     margin-top: 0;
     order: 2;
+  }
+
+  .match-score-team__header .match-team-elo {
+    order: 3;
   }
 
 }

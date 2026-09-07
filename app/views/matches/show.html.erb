@@ -41,15 +41,23 @@
   <section class="match-score-hero">
     <% home_team = summary.teams.fetch(:home) %>
     <% away_team = summary.teams.fetch(:away) %>
-    <% home_captain = match_team_captain(home_team) %>
-    <% away_captain = match_team_captain(away_team) %>
+    <% home_team_elo = summary.team_elo.fetch(:home) %>
+    <% away_team_elo = summary.team_elo.fetch(:away) %>
     <% home_events = summary.timeline.select { |event| event.fetch(:team) == home_team } %>
     <% away_events = summary.timeline.select { |event| event.fetch(:team) == away_team } %>
 
     <article class="match-score-team match-score-team--home">
       <div class="match-score-team__header">
+        <h2><%= home_team.name %></h2>
         <%= match_team_captain_mark(home_team) %>
-        <h2><%= home_captain.present? ? "Team #{home_captain.display_name}" : home_team.name %></h2>
+        <p class="match-team-elo" title="<%= t("matches.show.team_elo_help") %>">
+          <span class="match-team-elo__label"><%= t("matches.show.team_elo") %></span>
+          <span class="match-team-elo__values">
+            <strong class="match-team-elo__value match-team-elo__value--before"><%= home_team_elo&.fetch(:before)&.fetch(:effective) || "—" %></strong>
+            <span aria-hidden="true" class="match-team-elo__arrow">→</span>
+            <strong class="match-team-elo__value match-team-elo__value--after"><%= home_team_elo&.fetch(:after)&.fetch(:effective) || "—" %></strong>
+          </span>
+        </p>
       </div>
 
       <%= render partial: "matches/team_goals", locals: { events: home_events } %>
@@ -63,8 +71,16 @@
 
     <article class="match-score-team match-score-team--away">
       <div class="match-score-team__header">
+        <h2><%= away_team.name %></h2>
         <%= match_team_captain_mark(away_team) %>
-        <h2><%= away_captain.present? ? "Team #{away_captain.display_name}" : away_team.name %></h2>
+        <p class="match-team-elo" title="<%= t("matches.show.team_elo_help") %>">
+          <span class="match-team-elo__label"><%= t("matches.show.team_elo") %></span>
+          <span class="match-team-elo__values">
+            <strong class="match-team-elo__value match-team-elo__value--before"><%= away_team_elo&.fetch(:before)&.fetch(:effective) || "—" %></strong>
+            <span aria-hidden="true" class="match-team-elo__arrow">→</span>
+            <strong class="match-team-elo__value match-team-elo__value--after"><%= away_team_elo&.fetch(:after)&.fetch(:effective) || "—" %></strong>
+          </span>
+        </p>
       </div>
 
       <%= render partial: "matches/team_goals", locals: { events: away_events } %>

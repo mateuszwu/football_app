@@ -964,6 +964,8 @@ pl:
       status: "Status"
       final_score: "Wynik końcowy"
       quick_summary: "Szybkie podsumowanie"
+      team_elo: "Team ELO"
+      team_elo_help: "Team ELO przed meczem → po meczu. To średnia ELO zawodników tego składu; przy pełnych składach uwzględnia także przewagę liczebną."
       no_team_goals: "Brak goli tej drużyny."
       own_goal_by: "samobój: %{player}"
       result:

@@ -13,8 +13,8 @@ RSpec.describe "Matches" do
           home_player = create(:player, name: "Adam Nowak", nickname: "adam", phone: "+48111111111")
           home_player.update_columns(profile_icon: "sun", profile_color_key: "red_dark", profile_color_hex: "#B91C1C")
           away_player = create(:player, name: "Marek Kowalski", nickname: "marek", phone: "+48222222222")
-          create(:team_player, team: home_team, player: home_player, position: 1)
-          create(:team_player, team: away_team, player: away_player)
+          create(:team_player, team: home_team, player: home_player, position: 1, elo_before: 1100)
+          create(:team_player, team: away_team, player: away_player, elo_before: 900)
           home_team.update!(captain: home_player)
           away_team.update!(captain: away_player)
           match = create(
@@ -54,8 +54,6 @@ RSpec.describe "Matches" do
           expect(response.body).to include("match-roster-mobile-summary__breakdown")
           expect(response.body).to include("Adam Nowak")
           expect(response.body).to include("Marek Kowalski")
-          expect(response.body).to include("Team Adam Nowak")
-          expect(response.body).to include("Team Marek Kowalski")
           expect(response.body).to include("Team Adam Nowak wygrał")
           expect(response.body).to include("Kapitan: ")
           expect(response.body).to include("lucide-sun")
@@ -66,6 +64,19 @@ RSpec.describe "Matches" do
           expect(response.body).not_to include("+48111111111")
           expect(response.body).not_to include("+48222222222")
           expect(response.body).not_to include("phone")
+
+          page = Nokogiri::HTML(response.body)
+          home_header = page.at_css(".match-score-team--home .match-score-team__header")
+          away_header = page.at_css(".match-score-team--away .match-score-team__header")
+          expect(home_header.at_css("h2").text.strip).to eq("Team A")
+          expect(home_header.at_css(".match-team-captain__name").text.strip).to eq("Adam Nowak")
+          expect(home_header.at_css(".match-team-elo__value--before").text.strip).to eq("1100")
+          expect(home_header.at_css(".match-team-elo__value--after").text.strip).to eq("—")
+          expect(home_header.at_css(".match-team-elo__arrow").text.strip).to eq("→")
+          expect(away_header.at_css("h2").text.strip).to eq("Team B")
+          expect(away_header.at_css(".match-team-captain__name").text.strip).to eq("Marek Kowalski")
+          expect(away_header.at_css(".match-team-elo__value--before").text.strip).to eq("900")
+          expect(away_header.at_css(".match-team-elo__value--after").text.strip).to eq("—")
         end
       end
 
