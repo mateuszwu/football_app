@@ -1,18 +1,26 @@
 <% rows ||= [] %>
+<% active_tab ||= "records" %>
 
 <% if rows.any? %>
   <div class="leaderboards-table-wrap">
     <table class="leaderboards-table stats-records-table">
       <thead>
         <tr>
-          <th><%= t("statistics.index.records.record") %></th>
-          <th><%= t("statistics.index.records.match_or_player") %></th>
-          <th><%= t("statistics.index.records.value") %></th>
+          <% records_columns = [
+            [ :record, t("statistics.index.records.record") ],
+            [ :match_or_player, t("statistics.index.records.match_or_player") ],
+            [ :value, t("statistics.index.records.value") ]
+          ] %>
+          <% records_columns.each do |column, label| %>
+            <th aria-sort="<%= statistics_sort_aria(active_tab, column, sort_column, sort_direction) %>">
+              <%= statistics_sort_link(season:, tab: active_tab, column:, sort_column:, sort_direction:) { label } %>
+            </th>
+          <% end %>
           <th><%= t("statistics.index.table.link") %></th>
         </tr>
       </thead>
       <tbody>
-        <% rows.each do |row| %>
+        <% statistics_sorted_rows(rows, tab: active_tab, sort_column:, sort_direction:).each do |row| %>
           <tr>
             <td><%= t("statistics.index.records.#{row.fetch(:key)}") %></td>
             <td>

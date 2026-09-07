@@ -8,7 +8,9 @@ class StatisticsController < ApplicationController
       active_tab:,
       available_seasons:,
       insights:,
-      season:
+      season:,
+      sort_column: params[:sort].to_s.presence,
+      sort_direction: params[:sort_direction].to_s.presence
     }
   end
 

@@ -17,6 +17,8 @@
           <span><%= t("statistics.index.season") %></span>
         </div>
         <%= form.hidden_field :tab, value: active_tab %>
+        <%= form.hidden_field :sort, value: sort_column if sort_column.present? %>
+        <%= form.hidden_field :sort_direction, value: sort_direction if sort_direction.present? %>
         <%= form.label :season_id, t("statistics.index.season"), class: "sr-only" %>
         <%= form.select :season_id, options_from_collection_for_select(available_seasons, :id, :name, season.id), {}, onchange: "this.form.requestSubmit()" %>
       <% end %>
@@ -56,7 +58,7 @@
 
     <nav class="leaderboards-tabs stats-tabs" aria-label="<%= t("statistics.index.title") %>" role="tablist">
       <% statistics_tabs.each do |tab_key| %>
-        <%= link_to statistics_path(season_id: season.id, tab: tab_key), class: "leaderboards-tab #{'leaderboards-tab--active' if active_tab == tab_key}", role: "tab", aria: { selected: active_tab == tab_key, current: ("page" if active_tab == tab_key) }.compact do %>
+        <%= link_to statistics_path(season_id: season.id, tab: tab_key, sort: sort_column, sort_direction: sort_direction), class: "leaderboards-tab #{'leaderboards-tab--active' if active_tab == tab_key}", role: "tab", aria: { selected: active_tab == tab_key, current: ("page" if active_tab == tab_key) }.compact do %>
           <span><%= t("statistics.index.tabs.#{tab_key}") %></span>
         <% end %>
       <% end %>
@@ -98,7 +100,7 @@
                 <h2><%= t("statistics.index.tempo.records_title") %></h2>
               </div>
             </div>
-            <%= render "statistics/records_table", rows: insights.dig(:tempo, :records) %>
+            <%= render "statistics/records_table", rows: insights.dig(:tempo, :records), season:, active_tab:, sort_column:, sort_direction: %>
           </section>
         <% elsif active_tab == "first_goal" %>
           <section class="stats-card-grid stats-card-grid--two">
@@ -121,15 +123,22 @@
                 <table class="leaderboards-table stats-records-table stats-first-goal-table">
                   <thead>
                     <tr>
-                      <th><%= t("statistics.index.first_goal.player") %></th>
-                      <th class="is-numeric"><%= t("statistics.index.first_goal.first_goals") %></th>
-                      <th class="is-numeric"><%= t("statistics.index.first_goal.matches") %></th>
-                      <th class="is-numeric"><%= t("statistics.index.first_goal.first_goal_rate") %></th>
-                      <th class="is-numeric"><%= t("statistics.index.first_goal.win_rate_after_first_goal") %></th>
+                      <% first_goal_columns = [
+                        [ :player, t("statistics.index.first_goal.player") ],
+                        [ :first_goals, t("statistics.index.first_goal.first_goals") ],
+                        [ :matches, t("statistics.index.first_goal.matches") ],
+                        [ :first_goal_rate, t("statistics.index.first_goal.first_goal_rate") ],
+                        [ :win_rate_after_first_goal, t("statistics.index.first_goal.win_rate_after_first_goal") ]
+                      ] %>
+                      <% first_goal_columns.each do |column, label| %>
+                        <th class="<%= 'is-numeric' unless column == :player %>" aria-sort="<%= statistics_sort_aria(active_tab, column, sort_column, sort_direction) %>">
+                          <%= statistics_sort_link(season:, tab: active_tab, column:, sort_column:, sort_direction:) { label } %>
+                        </th>
+                      <% end %>
                     </tr>
                   </thead>
                   <tbody>
-                    <% insights.dig(:first_goal, :player_rows).each do |row| %>
+                    <% statistics_sorted_rows(insights.dig(:first_goal, :player_rows), tab: active_tab, sort_column:, sort_direction:).each do |row| %>
                       <tr>
                         <td>
                           <%= render "shared/player_identity_pill", player: row.fetch(:player), size: :xs, variant: :compact, max_width: "100%" %>
@@ -165,16 +174,23 @@
             <div class="leaderboards-table-wrap">
               <table class="leaderboards-table stats-records-table">
                 <thead>
-                  <tr>
-                    <th><%= t("statistics.index.comebacks.deficit") %></th>
-                    <th class="is-numeric"><%= t("statistics.index.comebacks.situations") %></th>
-                    <th class="is-numeric"><%= t("statistics.index.comebacks.comeback_wins") %></th>
-                    <th class="is-numeric"><%= t("statistics.index.comebacks.comeback_rate") %></th>
-                    <th><%= t("statistics.index.comebacks.example_match") %></th>
+                    <tr>
+                      <% comeback_columns = [
+                        [ :deficit, t("statistics.index.comebacks.deficit") ],
+                        [ :situations, t("statistics.index.comebacks.situations") ],
+                        [ :comeback_wins, t("statistics.index.comebacks.comeback_wins") ],
+                        [ :comeback_rate, t("statistics.index.comebacks.comeback_rate") ],
+                        [ :example_match, t("statistics.index.comebacks.example_match") ]
+                      ] %>
+                      <% comeback_columns.each do |column, label| %>
+                        <th class="<%= 'is-numeric' unless column == :example_match %>" aria-sort="<%= statistics_sort_aria(active_tab, column, sort_column, sort_direction) %>">
+                          <%= statistics_sort_link(season:, tab: active_tab, column:, sort_column:, sort_direction:) { label } %>
+                        </th>
+                      <% end %>
                   </tr>
                 </thead>
                 <tbody>
-                  <% insights.dig(:comebacks, :threshold_rows).each do |row| %>
+                  <% statistics_sorted_rows(insights.dig(:comebacks, :threshold_rows), tab: active_tab, sort_column:, sort_direction:).each do |row| %>
                     <% example = row.fetch(:examples).sample %>
                     <tr>
                       <td><%= row.fetch(:deficit) %></td>
@@ -204,15 +220,22 @@
                 <table class="leaderboards-table stats-records-table">
                   <thead>
                     <tr>
-                      <th><%= t("statistics.index.score_states.state") %></th>
-                      <th class="is-numeric"><%= t("statistics.index.score_states.occurrences") %></th>
-                      <th class="is-numeric"><%= t("statistics.index.score_states.leader_wins") %></th>
-                      <th class="is-numeric"><%= t("statistics.index.score_states.hold_rate") %></th>
-                      <th class="is-numeric"><%= t("statistics.index.score_states.comeback_count") %></th>
+                      <% score_state_columns = [
+                        [ :state, t("statistics.index.score_states.state") ],
+                        [ :occurrences, t("statistics.index.score_states.occurrences") ],
+                        [ :leader_wins, t("statistics.index.score_states.leader_wins") ],
+                        [ :hold_rate, t("statistics.index.score_states.hold_rate") ],
+                        [ :comeback_count, t("statistics.index.score_states.comeback_count") ]
+                      ] %>
+                      <% score_state_columns.each do |column, label| %>
+                        <th class="<%= 'is-numeric' unless column == :state %>" aria-sort="<%= statistics_sort_aria(active_tab, column, sort_column, sort_direction) %>">
+                          <%= statistics_sort_link(season:, tab: active_tab, column:, sort_column:, sort_direction:) { label } %>
+                        </th>
+                      <% end %>
                     </tr>
                   </thead>
                   <tbody>
-                    <% insights.dig(:score_states, :rows).each do |row| %>
+                    <% statistics_sorted_rows(insights.dig(:score_states, :rows), tab: active_tab, sort_column:, sort_direction:).each do |row| %>
                       <tr>
                         <td>
                           <%= row.fetch(:state) %>
@@ -238,7 +261,7 @@
             <div class="leaderboards-table-card__header">
               <div><h2><%= t("statistics.index.records.title") %></h2></div>
             </div>
-            <%= render "statistics/records_table", rows: insights.dig(:records, :rows) %>
+            <%= render "statistics/records_table", rows: insights.dig(:records, :rows), season:, active_tab:, sort_column:, sort_direction: %>
           </section>
         <% elsif active_tab == "clutch" %>
           <% if insights.fetch(:clutch_players).any? %>
@@ -250,17 +273,24 @@
                 <table class="leaderboards-table stats-records-table">
                   <thead>
                     <tr>
-                      <th><%= t("statistics.index.clutch.player") %></th>
-                      <th class="is-numeric"><%= t("statistics.index.clutch.opening_goals") %></th>
-                      <th class="is-numeric"><%= t("statistics.index.clutch.closing_goals") %></th>
-                      <th class="is-numeric"><%= t("statistics.index.clutch.go_ahead_goals") %></th>
-                      <th class="is-numeric"><%= t("statistics.index.clutch.equalizer_goals") %></th>
-                      <th class="is-numeric"><%= t("statistics.index.clutch.goals_when_tied") %></th>
-                      <th class="is-numeric"><%= t("statistics.index.clutch.comeback_contribution") %></th>
+                      <% clutch_columns = [
+                        [ :player, t("statistics.index.clutch.player") ],
+                        [ :opening_goals, t("statistics.index.clutch.opening_goals") ],
+                        [ :closing_goals, t("statistics.index.clutch.closing_goals") ],
+                        [ :go_ahead_goals, t("statistics.index.clutch.go_ahead_goals") ],
+                        [ :equalizer_goals, t("statistics.index.clutch.equalizer_goals") ],
+                        [ :goals_when_tied, t("statistics.index.clutch.goals_when_tied") ],
+                        [ :comeback_contribution, t("statistics.index.clutch.comeback_contribution") ]
+                      ] %>
+                      <% clutch_columns.each do |column, label| %>
+                        <th class="<%= 'is-numeric' unless column == :player %>" aria-sort="<%= statistics_sort_aria(active_tab, column, sort_column, sort_direction) %>">
+                          <%= statistics_sort_link(season:, tab: active_tab, column:, sort_column:, sort_direction:) { label } %>
+                        </th>
+                      <% end %>
                     </tr>
                   </thead>
                   <tbody>
-                    <% insights.fetch(:clutch_players).each do |row| %>
+                    <% statistics_sorted_rows(insights.fetch(:clutch_players), tab: active_tab, sort_column:, sort_direction:).each do |row| %>
                       <tr>
                         <td>
                           <%= render "shared/player_identity_pill",
