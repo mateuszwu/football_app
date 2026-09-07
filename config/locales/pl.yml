@@ -508,7 +508,7 @@ pl:
         draws: "Remisy"
         losses: "Porażki"
         win_rate: "Win rate"
-        goal_difference: "Bilans bramek"
+        goal_difference: "Bilans bramek drużyny"
     empty:
       elo: "Brak zawodników w rankingu ELO."
       goals: "Brak strzelców w tym sezonie."

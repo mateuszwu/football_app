@@ -113,6 +113,7 @@ RSpec.describe "Leaderboards" do
         expect(response.body).to include("Remisy")
         expect(response.body).to include("Porażki")
         expect(response.body).to include("Win rate")
+        expect(response.body).to include("Bilans bramek drużyny")
         expect(response.body).not_to include(">Punkty<")
 
         get leaderboards_path, params: {
