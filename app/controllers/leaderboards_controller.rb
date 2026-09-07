@@ -19,7 +19,7 @@ class LeaderboardsController < ApplicationController
   private
 
   def cached_leaderboards_for(season, attendance_percent:)
-    Rails.cache.fetch([ "leaderboards", "v3", season.id, attendance_percent, PublicStats::CacheKey.season(season) ], expires_in: 10.minutes) do
+    Rails.cache.fetch([ "leaderboards", "v4", season.id, attendance_percent, PublicStats::CacheKey.season(season) ], expires_in: 10.minutes) do
       Seasons::PublicLeaderboardQuery.call(season:, attendance_percent:)
     end
   end
