@@ -40,6 +40,7 @@ module MatchDays
         matches.zip(matches_data).each_with_index do |(match, match_data), index|
           process_imported_match!(match, match_data:, match_index: index)
         end
+        recalculate_season_elo(match_day:)
 
         return Result.new(success?: true, match_day:, matches:, errors: [])
       end
@@ -288,6 +289,12 @@ module MatchDays
 
       errors << "Could not finish imported match #{match_index + 1}"
       raise ActiveRecord::Rollback
+    end
+
+    def recalculate_season_elo(match_day:)
+      return unless match_day.reload.status == "finished"
+
+      Ratings::RecalculateSeasonElo.call(season:)
     end
 
     def match_day_params

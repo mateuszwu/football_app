@@ -203,6 +203,49 @@ RSpec.describe "Votes" do
         expect(vote_token.used_at).to eq(Time.zone.parse("2026-06-05 21:30:00"))
       end
 
+      it "redirects a previously submitted link and rejects a second submission" do
+        season = create(:season, mvp_max_points: 4.0, def_max_points: 3.0, voting_bonus_cap: 5.0, expected_voters_count: 5)
+        voter = create(:player, name: "Voter", nickname: "voter", approval_status: "approved", active: true, global_performance_score: 0.0)
+        original_mvp = create(:player, name: "Original MVP", nickname: "original-mvp", approval_status: "approved", active: true, global_performance_score: 0.0)
+        original_def = create(:player, name: "Original DEF", nickname: "original-def", approval_status: "approved", active: true, global_performance_score: 0.0)
+        new_choice = create(:player, name: "New Choice", nickname: "new-choice", approval_status: "approved", active: true, global_performance_score: 0.0)
+        match_day = create(:match_day, season:, status: "finished")
+        voter_match_day_player = create(:match_day_player, match_day:, player: voter)
+        create(:match_day_player, match_day:, player: original_mvp)
+        create(:match_day_player, match_day:, player: original_def)
+        create(:match_day_player, match_day:, player: new_choice)
+        vote_token = create(:match_day_vote_token, match_day_player: voter_match_day_player, token: "vote-token")
+
+        post "/votes/#{vote_token.token}", params: {
+          match_day_vote: {
+            mvp_player_id: original_mvp.id,
+            def_player_id: original_def.id
+          }
+        }
+
+        expect(response).to redirect_to("/votes/#{vote_token.token}/thank-you")
+        expect(vote_token.reload).to be_used
+
+        get "/votes/#{vote_token.token}"
+
+        expect(response).to redirect_to("/votes/#{vote_token.token}/thank-you")
+
+        expect do
+          post "/votes/#{vote_token.token}", params: {
+            match_day_vote: {
+              mvp_player_id: new_choice.id,
+              def_player_id: new_choice.id
+            }
+          }
+        end.not_to change(MatchDayVote, :count)
+
+        expect(response).to redirect_to("/votes/#{vote_token.token}/thank-you")
+        expect(vote_token.reload.match_day_vote).to have_attributes(
+          mvp_player: original_mvp,
+          def_player: original_def
+        )
+      end
+
       it "returns not found for tokens superseded by a newer finished match day" do
         voter = create(:player, approval_status: "approved", active: true)
         candidate = create(:player, name: "Adam Nowak", nickname: "adam", phone: "+48222222222", approval_status: "approved", active: true)

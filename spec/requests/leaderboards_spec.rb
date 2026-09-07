@@ -24,7 +24,21 @@ RSpec.describe "Leaderboards" do
         create(:player_season_stat, season:, player: assistant, elo: 1015, goals: 1, assists: 6, mvp_votes_count: 1, def_votes_count: 1, performance_score: 7.0)
         create(:player_season_stat, season:, player: defender, elo: 1000, goals: 0, assists: 1, mvp_votes_count: 0, def_votes_count: 4, performance_score: 2.0)
         create(:player_season_stat, season:, player: pending_player, elo: 1200, goals: 99)
-        create(:player_rating_change, player: scorer, season:, match_day:, match:, elo_delta: 18)
+        create(:player_rating_change, player: scorer, season:, match_day:, match:, elo_delta: 10)
+        [ 12, 10, -6 ].each do |elo_delta|
+          additional_home_team = create(:team, team_setup:, team_type: Team::TEAM_TYPE_MATCH)
+          additional_away_team = create(:team, team_setup:, team_type: Team::TEAM_TYPE_MATCH)
+          additional_match = create(
+            :match,
+            match_day:,
+            home_team: additional_home_team,
+            away_team: additional_away_team,
+            started_at: 1.hour.ago,
+            finished_at: 30.minutes.ago
+          )
+          create(:team_player, team: additional_home_team, player: scorer)
+          create(:player_rating_change, player: scorer, season:, match_day:, match: additional_match, elo_delta:)
+        end
 
         get leaderboards_path, params: { season_id: season.id, tab: "goals_assists" }
 
@@ -40,7 +54,7 @@ RSpec.describe "Leaderboards" do
         expect(response.body).to include("Bilans")
         expect(response.body).to include("G+A/mecz")
         expect(response.body).to include("Minimalna frekwencja")
-        expect(response.body).to include("Minimum 0 z 1 meczów")
+        expect(response.body).to include("Minimum 1 z 4 meczów")
         expect(response.body).to include("Adam Nowak")
         expect(response.body).to include("Marek Kowalski")
         expect(response.body).to include("Piotr Lis")
@@ -99,7 +113,12 @@ RSpec.describe "Leaderboards" do
         expect(response.body).to include("Win rate")
         expect(response.body).not_to include(">Punkty<")
 
-        get leaderboards_path, params: { season_id: season.id, tab: "elo" }
+        get leaderboards_path, params: {
+          season_id: season.id,
+          tab: "elo",
+          sort: "last_change",
+          sort_direction: "desc"
+        }
 
         expect(response).to have_http_status(:ok)
         expect(response.body.scan("<col ").size).to eq(6)
@@ -107,7 +126,7 @@ RSpec.describe "Leaderboards" do
         expect(response.body).to include("leaderboards-table__cell-main")
         expect(response.body).to include("leaderboards-table__mobile-subvalue")
         expect(response.body).to include("Ostatnia zmiana")
-        expect(response.body).to include("+18")
+        expect(response.body).to include("+26")
 
         get leaderboards_path, params: { season_id: season.id, tab: "goals" }
 

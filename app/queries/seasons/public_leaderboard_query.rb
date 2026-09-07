@@ -208,14 +208,16 @@ module Seasons
     def last_elo_delta_select
       <<~SQL.squish
         (
-          SELECT player_rating_changes.elo_delta
+          SELECT SUM(player_rating_changes.elo_delta)
           FROM player_rating_changes
+          INNER JOIN match_days ON match_days.id = player_rating_changes.match_day_id
           WHERE player_rating_changes.player_id = player_season_stats.player_id
           AND player_rating_changes.season_id = player_season_stats.season_id
           AND player_rating_changes.rating_scope = '#{PlayerRatingChange::RATING_SCOPE_SEASON}'
           AND player_rating_changes.source_type = '#{PlayerRatingChange::SOURCE_TYPE_MATCH}'
           AND player_rating_changes.elo_delta IS NOT NULL
-          ORDER BY player_rating_changes.created_at DESC, player_rating_changes.id DESC
+          GROUP BY match_days.played_on
+          ORDER BY match_days.played_on DESC
           LIMIT 1
         ) AS last_elo_delta_value
       SQL

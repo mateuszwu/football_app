@@ -102,6 +102,54 @@ RSpec.describe MatchDays::ImportFromPayload do
       end
     end
 
+    context "when every imported match is finished" do
+      it "recalculates season Elo after importing the match day" do
+        season = create(:season, initial_elo: 1000, elo_k_value: 16.0)
+        home_player = create(
+          :player,
+          name: "Home Player",
+          nickname: "home",
+          elo: 1000,
+          approval_status: "approved",
+          active: true
+        )
+        away_player = create(
+          :player,
+          name: "Away Player",
+          nickname: "away",
+          elo: 1000,
+          approval_status: "approved",
+          active: true
+        )
+        payload = {
+          played_on: "2026-06-19",
+          started_at: "2026-06-19 19:00",
+          finished_at: "2026-06-19 19:30",
+          all_roster_players_on_pitch: true,
+          teams: [
+            { name: "Team Home", players: [ "home" ] },
+            { name: "Team Away", players: [ "away" ] }
+          ],
+          goals: [
+            { team: "Team Home", scorer: "home", scored_at: "2026-06-19 19:10" }
+          ]
+        }
+
+        result = described_class.call(
+          payload:,
+          season:,
+          available_players: Player.approved.active.order(:name)
+        )
+
+        expect(result).to be_success
+        expect(result.match_day.status).to eq("finished")
+        expect(result.match.reload.elo_processed_at).to be_present
+        expect(PlayerSeasonStat.find_by!(season:, player: home_player).elo).to eq(1008)
+        expect(PlayerSeasonStat.find_by!(season:, player: away_player).elo).to eq(992)
+        expect(season.reload.elo_recalculated_at).to be_present
+      end
+    end
+
     context "when the payload uses the legacy single-match shape" do
       it "creates one match from top-level teams and goals" do
         season = create(:season)
@@ -132,6 +180,8 @@ RSpec.describe MatchDays::ImportFromPayload do
         expect(result.match).to be_all_roster_players_on_pitch
         expect(result.match.started_at).to eq(Time.zone.parse("2026-06-19 18:00:00"))
         expect(result.match.finished_at).to be_nil
+        expect(result.match.elo_processed_at).to be_nil
+        expect(season.reload.elo_recalculated_at).to be_nil
         expect(first_player.reload).to be_present
         expect(second_player.reload).to be_present
       end
