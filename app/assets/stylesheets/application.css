@@ -5832,8 +5832,8 @@ a:focus-visible {
 
 .leaderboards-table__tooltip-control {
   align-items: center;
-  background: rgba(148, 163, 184, 0.12);
-  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: transparent;
+  border: 0;
   border-radius: 999px;
   color: rgba(219, 231, 245, 0.88);
   cursor: help;
@@ -5850,10 +5850,10 @@ a:focus-visible {
 
 .leaderboards-table__tooltip-control:hover,
 .leaderboards-table__tooltip-control:focus-visible {
-  background: rgba(124, 255, 58, 0.14);
-  border-color: rgba(124, 255, 58, 0.42);
+  background: transparent;
   color: var(--accent);
-  outline: none;
+  outline: 2px solid rgba(124, 255, 58, 0.42);
+  outline-offset: 2px;
 }
 
 .leaderboards-table__tooltip-icon {
