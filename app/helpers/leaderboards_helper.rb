@@ -71,7 +71,7 @@ module LeaderboardsHelper
   end
 
   def leaderboard_attendance_filter_tab?(active_tab)
-    %w[goals assists goals_assists].include?(active_tab.to_s)
+    %w[goals assists goals_assists record].include?(active_tab.to_s)
   end
 
   def leaderboard_tab_config(active_tab)

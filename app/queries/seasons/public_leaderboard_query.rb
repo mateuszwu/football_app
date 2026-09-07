@@ -109,7 +109,7 @@ module Seasons
           .order(Arel.sql("matches_played_count ASC"))
           .order("players.name": :asc)
           .to_a,
-        record_ranking: leaderboard_scope
+        record_ranking: attendance_filtered_leaderboard_scope
           .order(Arel.sql("win_rate_value DESC"))
           .order(Arel.sql("wins_count DESC"))
           .order(Arel.sql("goal_difference_value DESC"))

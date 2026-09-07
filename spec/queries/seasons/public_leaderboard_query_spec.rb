@@ -89,6 +89,7 @@ RSpec.describe Seasons::PublicLeaderboardQuery do
       expect(result.top_scorers.map { |stat| stat.player.name }).to eq([ "At Threshold" ])
       expect(result.top_assistants.map { |stat| stat.player.name }).to eq([ "At Threshold" ])
       expect(result.goals_assists_ranking.map { |stat| stat.player.name }).to eq([ "At Threshold" ])
+      expect(result.record_ranking.map { |stat| stat.player.name }).to eq([ "At Threshold" ])
     end
 
     it "shows all offensive ranking players when attendance is 0%" do

@@ -106,6 +106,8 @@ RSpec.describe "Leaderboards" do
 
         expect(response).to have_http_status(:ok)
         expect(response.body).to include("Tabela rankingu: Bilans")
+        expect(response.body).to include("Minimalna frekwencja")
+        expect(response.body).to include("Minimum 1 z 4 meczów")
         expect(response.body.scan("<col ").size).to eq(9)
         expect(response.body).to include("Wygrane")
         expect(response.body).to include("Remisy")
@@ -204,6 +206,21 @@ RSpec.describe "Leaderboards" do
         expect(document.at_css("select[name='attendance_percent'] option[selected]")["value"]).to eq("25")
         expect(attendance_filter.at_css("input[name='sort']")["value"]).to eq("goals")
         expect(attendance_filter.at_css("input[name='sort_direction']")["value"]).to eq("asc")
+
+        get leaderboards_path, params: {
+          season_id: season.id,
+          tab: "record",
+          attendance_percent: 25
+        }
+
+        expect(response).to have_http_status(:ok)
+        record_table = Nokogiri::HTML(response.body).at_css("table.leaderboards-table--record")
+        record_names = record_table.css("tbody .leaderboard-player-cell .player-identity-pill__name").map { |name| name.text.strip }
+
+        expect(record_names).to eq([ "Eligible Player", "Second Eligible" ])
+        expect(record_table.text).not_to include("Below Player")
+        expect(response.body).to include("Minimum 2 z 10 meczów")
+        expect(Nokogiri::HTML(response.body).at_css("form.leaderboards-attendance-filter")).to be_present
       end
 
       it "renders player identity pills on every ranking tab" do
