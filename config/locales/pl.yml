@@ -489,6 +489,10 @@ pl:
         mvp: "Klasyfikacja głosów MVP w sezonie."
         def: "Klasyfikacja głosów DEF w sezonie."
         record: "Bilans wyników zawodników w sezonie: wygrane, remisy, porażki i skuteczność."
+      tooltips:
+        goal_difference:
+          label: "Jak liczony jest Bilans drużyny"
+          description: "Bilans drużyny obejmuje wyniki zakończonych meczów, w których zawodnik był przypisany do jednej z drużyn: wygrane, remisy, porażki i win rate. Ostatnia kolumna pokazuje różnicę bramek jego drużyny — gole strzelone minus gole stracone — a nie gole zdobyte osobiście przez zawodnika."
       columns:
         position: "#"
         player: "Zawodnik"

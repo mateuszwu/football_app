@@ -91,12 +91,28 @@
                 <tr>
                   <% tab_config.fetch(:columns).each do |column| %>
                     <th scope="col" class="<%= 'is-numeric' if leaderboard_numeric_column?(column) %>" aria-sort="<%= leaderboard_sort_aria(active_tab, column, sort_column, sort_direction) %>">
-                      <% if leaderboard_sortable_column?(active_tab, column) %>
-                        <%= leaderboard_sort_link(season:, active_tab:, column:, sort_column:, sort_direction:, attendance_percent:) do %>
+                      <% header_content = capture do %>
+                        <% if leaderboard_sortable_column?(active_tab, column) %>
+                          <%= leaderboard_sort_link(season:, active_tab:, column:, sort_column:, sort_direction:, attendance_percent:) do %>
+                            <%= leaderboard_column_header(column, active_tab) %>
+                          <% end %>
+                        <% else %>
                           <%= leaderboard_column_header(column, active_tab) %>
                         <% end %>
+                      <% end %>
+                      <% if active_tab == "record" && column.to_sym == :goal_difference %>
+                        <% tooltip_id = "leaderboards-record-goal-difference-tooltip" %>
+                        <span class="leaderboards-table__header-with-tooltip">
+                          <%= header_content %>
+                          <span class="leaderboards-table__tooltip-anchor">
+                            <button type="button" class="leaderboards-table__tooltip-control" aria-label="<%= t("leaderboards.table.tooltips.goal_difference.label") %>" aria-describedby="<%= tooltip_id %>">
+                              <%= safe_lucide_icon("info", fallback: "circle-help", class_name: "leaderboards-table__tooltip-icon") %>
+                            </button>
+                            <span class="leaderboards-table__tooltip" id="<%= tooltip_id %>" role="tooltip"><%= t("leaderboards.table.tooltips.goal_difference.description") %></span>
+                          </span>
+                        </span>
                       <% else %>
-                        <%= leaderboard_column_header(column, active_tab) %>
+                        <%= header_content %>
                       <% end %>
                     </th>
                   <% end %>

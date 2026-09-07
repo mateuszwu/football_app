@@ -114,6 +114,13 @@ RSpec.describe "Leaderboards" do
         expect(response.body).to include("Porażki")
         expect(response.body).to include("Win rate")
         expect(response.body).to include("Bilans drużyny")
+        expect(response.body).to include("Jak liczony jest Bilans drużyny")
+        expect(response.body).to include("a nie gole zdobyte osobiście przez zawodnika")
+        document = Nokogiri::HTML(response.body)
+        tooltip_button = document.at_css(".leaderboards-table__tooltip-control")
+        tooltip = document.at_css(".leaderboards-table__tooltip")
+        expect(tooltip_button["aria-describedby"]).to eq(tooltip["id"])
+        expect(tooltip["role"]).to eq("tooltip")
         expect(response.body).not_to include(">Punkty<")
 
         get leaderboards_path, params: {
