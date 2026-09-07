@@ -103,13 +103,13 @@
                       <% if active_tab == "record" && column.to_sym == :goal_difference %>
                         <% tooltip_id = "leaderboards-record-goal-difference-tooltip" %>
                         <span class="leaderboards-table__header-with-tooltip">
-                          <%= header_content %>
                           <span class="leaderboards-table__tooltip-anchor">
                             <button type="button" class="leaderboards-table__tooltip-control" aria-label="<%= t("leaderboards.table.tooltips.goal_difference.label") %>" aria-describedby="<%= tooltip_id %>">
                               <%= safe_lucide_icon("info", fallback: "circle-help", class_name: "leaderboards-table__tooltip-icon") %>
                             </button>
                             <span class="leaderboards-table__tooltip" id="<%= tooltip_id %>" role="tooltip"><%= t("leaderboards.table.tooltips.goal_difference.description") %></span>
                           </span>
+                          <%= header_content %>
                         </span>
                       <% else %>
                         <%= header_content %>
