@@ -5818,7 +5818,7 @@ a:focus-visible {
 }
 
 .leaderboards-table__header-with-tooltip {
-  align-items: flex-start;
+  align-items: center;
   display: inline-flex;
   gap: 0.35rem;
   max-width: 100%;
