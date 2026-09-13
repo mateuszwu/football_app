@@ -4235,6 +4235,14 @@ a:focus-visible {
   padding-top: 14px;
 }
 
+.stats-mobile-scroll-hint {
+  display: none;
+}
+
+.stats-table-header-label--mobile {
+  display: none;
+}
+
 .stats-badge {
   background: rgba(148, 163, 184, 0.12);
   border: 1px solid rgba(148, 163, 184, 0.22);
@@ -4388,6 +4396,43 @@ a:focus-visible {
 
 .synergy-graph-network--hovering {
   cursor: pointer;
+}
+
+.synergy-graph-accessible {
+  background: rgba(148, 163, 184, 0.06);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 12px;
+  color: #cbd5e1;
+  font-size: 0.82rem;
+  padding: 0.7rem 0.85rem;
+}
+
+.synergy-graph-accessible summary {
+  color: var(--text-primary);
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.synergy-graph-accessible p {
+  line-height: 1.4;
+  margin: 0.65rem 0;
+}
+
+.synergy-graph-accessible h3 {
+  color: var(--text-primary);
+  font-size: 0.8rem;
+  margin: 0.9rem 0 0.35rem;
+}
+
+.synergy-graph-accessible ul {
+  display: grid;
+  gap: 0.3rem;
+  margin: 0;
+  padding-left: 1.2rem;
+}
+
+.synergy-graph-accessible a {
+  color: var(--accent);
 }
 
 .synergy-graph-tooltip {
@@ -5840,6 +5885,96 @@ a:focus-visible {
 
 .leaderboards-table-wrap {
   overflow-x: auto;
+}
+
+.leaderboards-mobile-sort,
+.leaderboards-mobile-list {
+  display: none;
+}
+
+.leaderboards-mobile-sort {
+  align-items: center;
+  gap: 0.45rem;
+  overflow-x: auto;
+  padding: 0.75rem 1rem 0;
+  white-space: nowrap;
+}
+
+.leaderboards-mobile-sort__label {
+  color: #94a3b8;
+  flex: 0 0 auto;
+  font-size: 0.7rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.leaderboards-mobile-sort .leaderboards-sort-link {
+  background: rgba(148, 163, 184, 0.08);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 999px;
+  color: #cbd5e1;
+  flex: 0 0 auto;
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 0.35rem 0.55rem;
+  text-decoration: none;
+}
+
+.leaderboards-mobile-card {
+  background: rgba(148, 163, 184, 0.055);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 14px;
+  display: grid;
+  gap: 0.7rem;
+  padding: 0.8rem;
+}
+
+.leaderboards-mobile-card__identity {
+  align-items: center;
+  display: flex;
+  gap: 0.65rem;
+  min-width: 0;
+}
+
+.leaderboards-mobile-card__identity .player-identity-pill {
+  min-width: 0;
+}
+
+.leaderboards-mobile-card__identity .player-identity-pill__name {
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.leaderboards-mobile-card__metrics {
+  display: grid;
+  gap: 0.45rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0;
+}
+
+.leaderboards-mobile-card__metric {
+  background: rgba(9, 18, 31, 0.42);
+  border-radius: 10px;
+  min-width: 0;
+  padding: 0.45rem;
+}
+
+.leaderboards-mobile-card__metric dt {
+  color: #94a3b8;
+  font-size: 0.62rem;
+  font-weight: 900;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+  text-transform: uppercase;
+}
+
+.leaderboards-mobile-card__metric dd {
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 900;
+  margin: 0.2rem 0 0;
+  overflow-wrap: anywhere;
 }
 
 .leaderboards-table {
@@ -7407,8 +7542,30 @@ a:focus-visible {
     width: 100%;
   }
 
+  /* iOS Safari zooms focused controls whose computed font size is below 16px.
+     Keep the guest directory filters at the platform-safe minimum. */
+  .players-directory-field input,
+  .players-directory-field select {
+    font-size: 16px;
+  }
+
   .roster-card__main {
-    grid-template-columns: 1fr;
+    gap: 0.45rem;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .roster-card__main > div {
+    min-height: 4rem;
+    padding: 0.55rem 0.45rem;
+  }
+
+  .roster-card__main span,
+  .roster-card__stats dt {
+    font-size: 0.68rem;
+  }
+
+  .roster-card__main strong {
+    font-size: 1.2rem;
   }
 
   .leaderboards-tabs {
@@ -7421,8 +7578,17 @@ a:focus-visible {
   }
 
   .leaderboards-page .leaderboards-table-wrap {
-    overflow-x: visible;
-    width: 100%;
+    display: none;
+  }
+
+  .leaderboards-page .leaderboards-mobile-sort {
+    display: flex;
+  }
+
+  .leaderboards-page .leaderboards-mobile-list {
+    display: grid;
+    gap: 0.65rem;
+    padding: 0.75rem;
   }
 
   .leaderboards-page .leaderboards-table {
@@ -7562,13 +7728,36 @@ a:focus-visible {
   }
 
   .stats-first-goal-table-wrap {
-    overflow-x: visible;
+    overflow-x: auto;
     width: 100%;
   }
 
+  .stats-page .stats-table-card .leaderboards-table-wrap {
+    overflow-x: auto;
+    position: relative;
+  }
+
+  .stats-page .stats-mobile-scroll-hint {
+    color: #94a3b8;
+    display: block;
+    font-size: 0.68rem;
+    line-height: 1.3;
+    margin: 0;
+    padding: 0.65rem 0.75rem 0;
+  }
+
+  .stats-page .stats-records-table th:first-child,
+  .stats-page .stats-records-table td:first-child {
+    background: rgba(15, 29, 46, 0.98);
+    box-shadow: 5px 0 10px rgba(9, 18, 31, 0.28);
+    position: sticky;
+    left: 0;
+    z-index: 1;
+  }
+
   .stats-page .stats-first-goal-table {
-    min-width: 0;
-    width: 100%;
+    min-width: 34rem;
+    width: 34rem;
   }
 
   .stats-page .stats-first-goal-table th,
@@ -7578,10 +7767,18 @@ a:focus-visible {
   }
 
   .stats-page .stats-first-goal-table th {
-    font-size: 0.57rem;
+    font-size: 0.7rem;
     line-height: 1.05;
     overflow-wrap: anywhere;
     white-space: normal;
+  }
+
+  .stats-page .stats-table-header-label--desktop {
+    display: none;
+  }
+
+  .stats-page .stats-table-header-label--mobile {
+    display: inline;
   }
 
   .stats-page .stats-first-goal-table td {
@@ -7664,11 +7861,16 @@ a:focus-visible {
     width: 100%;
   }
 
-  .relationship-mobile-ranking__header,
-  .relationship-mobile-ranking__row {
+  .relationship-mobile-ranking__header {
     column-gap: 4px;
     display: grid;
     grid-template-columns: 38px minmax(0, 1fr) 42px 54px 58px;
+  }
+
+  .relationship-mobile-ranking__row {
+    column-gap: 4px;
+    display: grid;
+    grid-template-columns: 38px minmax(0, 1fr);
   }
 
   .relationship-mobile-ranking__header {
@@ -7693,21 +7895,51 @@ a:focus-visible {
     color: #dbe4f0;
     min-width: 0;
     padding: 0.78rem 0.55rem;
+    row-gap: 0.7rem;
   }
 
   .relationship-mobile-ranking__row + .relationship-mobile-ranking__row {
     border-top: 1px solid rgba(255, 255, 255, 0.03);
   }
 
-  .relationship-mobile-ranking__rank,
-  .relationship-mobile-ranking__matches,
-  .relationship-mobile-ranking__offense,
-  .relationship-mobile-ranking__mutual {
+  .relationship-mobile-ranking__rank {
     align-items: center;
     display: flex;
     justify-content: center;
     min-width: 0;
     text-align: center;
+  }
+
+  .relationship-mobile-ranking__metrics {
+    display: grid;
+    gap: 0.45rem;
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    min-width: 0;
+  }
+
+  .relationship-mobile-ranking__matches,
+  .relationship-mobile-ranking__offense,
+  .relationship-mobile-ranking__mutual {
+    align-items: center;
+    background: rgba(9, 18, 31, 0.42);
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.18rem;
+    justify-content: center;
+    min-width: 0;
+    padding: 0.45rem 0.3rem;
+    text-align: center;
+  }
+
+  .relationship-mobile-ranking__metric-label {
+    color: rgba(148, 163, 184, 0.86);
+    font-size: 0.58rem;
+    font-weight: 900;
+    line-height: 1.05;
+    overflow-wrap: anywhere;
+    text-transform: uppercase;
   }
 
   .relationship-mobile-ranking__matches {
@@ -7776,13 +8008,11 @@ a:focus-visible {
   }
 
   .relationship-mobile-player__name {
-    font-size: 0.78rem;
+    font-size: 0.82rem;
     font-weight: 900;
     line-height: 1.05;
     min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    overflow-wrap: anywhere;
   }
 
   .relationship-mobile-ranking__matches strong,

@@ -120,6 +120,7 @@
                 <div><h2><%= t("statistics.index.first_goal.title") %></h2></div>
               </div>
               <div class="leaderboards-table-wrap stats-first-goal-table-wrap">
+                <p class="stats-mobile-scroll-hint"><%= t("statistics.index.table.mobile_scroll_hint") %></p>
                 <table class="leaderboards-table stats-records-table stats-first-goal-table">
                   <thead>
                     <tr>
@@ -132,7 +133,14 @@
                       ] %>
                       <% first_goal_columns.each do |column, label| %>
                         <th class="<%= 'is-numeric' unless column == :player %>" aria-sort="<%= statistics_sort_aria(active_tab, column, sort_column, sort_direction) %>">
-                          <%= statistics_sort_link(season:, tab: active_tab, column:, sort_column:, sort_direction:) { label } %>
+                          <%= statistics_sort_link(season:, tab: active_tab, column:, sort_column:, sort_direction:) do %>
+                            <% if column == :player %>
+                              <%= label %>
+                            <% else %>
+                              <span class="stats-table-header-label stats-table-header-label--desktop"><%= label %></span>
+                              <span class="stats-table-header-label stats-table-header-label--mobile"><%= t("statistics.index.first_goal.mobile.#{column}", default: label) %></span>
+                            <% end %>
+                          <% end %>
                         </th>
                       <% end %>
                     </tr>
@@ -172,6 +180,7 @@
               <div><h2><%= t("statistics.index.comebacks.title") %></h2></div>
             </div>
             <div class="leaderboards-table-wrap">
+              <p class="stats-mobile-scroll-hint"><%= t("statistics.index.table.mobile_scroll_hint") %></p>
               <table class="leaderboards-table stats-records-table">
                 <thead>
                     <tr>
@@ -217,6 +226,7 @@
                 <div><h2><%= t("statistics.index.score_states.title") %></h2></div>
               </div>
               <div class="leaderboards-table-wrap">
+                <p class="stats-mobile-scroll-hint"><%= t("statistics.index.table.mobile_scroll_hint") %></p>
                 <table class="leaderboards-table stats-records-table">
                   <thead>
                     <tr>
@@ -270,6 +280,7 @@
                 <div><h2><%= t("statistics.index.clutch.title") %></h2></div>
               </div>
               <div class="leaderboards-table-wrap">
+                <p class="stats-mobile-scroll-hint"><%= t("statistics.index.table.mobile_scroll_hint") %></p>
                 <table class="leaderboards-table stats-records-table">
                   <thead>
                     <tr>

@@ -160,6 +160,36 @@
               </tbody>
             </table>
           </div>
+
+          <nav class="leaderboards-mobile-sort" aria-label="<%= t("leaderboards.mobile_sort_label") %>">
+            <span class="leaderboards-mobile-sort__label"><%= t("leaderboards.mobile_sort_label") %>:</span>
+            <% tab_config.fetch(:columns).each do |column| %>
+              <% next unless leaderboard_sortable_column?(active_tab, column) %>
+              <%= leaderboard_sort_link(season:, active_tab:, column:, sort_column:, sort_direction:, attendance_percent:) do %>
+                <%= leaderboard_column_header(column, active_tab) %>
+              <% end %>
+            <% end %>
+          </nav>
+
+          <div class="leaderboards-mobile-list" aria-label="<%= t("leaderboards.mobile_list_label") %>">
+            <% ranked_entries.each do |ranked_entry| %>
+              <% player_stat = ranked_entry.entry %>
+              <article class="leaderboards-mobile-card">
+                <div class="leaderboards-mobile-card__identity">
+                  <%= leaderboard_rank_badge(ranked_entry.rank) %>
+                  <%= render "shared/player_identity_pill", player: player_stat.player, size: :sm, variant: :default %>
+                </div>
+                <dl class="leaderboards-mobile-card__metrics">
+                  <% leaderboard_mobile_metric_columns(active_tab).each do |column| %>
+                    <div class="leaderboards-mobile-card__metric">
+                      <dt><%= leaderboard_column_header(column, active_tab) %></dt>
+                      <dd class="<%= 'is-numeric' if leaderboard_numeric_column?(column) %>"><%= leaderboard_cell_value(player_stat, column, ranked_entry) %></dd>
+                    </div>
+                  <% end %>
+                </dl>
+              </article>
+            <% end %>
+          </div>
         <% else %>
           <div class="leaderboards-empty">
             <p><%= t("leaderboards.empty.#{tab_config.fetch(:empty_key)}") %></p>

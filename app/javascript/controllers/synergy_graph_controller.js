@@ -9,26 +9,40 @@ export default class extends Controller {
   connect() {
     if (!this.dataValue || !this.dataValue.elements || this.dataValue.elements.length === 0) return
 
+    this.selectedNode = null
+    this.selectedEdge = null
     this.tooltip = this.buildTooltip()
     this.cy = cytoscape({
       container: this.element,
       elements: this.dataValue.elements,
       style: this.styles(),
-      layout: this.layoutOptions(),
-      wheelSensitivity: 0.2
+      layout: this.layoutOptions()
     })
 
     this.cy.on("tap", "node", (event) => {
       const profilePath = event.target.data("profile_path")
-      if (profilePath) window.location.href = profilePath
+      if (!profilePath) return
+
+      if (!this.isTouchInteraction(event) || this.selectedNode === event.target) {
+        window.location.href = profilePath
+        return
+      }
+
+      this.clearSelection()
+      this.selectedNode = event.target
+      event.target.select()
+      this.showNodeTooltip(event)
     })
 
     this.cy.on("tap", "edge", (event) => {
+      this.clearSelection()
+      this.selectedEdge = event.target
+      event.target.select()
       this.showEdgeTooltip(event)
     })
 
     this.cy.on("tap", (event) => {
-      if (event.target === this.cy) this.hideTooltip()
+      if (event.target === this.cy) this.clearSelection()
     })
 
     this.cy.on("mouseover", "node", (event) => {
@@ -49,7 +63,7 @@ export default class extends Controller {
   }
 
   disconnect() {
-    this.hideTooltip()
+    this.clearSelection()
     if (this.tooltip) this.tooltip.remove()
 
     if (!this.cy) return
@@ -84,7 +98,7 @@ export default class extends Controller {
           "label": "data(label)",
           "color": "#F8FAFC",
           "font-size": 12,
-          "font-weight": "700",
+          "font-weight": 700,
           "text-valign": "center",
           "text-halign": "center",
           "width": 42,
@@ -128,7 +142,7 @@ export default class extends Controller {
           "label": "data(shared_matches)",
           "color": "#F8FAFC",
           "font-size": 12,
-          "font-weight": "900",
+          "font-weight": 900,
           "text-background-opacity": 0.92,
           "text-border-opacity": 1,
           "opacity": 0.95,
@@ -195,6 +209,21 @@ export default class extends Controller {
   hideTooltip() {
     if (!this.tooltip) return
 
+    if (this.selectedNode || this.selectedEdge) return
+
+    this.tooltip.hidden = true
+    this.element.classList.remove("synergy-graph-network--hovering")
+  }
+
+  clearSelection() {
+    if (this.selectedNode) this.selectedNode.unselect()
+    if (this.selectedEdge) this.selectedEdge.unselect()
+
+    this.selectedNode = null
+    this.selectedEdge = null
+
+    if (!this.tooltip) return
+
     this.tooltip.hidden = true
     this.element.classList.remove("synergy-graph-network--hovering")
   }
@@ -212,5 +241,12 @@ export default class extends Controller {
     if ([2, 3, 4].includes(count)) return `${count} wspólne mecze`
 
     return `${count} wspólnych meczów`
+  }
+
+  isTouchInteraction(event) {
+    const originalEvent = event.originalEvent
+    if (originalEvent?.pointerType === "touch" || originalEvent?.type?.startsWith("touch")) return true
+
+    return window.matchMedia?.("(hover: none)").matches === true
   }
 }

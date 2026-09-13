@@ -456,6 +456,8 @@ pl:
     change: "Zmiana"
     position: "#"
     value: "Wynik"
+    mobile_sort_label: "Sortuj"
+    mobile_list_label: "Ranking zawodników"
     summary:
       elo_leader: "Lider ELO"
       top_scorer: "Najlepszy strzelec"
@@ -663,6 +665,10 @@ pl:
       legend_low: "Pomarańczowa linia = niski win rate"
       top_connections: "Najmocniejsze połączenia"
       full_graph: "Pełny graf relacji"
+      accessible_label: "Interaktywna mapa relacji zawodników"
+      accessible_title: "Pokaż listę zawodników i połączeń"
+      accessible_body: "Na urządzeniach dotykowych wybierz zawodnika, aby zobaczyć jego nazwę. Otwórz profil drugim dotknięciem. Lista poniżej jest dostępna bez grafiki."
+      accessible_connections: "Najmocniejsze połączenia"
       no_data_title: "Brak relacji"
       no_data_body: "Graf pojawi się, gdy zawodnicy rozegrają wspólne mecze."
     how_to_read:
@@ -1066,6 +1072,11 @@ pl:
         matches: "Mecze rozegrane"
         first_goal_rate: "% meczów z pierwszym golem"
         win_rate_after_first_goal: "Win rate po pierwszym golu"
+        mobile:
+          first_goals: "1. gole"
+          matches: "Mecze"
+          first_goal_rate: "1. gol %"
+          win_rate_after_first_goal: "Win rate"
       comebacks:
         title: "Comebacki"
         deficit: "Deficyt"
@@ -1117,6 +1128,7 @@ pl:
         rank: "#"
         link: "Link"
         view_match: "Zobacz mecz"
+        mobile_scroll_hint: "Przesuń tabelę w bok, aby zobaczyć wszystkie kolumny."
       empty:
         no_time_data: "Brak danych czasowych"
         no_timeline_title: "Brak danych timeline’u"

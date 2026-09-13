@@ -93,7 +93,7 @@ RSpec.describe "Leaderboards" do
         expect(tabs["role"]).to eq("tablist")
         expect(tabs.css(".leaderboards-tab[role='tab']").size).to eq(7)
         expect(frame["data-turbo-action"]).to eq("advance")
-        expect(frame.css("a[data-turbo-frame='leaderboards_results']").size).to eq(12)
+        expect(frame.css("a[data-turbo-frame='leaderboards_results']").size).to eq(17)
         expect(response.body).not_to include(">Punkty<")
         expect(response.body).not_to include("Pending Player")
         expect(response.body).not_to include("+48111111111")

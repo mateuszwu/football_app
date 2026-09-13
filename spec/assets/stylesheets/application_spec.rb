@@ -12,4 +12,21 @@ RSpec.describe "Application stylesheet" do
       expect(duo_separator_rule).to include("color: var(--text-muted);")
     end
   end
+
+  describe "guest mobile player directory" do
+    it "keeps filter controls at the iOS zoom-safe font size" do
+      stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
+      mobile_rules = stylesheet[/@media \(max-width: 767px\)(?<body>.*)\z/m, :body]
+
+      expect(mobile_rules).to include(".players-directory-field input")
+      expect(mobile_rules).to match(/\.players-directory-field input,\s*\.players-directory-field select\s*\{[^}]*font-size: 16px;/m)
+    end
+
+    it "keeps roster metrics in a compact three-column layout" do
+      stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
+      mobile_rules = stylesheet[/@media \(max-width: 767px\)(?<body>.*)\z/m, :body]
+
+      expect(mobile_rules).to match(/\.roster-card__main\s*\{[^}]*grid-template-columns: repeat\(3, minmax\(0, 1fr\)\);/m)
+    end
+  end
 end

@@ -53,7 +53,7 @@ RSpec.describe "Statistics" do
         expect(first_goal_table.css(".player-identity-pill").size).to eq(1)
         expect(first_goal_table.css(".player-identity-pill__icon").size).to eq(1)
         expect(first_goal_table.css(".stats-player-link")).to be_empty
-        expect(first_goal_table.css("thead th").map { |header| header.text.strip }).to include("Mecze rozegrane")
+        expect(first_goal_table.css("thead th").map { |header| header.text.strip }).to include(a_string_including("Mecze rozegrane"))
         expect(first_goal_table.css("thead th a.leaderboards-sort-link").size).to eq(5)
         expect(response.body).to include("stats-first-goal-table-wrap")
 

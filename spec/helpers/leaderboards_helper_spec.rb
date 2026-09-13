@@ -36,6 +36,14 @@ RSpec.describe LeaderboardsHelper do
     end
   end
 
+  describe "#leaderboard_mobile_metric_columns" do
+    it "omits identity columns while retaining every metric" do
+      expect(helper.leaderboard_mobile_metric_columns("record")).to eq(
+        %i[matches wins draws losses win_rate goal_difference]
+      )
+    end
+  end
+
   describe "#leaderboard_cell_value" do
     it "formats every supported table column" do
       player = build_stubbed(:player, name: "Adam Nowak", role_code: "ATT")

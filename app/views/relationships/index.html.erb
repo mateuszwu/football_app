@@ -83,7 +83,31 @@
               data-controller="synergy-graph"
               data-synergy-graph-data-value="<%= json_escape(graph_data.to_json) %>"
               class="synergy-graph-network"
+              role="img"
+              aria-label="<%= t("relationships.graph.accessible_label") %>"
             ></div>
+
+            <% graph_nodes = graph_data.fetch(:elements).filter_map do |element|
+              data = element[:data] || element["data"]
+              data if data.is_a?(Hash) && (data[:profile_path] || data["profile_path"]).present?
+            end %>
+            <details class="synergy-graph-accessible">
+              <summary><%= t("relationships.graph.accessible_title") %></summary>
+              <p><%= t("relationships.graph.accessible_body") %></p>
+              <ul>
+                <% graph_nodes.each do |node| %>
+                  <li><%= link_to(node[:name] || node["name"], node[:profile_path] || node["profile_path"]) %></li>
+                <% end %>
+              </ul>
+              <% if graph_data.fetch(:top_connections).any? %>
+                <h3><%= t("relationships.graph.accessible_connections") %></h3>
+                <ul>
+                  <% graph_data.fetch(:top_connections).each do |connection| %>
+                    <li><%= connection.fetch(:label) %> — <%= t("relationships.labels.shared_matches", count: connection.fetch(:shared_matches)) %>, <%= t("relationships.labels.goals_assists_together", value: connection.fetch(:goals_assists)) %></li>
+                  <% end %>
+                </ul>
+              <% end %>
+            </details>
           <% else %>
             <div class="synergy-graph-empty">
               <h3><%= t("relationships.graph.no_data_title") %></h3>
@@ -268,18 +292,23 @@
                 <% end %>
               </div>
 
-              <div class="relationship-mobile-ranking__matches">
-                <strong><%= result.shared_matches_count %></strong>
-                <span><%= result.win_rate ? t("relationships.table.win_rate_value", value: result.win_rate) : "—" %></span>
-              </div>
+              <div class="relationship-mobile-ranking__metrics">
+                <div class="relationship-mobile-ranking__matches">
+                  <span class="relationship-mobile-ranking__metric-label"><%= t("relationships.table.matches") %></span>
+                  <strong><%= result.shared_matches_count %></strong>
+                  <span><%= result.win_rate ? t("relationships.table.win_rate_value", value: result.win_rate) : "—" %></span>
+                </div>
 
-              <div class="relationship-mobile-ranking__offense">
-                <strong><%= result.goals_assists %></strong>
-                <span>(<%= result.goals %>g + <%= result.assists %>a)</span>
-              </div>
+                <div class="relationship-mobile-ranking__offense">
+                  <span class="relationship-mobile-ranking__metric-label">G+A</span>
+                  <strong><%= result.goals_assists %></strong>
+                  <span>(<%= result.goals %>g + <%= result.assists %>a)</span>
+                </div>
 
-              <div class="relationship-mobile-ranking__mutual">
-                <strong><%= result.mutual_assists %></strong>
+                <div class="relationship-mobile-ranking__mutual">
+                  <span class="relationship-mobile-ranking__metric-label"><%= t("relationships.table.mutual_assists_mobile") %></span>
+                  <strong><%= result.mutual_assists %></strong>
+                </div>
               </div>
             </article>
           <% end %>

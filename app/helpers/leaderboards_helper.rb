@@ -141,6 +141,10 @@ module LeaderboardsHelper
     NUMERIC_COLUMNS.include?(column)
   end
 
+  def leaderboard_mobile_metric_columns(active_tab)
+    leaderboard_tab_config(active_tab).fetch(:columns).reject { |column| %i[position player role].include?(column.to_sym) }
+  end
+
   def leaderboard_summary_cards(leaderboards)
     [
       summary_card("elo_leader", "trending-up", "chart-no-axes-combined", leaderboards&.ranked_elo&.first, :elo),

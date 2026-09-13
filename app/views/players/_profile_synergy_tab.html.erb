@@ -13,7 +13,7 @@
     <%= link_to t("players.profile.synergy.full_relationship_graph"), profile.synergy.fetch(:graph_path), class: "dashboard-button" %>
   </div>
   <% if profile.synergy.fetch(:graph_data).dig(:meta, :edges_count).to_i.positive? %>
-    <div data-controller="synergy-graph" data-synergy-graph-data-value="<%= player_profile_chart_data(profile.synergy.fetch(:graph_data)) %>" class="synergy-graph-network player-profile-synergy-graph"></div>
+    <div data-controller="synergy-graph" data-synergy-graph-data-value="<%= player_profile_chart_data(profile.synergy.fetch(:graph_data)) %>" class="synergy-graph-network player-profile-synergy-graph" role="img" aria-label="<%= t("players.profile.synergy.title") %>"></div>
   <% end %>
 </section>
 
