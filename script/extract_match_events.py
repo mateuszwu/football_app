@@ -55,7 +55,9 @@ INVALID_SCORERS = {
     "to",
 }
 NAME_ALIASES = {
-    "barcelona": "Kamil",
+    "barcelona": "Kamil (Barcelona)",
+    "barcelonego": "Kamil (Barcelona)",
+    "baca": "Baca",
     "czemu": "Przemo",
     "dig": "Milik",
     "inter": "Mati",
@@ -64,19 +66,31 @@ NAME_ALIASES = {
     "league": "Milik",
     "ligol": "Milik",
     "link": "Milik",
+    "matti": "Mati",
+    "matty": "Mati",
     "maty": "Mati",
+    "mati cash": "Cash",
+    "t-cash": "Cash",
     "mili": "Milik",
     "nieco": "Wicu",
     "paczek": "Płaczek",
     "placzek": "Płaczek",
     "przemek": "Przemo",
     "przemu": "Przemo",
+    "paca": "Baca",
+    "płaca": "Baca",
+    "placa": "Baca",
     "stawicu": "Wicu",
+    "szestawicu": "Wicu",
     "vico": "Wicu",
     "wico": "Wicu",
     "wice": "Wicu",
     "wicy": "Wicu",
     "wicso": "Wicu",
+    "kamil": "Kamil (Marcelo)",
+    "kamil barcelona": "Kamil (Barcelona)",
+    "kamil barcelonego": "Kamil (Barcelona)",
+    "kamil nowy": "Kamil (Barcelona)",
 }
 KNOWN_PLAYERS = {
     "Baca",
@@ -84,7 +98,8 @@ KNOWN_PLAYERS = {
     "Damian",
     "Daniel",
     "Dominik",
-    "Kamil",
+    "Kamil (Barcelona)",
+    "Kamil (Marcelo)",
     "Mati",
     "Max",
     "Milik",
@@ -120,7 +135,7 @@ def timestamp_seconds(value: str) -> float:
 def display_name(value: str | None) -> str | None:
     if not value:
         return None
-    normalized = value.strip(" ,.!?:;").casefold()
+    normalized = re.sub(r"[\s,.!?:;]+", " ", value).strip().casefold()
     if normalized in NAME_ALIASES:
         return NAME_ALIASES[normalized]
 
@@ -135,8 +150,14 @@ def display_name(value: str | None) -> str | None:
 def same_scorer(left: str | None, right: str | None) -> bool:
     if not left or not right:
         return left == right
-    left_tokens = left.casefold().split()
-    right_tokens = right.casefold().split()
+    left_name = display_name(left).casefold()
+    right_name = display_name(right).casefold()
+    distinct_kamil_names = {"kamil (barcelona)", "kamil (marcelo)"}
+    if left_name in distinct_kamil_names and right_name in distinct_kamil_names:
+        return left_name == right_name
+
+    left_tokens = left_name.split()
+    right_tokens = right_name.split()
     return left_tokens == right_tokens or left_tokens[0] == right_tokens[0]
 
 
@@ -248,8 +269,22 @@ def merge_goal(
         )
         if time_difference > repeated_announcement_window:
             break
+        kamil_variant_confirmation = (
+            time_difference <= REPEATED_GOAL_CONFIRMATION_WINDOW
+            and {
+                candidate["scorer"].casefold(),
+                existing["scorer"].casefold(),
+            }
+            == {"kamil (barcelona)", "kamil (marcelo)"}
+        )
         if not same_scorer(candidate["scorer"], existing["scorer"]):
-            continue
+            if not kamil_variant_confirmation:
+                continue
+
+        if kamil_variant_confirmation:
+            existing["scorer"] = "Kamil (Barcelona)"
+            existing["confidence"] = "high"
+
         if time_difference > deduplication_window:
             candidate_texts = {
                 prepare_text(str(item["text"])).casefold()

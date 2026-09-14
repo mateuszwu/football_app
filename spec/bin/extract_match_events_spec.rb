@@ -16,7 +16,7 @@ RSpec.describe "script/extract_match_events.py" do
               segment("00:00:05,000", "00:00:06,000", "Dobra, gotowi? Lecimy!"),
               segment("00:00:10,000", "00:00:11,000", "Damian asysta, Kamil gol"),
               segment("00:00:12,000", "00:00:13,000", "Damian asysta, Kamil gol"),
-              segment("00:00:14,000", "00:00:15,000", "Damian asysta, Kamil Barcelona gol"),
+              segment("00:00:14,000", "00:00:15,000", "Damian asysta, Kamil gol"),
               segment("00:00:58,000", "00:00:59,000", "Damian asysta, Kamil gol"),
               segment("00:01:00,000", "00:01:01,000", "Cash asysta, Płaczek gol"),
               segment("00:01:10,000", "00:01:11,000", "Wynik 2:0"),
@@ -40,7 +40,7 @@ RSpec.describe "script/extract_match_events.py" do
           result = JSON.parse(File.read(output))
           expect(result.fetch("source_id")).to eq("match-1")
           expect(result.fetch("goals").map { |goal| [ goal["scorer"], goal["assist"] ] }).to eq(
-            [ [ "Kamil", "Damian" ], [ "Płaczek", "Cash" ] ]
+            [ [ "Kamil (Marcelo)", "Damian" ], [ "Płaczek", "Cash" ] ]
           )
           first_goal = result.fetch("goals").fetch(0)
           expect(first_goal.fetch("goal_confirmation")).to eq("repeated_within_5_seconds")
@@ -49,6 +49,43 @@ RSpec.describe "script/extract_match_events.py" do
           expect(result.dig("goals", 0, "match_minute")).to eq(1)
           expect(result.fetch("scores").first).to include("home" => 2, "away" => 0)
           expect(result.fetch("match_ends").length).to eq(1)
+        end
+      end
+    end
+
+    context "when two Kamil identities appear in the transcript" do
+      it "keeps Barcelona and Marcelo as separate scorers" do
+        Dir.mktmpdir("extract-match-events-spec-") do |directory|
+          input = File.join(directory, "transcript.json")
+          output = File.join(directory, "events.json")
+          document = {
+            "transcription" => [
+              segment("00:00:05,000", "00:00:06,000", "Start"),
+              segment("00:00:10,000", "00:00:11,000", "Damian asysta, Kamil Barcelona gol"),
+              segment("00:00:12,000", "00:00:13,000", "Damian asysta, Kamil Barcelona gol"),
+              segment("00:01:00,000", "00:01:01,000", "Damian asysta, Kamil gol"),
+              segment("00:01:02,000", "00:01:03,000", "Damian asysta, Kamil gol")
+            ]
+          }
+          File.write(input, JSON.generate(document))
+
+          _stdout, stderr, status = Open3.capture3(
+            "python3",
+            script_path,
+            input,
+            "--output",
+            output
+          )
+
+          expect(status).to be_success, stderr
+          result = JSON.parse(File.read(output))
+
+          expect(result.fetch("goals").map { |goal| [ goal["scorer"], goal["assist"] ] }).to eq(
+            [
+              [ "Kamil (Barcelona)", "Damian" ],
+              [ "Kamil (Marcelo)", "Damian" ]
+            ]
+          )
         end
       end
     end
@@ -125,7 +162,8 @@ RSpec.describe "script/extract_match_events.py" do
               segment("00:02:00,000", "00:02:01,000", "Max asysta, Czemu gol"),
               segment("00:03:00,000", "00:03:01,000", "Cash asysta, Paczek gol"),
               segment("00:04:00,000", "00:04:01,000", "Wicso asystami, league goal"),
-              segment("00:05:00,000", "00:05:01,000", "Mati kesz gol")
+              segment("00:05:00,000", "00:05:01,000", "Mati kesz gol"),
+              segment("00:06:00,000", "00:06:01,000", "Matti asysta, Baca gol")
             ]
           }
           File.write(input, JSON.generate(document))
@@ -146,9 +184,43 @@ RSpec.describe "script/extract_match_events.py" do
               [ "Przemo", "Max" ],
               [ "Płaczek", "Cash" ],
               [ "Milik", "Wicu" ],
-              [ "Cash", "Mati" ]
+              [ "Cash", "Mati" ],
+              [ "Baca", "Mati" ]
             ]
           )
+        end
+      end
+    end
+
+    context "when a generic Kamil call is clarified immediately" do
+      it "merges it into the explicit Barcelona goal" do
+        Dir.mktmpdir("extract-match-events-spec-") do |directory|
+          input = File.join(directory, "transcript.json")
+          output = File.join(directory, "events.json")
+          document = {
+            "transcription" => [
+              segment("00:00:10,000", "00:00:11,000", "Kamil gol"),
+              segment("00:00:12,000", "00:00:13,000", "Damian asysta, Kamil Barcelona gol"),
+              segment("00:00:14,000", "00:00:15,000", "Kamil Barcelona gol")
+            ]
+          }
+          File.write(input, JSON.generate(document))
+
+          _stdout, stderr, status = Open3.capture3(
+            "python3",
+            script_path,
+            input,
+            "--output",
+            output
+          )
+
+          expect(status).to be_success, stderr
+          goals = JSON.parse(File.read(output)).fetch("goals")
+
+          expect(goals.map { |goal| [ goal["scorer"], goal["assist"] ] }).to eq(
+            [ [ "Kamil (Barcelona)", "Damian" ] ]
+          )
+          expect(goals.first.fetch("goal_confirmation")).to eq("repeated_within_5_seconds")
         end
       end
     end
@@ -185,7 +257,7 @@ RSpec.describe "script/extract_match_events.py" do
             "goal_type" => "own_goal",
             "own_goal_player" => "Wicu",
             "scorer" => "Wicu",
-            "initial_scorer_call" => "Kamil",
+            "initial_scorer_call" => "Kamil (Marcelo)",
             "assist" => nil
           )
           expect(goal.fetch("own_goal_evidence")).not_to be_empty

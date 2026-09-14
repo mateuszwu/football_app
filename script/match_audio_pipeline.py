@@ -1561,24 +1561,115 @@ def find_pending_confirmation_goal(
     clip_link = confirmation.get("clip_link")
     source_id = confirmation.get("source_id")
     recording_seconds = confirmation.get("recording_seconds")
-    candidates: list[tuple[list[dict[str, Any]], int, dict[str, Any]]] = []
-    for key in ("pending_goals", "pending_recorder_goals"):
-        pending = summary.get(key, [])
-        for index, goal in enumerate(pending):
-            review_clip = goal.get("review_clip", {})
-            if clip_link and review_clip.get("clip_link") == clip_link:
-                return pending, index, goal
-            if source_id and goal.get("review_source_id") != source_id:
-                continue
-            if recording_seconds is not None:
-                difference = abs(
-                    float(goal.get("recording_seconds", -1))
-                    - float(recording_seconds)
-                )
-                if difference > 0.01:
-                    continue
-            candidates.append((pending, index, goal))
-    return candidates[0] if candidates else None
+    candidates: list[tuple[list[dict[str, Any]], int, dict[str, Any]]] = [
+        (pending, index, goal)
+        for key in ("pending_goals", "pending_recorder_goals")
+        for pending in [summary.get(key, [])]
+        for index, goal in enumerate(pending)
+    ]
+
+    if clip_link:
+        exact_clip_matches = [
+            candidate
+            for candidate in candidates
+            if candidate[2].get("review_clip", {}).get("clip_link") == clip_link
+        ]
+        if exact_clip_matches:
+            return exact_clip_matches[0]
+
+    scoped_candidates = [
+        candidate
+        for candidate in candidates
+        if not source_id or candidate[2].get("review_source_id") == source_id
+    ]
+    if recording_seconds is not None:
+        timed_matches = [
+            candidate
+            for candidate in scoped_candidates
+            if abs(
+                float(candidate[2].get("recording_seconds", -1))
+                - float(recording_seconds)
+            ) <= 0.01
+        ]
+        if len(timed_matches) == 1:
+            return timed_matches[0]
+
+    scorer = confirmation.get("scorer")
+    if scorer:
+        scorer_matches = [
+            candidate
+            for candidate in scoped_candidates
+            if same_scorer(candidate[2].get("scorer"), scorer)
+        ]
+        return scorer_matches[0] if len(scorer_matches) == 1 else None
+
+    return scoped_candidates[0] if len(scoped_candidates) == 1 else None
+
+
+def find_existing_confirmation_goal(
+    summary: dict[str, Any],
+    confirmation: dict[str, Any],
+) -> dict[str, Any] | None:
+    scorer = confirmation.get("scorer")
+    if not scorer:
+        return None
+
+    candidates = [
+        goal
+        for goal in summary.get("goals", [])
+        if same_scorer(goal.get("scorer"), scorer)
+    ]
+    recording_seconds = confirmation.get("recording_seconds")
+    if recording_seconds is not None:
+        candidates = [
+            goal
+            for goal in candidates
+            if abs(
+                float(goal.get("recording_seconds", -1))
+                - float(recording_seconds)
+            ) <= 0.01
+        ]
+
+    if (
+        confirmation.get("assist_status") == "confirmed_no_assist"
+        or confirmation.get("assist") is None
+    ):
+        no_assist_candidates = [goal for goal in candidates if not goal.get("assist")]
+        if no_assist_candidates:
+            candidates = no_assist_candidates
+
+    return candidates[0] if len(candidates) == 1 else None
+
+
+def apply_confirmation_to_existing_goal(
+    target: dict[str, Any],
+    confirmation: dict[str, Any],
+) -> None:
+    assist_status = confirmation.get("assist_status")
+    if assist_status == "needs_manual_review":
+        target["assist"] = None
+        target["assist_candidates"] = (
+            [confirmation.get("assist_candidate")]
+            if confirmation.get("assist_candidate")
+            else []
+        )
+        target["assist_status"] = "manual_review_required"
+        target["assist_review"] = confirmation.get("assist_review", {})
+        target["assist_source"] = {
+            "source": "ponowna transkrypcja large-v3",
+            "confidence": "not_established",
+        }
+    elif assist_status == "confirmed_no_assist":
+        target["assist"] = None
+        target["assist_candidates"] = []
+        target["assist_status"] = "confirmed_no_assist"
+        target["assist_source"] = {
+            "source": "potwierdzenie użytkownika po odsłuchu klipów 6–9",
+            "confidence": "high",
+        }
+
+    target["manual_confirmation_status"] = "confirmed_by_user"
+    target["manual_confirmation"] = confirmation
 
 
 def append_evidence(
@@ -1609,6 +1700,17 @@ def apply_manual_confirmations(
             continue
         pending_match = find_pending_confirmation_goal(summary, confirmation)
         if pending_match is None:
+            if confirmation.get("resolution", "new_goal") == "duplicate_existing_goal":
+                target = find_existing_confirmation_goal(summary, confirmation)
+                if target is not None:
+                    apply_confirmation_to_existing_goal(target, confirmation)
+                    summary["manual_confirmations"].append(
+                        {
+                            **confirmation,
+                            "status": "updated_existing_goal",
+                        }
+                    )
+                    continue
             summary["manual_confirmation_errors"].append(
                 {
                     **confirmation,
@@ -1664,28 +1766,8 @@ def apply_manual_confirmations(
                 source_role,
                 pending_goal.get("evidence", []),
             )
-            target["manual_confirmation_status"] = "confirmed_by_user"
             target["source_confidence"] = "paired_and_user_confirmed"
-            if assist_status == "needs_manual_review":
-                target["assist"] = None
-                target["assist_candidates"] = [
-                    confirmation.get("assist_candidate")
-                ] if confirmation.get("assist_candidate") else []
-                target["assist_status"] = "manual_review_required"
-                target["assist_review"] = confirmation.get("assist_review", {})
-                target["assist_source"] = {
-                    "source": "ponowna transkrypcja large-v3",
-                    "confidence": "not_established",
-                }
-            elif assist_status == "confirmed_no_assist":
-                target["assist"] = None
-                target["assist_candidates"] = []
-                target["assist_status"] = "confirmed_no_assist"
-                target["assist_source"] = {
-                    "source": "potwierdzenie użytkownika po odsłuchu klipów 6–9",
-                    "confidence": "high",
-                }
-            target["manual_confirmation"] = confirmation
+            apply_confirmation_to_existing_goal(target, confirmation)
             pending.pop(pending_index)
             summary["manual_confirmations"].append(
                 {
@@ -2275,7 +2357,7 @@ def render_report(
         lines.append("| --- | --- | --- |")
         for member in roster["members"]:
             name = member.get("name") or member.get("raw") or "nierozpoznane"
-            if member.get("alias"):
+            if member.get("alias") and member["alias"].casefold() not in name.casefold():
                 name = f"{name} ({member['alias']})"
             if member.get("candidate_names"):
                 name += " — kandydaci: " + "/".join(member["candidate_names"])

@@ -685,6 +685,110 @@ RSpec.describe "script/match_audio_pipeline.py" do
       expect(result.fetch("statuses")).to contain_exactly("confirmed_by_user", "confirmed_by_user")
     end
 
+    it "does not apply a confirmation to the first pending goal from the same source" do
+      python = <<~PYTHON
+        import json
+        import sys
+        sys.path.insert(0, sys.argv[1])
+        import match_audio_pipeline as pipeline
+
+        summary = {
+            "match_number": 3,
+            "meczyk_goal_count": 0,
+            "goals": [],
+            "pending_goals": [
+                {
+                    "scorer": "Kamil (Marcelo)",
+                    "assist": "Damian",
+                    "recording_seconds": 483.0,
+                    "review_source_id": "meczyk-3",
+                    "review_source_role": "meczyk",
+                    "review_clip": {"status": "clip_failed"},
+                    "evidence": [{"text": "Kamil gol"}],
+                },
+                {
+                    "scorer": "Dominik",
+                    "assist": "Płaczek",
+                    "recording_seconds": 1553.0,
+                    "review_source_id": "meczyk-3",
+                    "review_source_role": "meczyk",
+                    "review_clip": {"status": "ready"},
+                    "evidence": [{"text": "Płaczek asysta, Dominik gol"}],
+                },
+            ],
+            "pending_recorder_goals": [],
+        }
+        confirmations = [{
+            "match_number": 3,
+            "source_id": "meczyk-3",
+            "resolution": "new_goal",
+            "scorer": "Dominik",
+            "assist": "Płaczek",
+        }]
+        pipeline.apply_manual_confirmations([summary], confirmations)
+        print(json.dumps({
+            "goals": [(goal["scorer"], goal["recording_seconds"]) for goal in summary["goals"]],
+            "pending": [(goal["scorer"], goal["recording_seconds"]) for goal in summary["pending_goals"]],
+            "errors": summary["manual_confirmation_errors"],
+        }, ensure_ascii=False))
+      PYTHON
+
+      stdout, stderr, status = Open3.capture3(
+        "python3",
+        "-c",
+        python,
+        File.dirname(script_path)
+      )
+
+      expect(status).to be_success, stderr
+      result = JSON.parse(stdout)
+      expect(result.fetch("goals")).to eq([ [ "Dominik", 1553.0 ] ])
+      expect(result.fetch("pending")).to eq([ [ "Kamil (Marcelo)", 483.0 ] ])
+      expect(result.fetch("errors")).to be_empty
+    end
+
+    it "uses the unique no-assist goal when a duplicate confirmation omits the assist" do
+      python = <<~PYTHON
+        import json
+        import sys
+        sys.path.insert(0, sys.argv[1])
+        import match_audio_pipeline as pipeline
+
+        summary = {
+            "match_number": 1,
+            "goals": [
+                {"scorer": "Baca", "assist": "Max", "recording_seconds": 100.0},
+                {"scorer": "Baca", "assist": None, "recording_seconds": 200.0},
+            ],
+            "pending_goals": [],
+            "pending_recorder_goals": [],
+        }
+        confirmations = [{
+            "match_number": 1,
+            "resolution": "duplicate_existing_goal",
+            "scorer": "Baca",
+            "assist": None,
+        }]
+        pipeline.apply_manual_confirmations([summary], confirmations)
+        print(json.dumps({
+            "statuses": [goal.get("manual_confirmation_status") for goal in summary["goals"]],
+            "errors": summary["manual_confirmation_errors"],
+        }, ensure_ascii=False))
+      PYTHON
+
+      stdout, stderr, status = Open3.capture3(
+        "python3",
+        "-c",
+        python,
+        File.dirname(script_path)
+      )
+
+      expect(status).to be_success, stderr
+      result = JSON.parse(stdout)
+      expect(result.fetch("statuses")).to eq([ nil, "confirmed_by_user" ])
+      expect(result.fetch("errors")).to be_empty
+    end
+
     it "keeps an uncertain assist out of the confirmed goal while preserving the candidate" do
       python = <<~PYTHON
         import json
