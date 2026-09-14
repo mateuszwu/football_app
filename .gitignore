@@ -64,3 +64,12 @@ Icon?
 /config/credentials/*.key
 
 .ai
+
+# Project-local speech-to-text runtime and large model files.
+/.local/whisper.cpp/
+__pycache__/
+*.py[cod]
+
+# Raw match recordings/transcripts are local inputs, never repository artifacts.
+/Meczyk-*
+/R[0-9]*

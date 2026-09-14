@@ -143,6 +143,109 @@ transaction.
 
 ## Common Commands
 
+Clean a speech recording before transcription (requires FFmpeg):
+
+```sh
+python3 script/clean_audio.py input.m4a \
+  --output tmp/audio/input.clean.wav \
+  --compressed-output tmp/audio/input.clean.mp3
+```
+
+The WAV is a 16 kHz mono master. The optional MP3 is encoded at 64 kb/s for
+transcription services with upload-size limits. Use `--profile light` when the
+voice already sounds clear or `--profile strong` only for especially noisy
+recordings. The script preserves pauses so transcript timestamps still match
+the source recording.
+
+Transcribe the cleaned WAV locally with the full Whisper large-v3 model:
+
+```sh
+python3 script/transcribe_audio.py tmp/audio/input.clean.wav
+```
+
+The local whisper.cpp binary and model are stored under `.local/whisper.cpp`.
+Transcription uses Polish, Metal acceleration, beam search, and conservative
+Silero VAD settings that suppress hallucinations during silence while retaining
+short calls. Rolling text context is disabled so a bad phrase cannot propagate
+through later Bluetooth dropouts. It produces TXT, SRT, and JSON files. Pass
+`--duration 60` for a one-minute test. Apply a player-name glossary in a
+separate correction pass; an initial prompt conflicts with this script's
+anti-hallucination mode because whisper.cpp uses the same context budget for
+both features.
+
+Run the development pipeline for recordings added to `~/Downloads` today:
+
+```sh
+python3 script/match_audio_pipeline.py
+```
+
+The pipeline selects audio whose local modification date is today and whose
+name starts with `Meczyk-` or `R`. TXT files in
+`Downloads` are deliberately ignored because they are not reliable references.
+Audio files are copied to
+`tmp/match_audio/YYYY-MM-DD`, which is ignored by Git. It pairs `Meczyk` and
+`R` recordings by duration, reports missing counterparts, prepares neutral
+and cleaned WAVs, transcribes both, and writes Markdown plus JSON comparison
+reports. It verifies proposed pairs by transcript similarity and compares the
+goal/assist sequences from both audio sources. Existing TXT files are never
+used to score or select a cleaner variant. `Meczyk` uses the `bluetooth` cleaner
+profile; `R` uses the milder
+`recorder` profile because it is already compressed and its stereo channels
+contain the same signal.
+
+Useful development stages:
+
+```sh
+python3 script/match_audio_pipeline.py --stage collect
+python3 script/match_audio_pipeline.py --stage prepare
+python3 script/match_audio_pipeline.py --stage transcribe --cpu
+python3 script/match_audio_pipeline.py --stage analyze
+```
+
+Etap `prepare` domyślnie przetwarza dwa niezależne nagrania równolegle przez
+FFmpeg (`--prepare-workers 2`). Wyniki neutral/clean pozostają deterministyczne;
+liczbę workerów można zmienić parametrem, np. `--prepare-workers 1`.
+
+All full-file transcriptions default to the local full `ggml-large-v3.bin`
+model, for both neutral/original and cleaned variants of every audio file.
+Short context verification uses the same full large-v3 model. Pass
+`--model PATH` or `--verification-model PATH` only when an intentional model
+override is needed. Each pipeline transcript stores a model marker; an
+existing transcript without a matching marker is transcribed again instead of
+being silently reused. Each transcribe run also writes per-file wall-clock
+times and the actual device used to `transcription_timings.json`. The analysis
+also uses it on short context clips for the
+session roster/rule and, when needed, around a missing final score; use
+`--no-score-verification` only to skip the score-tail pass. It parses the
+recording hour from each `Meczyk-... o HH:MM` filename and adds the audio offset
+to produce local match datetimes. Start/end findings carry an explicit status:
+an audio message is `confirmed_audio`, while the end of a file is
+`estimated_recording_boundary`. Recordings with neither a start message nor a
+goal are reported as organizational recordings and are not counted as matches.
+An extracted goal is counted automatically only when the goal announcement is
+repeated within five seconds or the same event is independently matched in the
+paired Meczyk/R recordings. Single announcements, announcements spread beyond
+five seconds, and unmatched recorder-only calls remain manual-review candidates;
+the pipeline exports short audio clips under `analysis/manual_review/` and links
+to them from a numbered clip index in the Markdown and JSON reports. Candidate transcript evidence and the
+confirmation window are retained in JSON, so a background `gol` call does not
+silently change the score. Assist evidence is kept separate and is never
+invented when it is not clear.
+Human decisions can be persisted in
+`tmp/match_audio/YYYY-MM-DD/analysis/manual_confirmations.json`; the next
+`--stage analyze` run merges confirmed duplicates and adds confirmed goals
+before calculating scores.
+The JSON report keeps evidence and confidence for goals, assists, scores,
+lineups, captains, and time findings. It marks whether each goal is confirmed
+by both Meczyk/R recordings; low-quality pairs remain single-source findings.
+If a later audio statement corrects an initial goal call to an own goal, the
+report preserves both the initial scorer and the correction as `own_goal`
+evidence. Recorder files can also carry a user-confirmed `recorded_by` identity
+when the operator is known.
+An eight-goal 5:3 result is inferred only when the full large-v3 context check
+confirms the session rule to five goals. Missing captains and ambiguous names
+remain unresolved rather than being inferred.
+
 Run tests:
 
 ```sh
