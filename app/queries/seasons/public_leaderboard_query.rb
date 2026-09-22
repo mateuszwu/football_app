@@ -96,7 +96,7 @@ module Seasons
           .order(Arel.sql("matches_played_count ASC"))
           .order("players.name": :asc)
           .to_a,
-        elo_ranking: leaderboard_scope
+        elo_ranking: attendance_filtered_leaderboard_scope
           .order(Arel.sql("COALESCE(player_season_stats.elo, 0) DESC"))
           .order(Arel.sql("COALESCE(last_elo_delta_value, 0) DESC"))
           .order("players.name": :asc)

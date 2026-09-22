@@ -1,6 +1,6 @@
 module Players
   class ProfileStatsQuery
-    TABS = %w[overview stats matches charts elo synergy awards].freeze
+    TABS = %w[overview stats matches charts elo synergy opponents awards].freeze
 
     MatchEntry = Struct.new(
       :match,
@@ -41,6 +41,7 @@ module Players
       :paginated_matches,
       :awards,
       :synergy,
+      :opponents,
       :chart_data,
       keyword_init: true
     )
@@ -72,6 +73,7 @@ module Players
         paginated_matches: tab == "matches" ? paginate(match_entries) : empty_pagination,
         awards: awards_tab? ? awards : [],
         synergy: synergy_tab? ? synergy : {},
+        opponents: opponents_tab? ? OpponentRecordsQuery.call(player:, season: selected_season) : [],
         chart_data:
       )
     end
@@ -661,6 +663,10 @@ module Players
 
     def synergy_tab?
       %w[overview synergy].include?(tab)
+    end
+
+    def opponents_tab?
+      tab == "opponents"
     end
   end
 end

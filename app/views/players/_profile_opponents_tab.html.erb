@@ -1,0 +1,150 @@
+<% opponent_entries = player_profile_opponents_sorted_entries(profile.opponents, sort_column:, sort_direction:) %>
+<% attendance_percent = player_profile_opponents_attendance_percent(attendance_percent) %>
+<% minimum_matches = player_profile_opponents_minimum_matches(total_matches: profile.summary.fetch(:matches), attendance_percent:) %>
+<% visible_opponent_entries = player_profile_opponents_filtered_entries(opponent_entries, minimum_matches:) %>
+<% opponent_column_widths = [ "16%", "10%", "5%", "5%", "5%", "7%", "7%", "7%", "7%", "7%", "7%", "8.5%", "8.5%" ] %>
+<% opponent_columns = {
+  "opponent" => "opponent",
+  "matches" => "matches",
+  "wins" => "wins",
+  "draws" => "draws",
+  "losses" => "losses",
+  "win_rate" => "win_rate",
+  "loss_rate" => "loss_rate",
+  "player_goals" => "player_goals",
+  "player_assists" => "player_assists",
+  "opponent_goals" => "opponent_goals",
+  "opponent_assists" => "opponent_assists",
+  "team_goals_for" => "team_goals_for",
+  "team_goals_against" => "team_goals_against"
+} %>
+
+<section class="player-profile-chart-card player-profile-opponents-intro">
+  <div class="player-profile-opponents-intro__header">
+    <div>
+      <h2><%= t("players.profile.opponents.title") %></h2>
+      <p><%= t("players.profile.opponents.description") %></p>
+    </div>
+  </div>
+</section>
+
+<%= turbo_frame_tag "player_profile_opponents_results", data: { turbo_action: "advance" } do %>
+  <%= form_with url: player_path(player), method: :get, local: true, class: "leaderboards-attendance-filter player-profile-opponents-filter", data: { turbo_frame: "player_profile_opponents_results" } do |form| %>
+    <%= form.hidden_field :tab, value: "opponents" %>
+    <%= form.hidden_field :season_id, value: profile.season&.id %>
+    <%= form.hidden_field :sort, value: sort_column if sort_column.present? %>
+    <%= form.hidden_field :sort_direction, value: sort_direction if sort_direction.present? %>
+    <div class="leaderboards-attendance-filter__control">
+      <%= form.label :attendance_percent, t("leaderboards.attendance_filter.label") %>
+      <%= form.select :attendance_percent,
+                      options_for_select(Seasons::PublicLeaderboardQuery::ATTENDANCE_PERCENT_OPTIONS.map { |percent| [ "#{percent}%", percent ] }, attendance_percent),
+                      {},
+                      onchange: "this.form.requestSubmit()" %>
+    </div>
+    <span class="leaderboards-attendance-filter__summary">
+      <%= t("leaderboards.attendance_filter.minimum_matches", minimum_matches:, season_matches_count: profile.summary.fetch(:matches)) %>
+      · <%= t("players.profile.opponents.results_count", shown: visible_opponent_entries.size, total: opponent_entries.size) %>
+    </span>
+  <% end %>
+
+  <% if visible_opponent_entries.any? %>
+    <nav class="leaderboards-mobile-sort player-profile-opponents-sort" aria-label="<%= t("players.profile.opponents.title") %>">
+      <span class="leaderboards-mobile-sort__label"><%= t("leaderboards.mobile_sort_label") %>:</span>
+      <% opponent_columns.each do |column, label_key| %>
+        <%= player_profile_opponents_sort_link(player:, profile:, column:, sort_column:, sort_direction:, attendance_percent:) do %>
+          <%= t("players.profile.opponents.#{label_key}") %>
+        <% end %>
+      <% end %>
+    </nav>
+
+    <section class="player-profile-table-card player-profile-table-card--opponents">
+      <div class="leaderboards-table-wrap">
+        <table class="leaderboards-table player-profile-table player-profile-opponents-table">
+          <colgroup>
+            <% opponent_column_widths.each do |width| %>
+              <col style="width: <%= width %>;">
+            <% end %>
+          </colgroup>
+          <thead>
+            <tr>
+              <% opponent_columns.each do |column, label_key| %>
+                <th
+                  class="<%= 'is-numeric' unless column == 'opponent' %>"
+                  aria-sort="<%= player_profile_opponents_sort_aria(column, sort_column, sort_direction) %>"
+                >
+                  <%= player_profile_opponents_sort_link(player:, profile:, column:, sort_column:, sort_direction:, attendance_percent:) do %>
+                    <%= t("players.profile.opponents.#{label_key}") %>
+                  <% end %>
+                </th>
+              <% end %>
+            </tr>
+          </thead>
+          <tbody>
+            <% visible_opponent_entries.each do |entry| %>
+              <tr>
+                <td><%= render "shared/player_identity_pill", player: entry.opponent, size: :sm, variant: :default %></td>
+                <td class="is-numeric"><%= entry.matches_count %></td>
+                <td class="is-numeric"><%= entry.wins %></td>
+                <td class="is-numeric"><%= entry.draws %></td>
+                <td class="is-numeric"><%= entry.losses %></td>
+                <td class="is-numeric"><%= player_profile_opponent_rate(entry.win_rate) %>%</td>
+                <td class="is-numeric"><%= player_profile_opponent_rate(entry.loss_rate) %>%</td>
+                <td class="is-numeric"><%= entry.player_goals %></td>
+                <td class="is-numeric"><%= entry.player_assists %></td>
+                <td class="is-numeric"><%= entry.opponent_goals %></td>
+                <td class="is-numeric"><%= entry.opponent_assists %></td>
+                <td class="is-numeric"><%= entry.team_goals_for %></td>
+                <td class="is-numeric"><%= entry.team_goals_against %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="player-profile-synergy-mobile player-profile-opponents-mobile" aria-label="<%= t("players.profile.opponents.title") %>">
+      <% visible_opponent_entries.each do |entry| %>
+        <article class="player-profile-synergy-mobile__row">
+          <div class="player-profile-synergy-mobile__top">
+            <%= render "shared/player_identity_pill", player: entry.opponent, size: :sm, variant: :default %>
+            <div class="player-profile-synergy-mobile__offense">
+              <span><%= t("players.profile.opponents.matches") %></span>
+              <strong><%= entry.matches_count %></strong>
+            </div>
+          </div>
+
+          <dl class="player-profile-synergy-mobile__metrics">
+            <div>
+              <dt><%= t("players.profile.opponents.record") %></dt>
+              <dd><%= entry.wins %>W · <%= entry.draws %>R · <%= entry.losses %>P</dd>
+            </div>
+            <div>
+              <dt><%= t("players.profile.opponents.win_rate") %> / <%= t("players.profile.opponents.loss_rate") %></dt>
+              <dd><%= player_profile_opponent_rate(entry.win_rate) %>% / <%= player_profile_opponent_rate(entry.loss_rate) %>%</dd>
+            </div>
+            <div>
+              <dt><%= t("players.profile.opponents.player_goals") %> / <%= t("players.profile.opponents.player_assists") %></dt>
+              <dd><%= entry.player_goals %> / <%= entry.player_assists %></dd>
+            </div>
+            <div>
+              <dt><%= t("players.profile.opponents.opponent_goals") %> / <%= t("players.profile.opponents.opponent_assists") %></dt>
+              <dd><%= entry.opponent_goals %> / <%= entry.opponent_assists %></dd>
+            </div>
+            <div>
+              <dt><%= t("players.profile.opponents.team_goals_for") %> / <%= t("players.profile.opponents.team_goals_against") %></dt>
+              <dd><%= entry.team_goals_for %> / <%= entry.team_goals_against %></dd>
+            </div>
+          </dl>
+        </article>
+      <% end %>
+    </section>
+  <% elsif opponent_entries.any? %>
+    <%= render "players/profile_empty",
+               title: t("players.profile.empty.no_opponents_for_filter_title"),
+               body: t("players.profile.empty.no_opponents_for_filter_body") %>
+  <% else %>
+    <%= render "players/profile_empty",
+               title: t("players.profile.empty.no_opponents_title"),
+               body: t("players.profile.empty.no_opponents_body") %>
+  <% end %>
+<% end %>

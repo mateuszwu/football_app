@@ -6679,7 +6679,17 @@ a:focus-visible {
 }
 
 .player-profile-tabs {
-  margin-bottom: 0.25rem;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  margin-bottom: 1rem;
+}
+
+@media (min-width: 901px) {
+  .player-profile-tabs .leaderboards-tab {
+    font-size: 0.75rem;
+    gap: 0.35rem;
+    padding: 0.5rem 0.4rem;
+    white-space: nowrap;
+  }
 }
 
 .player-profile-layout {
@@ -6776,6 +6786,74 @@ a:focus-visible {
   min-width: 62rem;
 }
 
+.player-profile-opponents-filter {
+  margin: 1rem 0 1.25rem;
+}
+
+.player-profile-opponents-filter .leaderboards-attendance-filter__summary {
+  white-space: normal;
+}
+
+.player-profile-opponents-intro {
+  margin-top: 1rem;
+}
+
+.player-profile-opponents-intro__header p {
+  color: #94a3b8;
+  font-size: 0.82rem;
+  margin: 0;
+  max-width: 48rem;
+}
+
+.player-profile-opponents-table {
+  box-sizing: border-box;
+  min-width: 0;
+  table-layout: fixed;
+  width: 100%;
+}
+
+.player-profile-table-card--opponents .leaderboards-table-wrap {
+  overflow-x: hidden;
+}
+
+.player-profile-opponents-table th,
+.player-profile-opponents-table td {
+  box-sizing: border-box;
+  overflow: hidden;
+  padding: 0.55rem 0.4rem;
+}
+
+.player-profile-opponents-table th {
+  font-size: 0.62rem;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.player-profile-opponents-table th .leaderboards-sort-link {
+  display: flex;
+  justify-content: flex-end;
+  max-width: 100%;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.player-profile-opponents-table td {
+  font-size: 0.76rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.player-profile-opponents-table td:first-child .player-identity-pill {
+  max-width: 100%;
+  width: fit-content;
+}
+
+.player-profile-opponents-table td:first-child .player-identity-pill__name {
+  min-width: 0;
+}
+
 .player-profile-match-result {
   align-items: center;
   border-radius: 999px;
@@ -6856,8 +6934,36 @@ a:focus-visible {
   min-height: 300px;
 }
 
+@media (max-width: 1023px) {
+  .player-profile-opponents-sort {
+    display: flex;
+  }
+
+  .player-profile-table-card--opponents {
+    display: none;
+  }
+
+  .player-profile-opponents-mobile {
+    display: grid;
+    gap: 0.7rem;
+    min-width: 0;
+  }
+}
+
 @media (max-width: 767px) {
+  .player-profile-synergy-sort {
+    display: flex;
+  }
+
+  .player-profile-opponents-sort {
+    display: flex;
+  }
+
   .player-profile-table-card--synergy {
+    display: none;
+  }
+
+  .player-profile-table-card--opponents {
     display: none;
   }
 

@@ -58,7 +58,13 @@ class PlayersController < ApplicationController
     season = Season.find_by(id: params[:season_id]) if params[:season_id].present?
     profile = Players::ProfileStatsQuery.call(player:, season:, tab: params[:tab], page: params[:page], per_page: 20)
 
-    render :show, locals: { player:, profile: }
+    render :show, locals: {
+      player:,
+      profile:,
+      sort_column: params[:sort].to_s.presence || ("losses" if params[:tab].to_s == "opponents"),
+      sort_direction: params[:sort_direction].to_s.presence || ("desc" if params[:tab].to_s == "opponents"),
+      attendance_percent: params[:attendance_percent].to_s
+    }
   end
 
   private

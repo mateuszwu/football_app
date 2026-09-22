@@ -51,6 +51,9 @@
     <% if profile.available_seasons.any? %>
       <%= form_with url: player_path(player), method: :get, local: true, class: "player-profile-season-form" do |form| %>
         <%= form.hidden_field :tab, value: profile.active_tab %>
+        <%= form.hidden_field :sort, value: sort_column if %w[synergy opponents].include?(profile.active_tab) && sort_column.present? %>
+        <%= form.hidden_field :sort_direction, value: sort_direction if %w[synergy opponents].include?(profile.active_tab) && sort_direction.present? %>
+        <%= form.hidden_field :attendance_percent, value: attendance_percent if profile.active_tab == "opponents" && attendance_percent.present? %>
         <%= form.label :season_id, t("players.profile.season"), class: "sr-only" %>
         <%= form.select :season_id, options_from_collection_for_select(profile.available_seasons, :id, :name, profile.season&.id), {}, onchange: "this.form.requestSubmit()" %>
       <% end %>
@@ -179,7 +182,9 @@
     <% elsif profile.active_tab == "elo" %>
       <%= render "players/profile_elo_tab", player:, profile: %>
     <% elsif profile.active_tab == "synergy" %>
-      <%= render "players/profile_synergy_tab", player:, profile: %>
+      <%= render "players/profile_synergy_tab", player:, profile:, sort_column:, sort_direction: %>
+    <% elsif profile.active_tab == "opponents" %>
+      <%= render "players/profile_opponents_tab", player:, profile:, sort_column:, sort_direction:, attendance_percent: %>
     <% elsif profile.active_tab == "awards" %>
       <%= render "players/profile_awards_tab", player:, profile: %>
     <% end %>
