@@ -9,6 +9,11 @@
   <% if matches.any? %>
     <div class="leaderboards-table-wrap">
       <table class="leaderboards-table player-profile-table">
+        <colgroup>
+          <% [ 12, 21, 8, 10, 7, 9, 10, 10, 13 ].each do |width| %>
+            <col style="width: <%= width %>%">
+          <% end %>
+        </colgroup>
         <thead>
           <tr>
             <th><%= t("players.profile.matches.date") %></th>
