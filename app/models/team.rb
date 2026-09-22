@@ -27,6 +27,8 @@ class Team < ApplicationRecord
   belongs_to :captain, class_name: "Player", optional: true
   has_many :derived_teams, class_name: "Team", foreign_key: :source_team_id, dependent: :nullify
   has_many :match_goals, foreign_key: :scoring_team_id, dependent: :restrict_with_exception
+  has_many :match_player_changes_from, class_name: "MatchPlayerChange", foreign_key: :from_team_id, dependent: :nullify
+  has_many :match_player_changes_to, class_name: "MatchPlayerChange", foreign_key: :to_team_id, dependent: :nullify
   has_many :team_players, dependent: :destroy
   has_many :players, through: :team_players
 

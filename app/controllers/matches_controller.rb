@@ -7,6 +7,7 @@ class MatchesController < ApplicationController
         match_day: :season,
         home_team: :players,
         away_team: :players,
+        match_player_changes: [ :player, :from_team, :to_team ],
         match_goals: [ :scoring_team, { scorer_team_player: :player, assistant_team_player: :player } ]
       )
       .find(params[:id])

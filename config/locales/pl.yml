@@ -989,7 +989,7 @@ pl:
         awards_value: "MVP %{mvp} · DEF %{def}"
       timeline:
         title: "Przebieg meczu"
-        subtitle: "Chronologia bramek z wynikiem po każdym golu."
+        subtitle: "Chronologia bramek i zmian zawodników; wynik po każdym golu."
         minute: "%{minute}. minuta"
         goal: "Gol: %{player}"
         own_goal: "Gol samobójczy: %{player}"
@@ -999,7 +999,14 @@ pl:
         first_goal: "pierwszy gol"
         equalizer: "wyrównanie"
         go_ahead: "prowadzenie"
-        empty: "Brak zdarzeń bramkowych w tym meczu."
+        empty: "Brak zdarzeń w tym meczu."
+      player_changes:
+        bench: "Ławka"
+        off_pitch: "Poza boiskiem"
+        types:
+          team_change: "Zmiana drużyny"
+          substitution_in: "Wejście na boisko"
+          substitution_out: "Zejście z boiska"
       rosters:
         title: "Składy i wkład zawodników"
         subtitle: "Zawodnicy oraz ich udział w bramkach w tym meczu."

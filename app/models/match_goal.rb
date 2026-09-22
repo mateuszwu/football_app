@@ -11,6 +11,8 @@ class MatchGoal < ApplicationRecord
   validate :scoring_team_is_playing
   validate :scorer_team_player_belongs_to_scoring_team
   validate :assistant_team_player_belongs_to_scoring_team
+  validate :scorer_was_in_the_expected_team
+  validate :assistant_was_in_the_scoring_team
   validate :assistant_is_not_scorer
   validate :own_goal_scorer_belongs_to_opponent
   validate :own_goal_has_no_assistant
@@ -56,6 +58,21 @@ class MatchGoal < ApplicationRecord
     return if assistant_team_player.team_id == scoring_team_id
 
     errors.add(:assistant_team_player, "must belong to the scoring team")
+  end
+
+  def scorer_was_in_the_expected_team
+    return if own_goal?
+    return if match.blank? || scoring_team.blank? || scorer_team_player.blank? || scored_at.blank?
+    return if match.player_team_at(scorer_team_player.player, occurred_at: scored_at) == scoring_team
+
+    errors.add(:scorer_team_player, "must be in the scoring team when the goal is scored")
+  end
+
+  def assistant_was_in_the_scoring_team
+    return if match.blank? || scoring_team.blank? || assistant_team_player.blank? || scored_at.blank?
+    return if match.player_team_at(assistant_team_player.player, occurred_at: scored_at) == scoring_team
+
+    errors.add(:assistant_team_player, "must be in the scoring team when the goal is scored")
   end
 
   def assistant_is_not_scorer

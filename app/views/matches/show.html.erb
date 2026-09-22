@@ -139,39 +139,55 @@
           <% end %>
         </div>
 
-        <% if summary.timeline.any? %>
+        <% if summary.match_events.any? %>
           <ol class="match-timeline">
-            <% summary.timeline.each do |event| %>
-              <li class="match-timeline-row match-timeline-row--<%= event.fetch(:event_type) %>">
+            <% summary.match_events.each do |event| %>
+              <% player_change_event = event.fetch(:timeline_type) == :player_change %>
+              <% timeline_row_class = player_change_event ? "match-timeline-row--player-change" : "match-timeline-row--#{event.fetch(:event_type)}" %>
+              <li class="match-timeline-row <%= timeline_row_class %>">
                 <span class="match-event-time"><%= match_report_minute_label(event.fetch(:occurred_at_seconds)) %></span>
                 <div class="match-timeline__body">
-                  <div class="match-event-main">
-                    <span class="match-event-type"><%= event.fetch(:own_goal) ? t("matches.show.timeline.own_goal_badge") : t("matches.goal") %></span>
-                    <strong><%= event.fetch(:scorer).name %></strong>
-                  </div>
-                  <p>
-                    <% if event.fetch(:own_goal) %>
-                      <%= t("matches.show.timeline.for_team", team: event.fetch(:team).name) %>
-                    <% elsif event.fetch(:assister).present? %>
-                      <%= t("matches.show.timeline.assist", player: event.fetch(:assister).name) %>
-                    <% end %>
-                  </p>
-                  <div class="match-timeline__tags">
-                    <span class="match-timeline__tag--event-type"><%= event.fetch(:own_goal) ? t("matches.show.timeline.own_goal_badge") : t("matches.goal") %></span>
-                    <% if event.fetch(:first_goal) %>
-                      <span><%= t("matches.show.timeline.first_goal") %></span>
-                    <% end %>
-                    <% if event.fetch(:equalizer) %>
-                      <span><%= t("matches.show.timeline.equalizer") %></span>
-                    <% end %>
-                    <% if event.fetch(:go_ahead_goal) %>
-                      <span><%= t("matches.show.timeline.go_ahead") %></span>
-                    <% end %>
-                  </div>
+                  <% if player_change_event %>
+                    <div class="match-event-main">
+                      <span class="match-event-type"><%= t("matches.show.player_changes.types.#{event.fetch(:event_type)}") %></span>
+                      <strong><%= event.fetch(:player).name %></strong>
+                    </div>
+                    <p>
+                      <%= event.fetch(:from_team)&.name || t("matches.show.player_changes.bench") %>
+                      →
+                      <%= event.fetch(:to_team)&.name || t("matches.show.player_changes.off_pitch") %>
+                    </p>
+                  <% else %>
+                    <div class="match-event-main">
+                      <span class="match-event-type"><%= event.fetch(:own_goal) ? t("matches.show.timeline.own_goal_badge") : t("matches.goal") %></span>
+                      <strong><%= event.fetch(:scorer).name %></strong>
+                    </div>
+                    <p>
+                      <% if event.fetch(:own_goal) %>
+                        <%= t("matches.show.timeline.for_team", team: event.fetch(:team).name) %>
+                      <% elsif event.fetch(:assister).present? %>
+                        <%= t("matches.show.timeline.assist", player: event.fetch(:assister).name) %>
+                      <% end %>
+                    </p>
+                    <div class="match-timeline__tags">
+                      <span class="match-timeline__tag--event-type"><%= event.fetch(:own_goal) ? t("matches.show.timeline.own_goal_badge") : t("matches.goal") %></span>
+                      <% if event.fetch(:first_goal) %>
+                        <span><%= t("matches.show.timeline.first_goal") %></span>
+                      <% end %>
+                      <% if event.fetch(:equalizer) %>
+                        <span><%= t("matches.show.timeline.equalizer") %></span>
+                      <% end %>
+                      <% if event.fetch(:go_ahead_goal) %>
+                        <span><%= t("matches.show.timeline.go_ahead") %></span>
+                      <% end %>
+                    </div>
+                  <% end %>
                 </div>
-                <strong class="match-event-score"><%= match_report_compact_score(event.fetch(:score_after)) %></strong>
-                <% if admin_signed_in? %>
-                  <%= button_to t("matches.undo"), match_goal_path(match, event.fetch(:id)), method: :delete, class: "button button--danger button--small", data: { turbo_confirm: t("matches.remove_goal_confirm") } %>
+                <% unless player_change_event %>
+                  <strong class="match-event-score"><%= match_report_compact_score(event.fetch(:score_after)) %></strong>
+                  <% if admin_signed_in? %>
+                    <%= button_to t("matches.undo"), match_goal_path(match, event.fetch(:id)), method: :delete, class: "button button--danger button--small", data: { turbo_confirm: t("matches.remove_goal_confirm") } %>
+                  <% end %>
                 <% end %>
               </li>
             <% end %>
@@ -356,6 +372,31 @@
         <div class="form-actions">
           <%= button_to "Finish match", finish_match_path(match), method: :patch, class: "button button--danger", data: { turbo_confirm: "Finish this match?" } %>
         </div>
+
+        <h2>Record player change</h2>
+        <%= form_with url: match_player_changes_path(match), scope: :match_player_change, method: :post, local: true, class: "admin-form" do |form| %>
+          <label class="form-field">
+            <span>Player</span>
+            <%= form.select :player_id, options_from_collection_for_select(match.match_day.players.order(:name), :id, :name), { include_blank: "Select player" }, required: true %>
+          </label>
+
+          <label class="form-field">
+            <span>From team (blank means bench)</span>
+            <%= form.select :from_team_id, options_from_collection_for_select([ match.home_team, match.away_team ], :id, :name), { include_blank: "Bench" } %>
+          </label>
+
+          <label class="form-field">
+            <span>To team (blank means off pitch)</span>
+            <%= form.select :to_team_id, options_from_collection_for_select([ match.home_team, match.away_team ], :id, :name), { include_blank: "Off pitch" } %>
+          </label>
+
+          <label class="form-field">
+            <span>Occurred at</span>
+            <%= form.datetime_local_field :occurred_at, value: Time.current.strftime("%Y-%m-%dT%H:%M"), required: true %>
+          </label>
+
+          <%= form.submit "Save player change", class: "button button--primary" %>
+        <% end %>
       <% end %>
 
       <h2>Add goal</h2>

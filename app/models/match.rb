@@ -14,6 +14,7 @@ class Match < ApplicationRecord
   belongs_to :away_team, class_name: "Team"
   has_many :match_goals, dependent: :destroy
   has_many :active_match_goals, -> { active }, class_name: "MatchGoal", dependent: :destroy, inverse_of: :match
+  has_many :match_player_changes, dependent: :destroy
   has_many :player_rating_changes, dependent: :nullify
   has_many :teams, dependent: :nullify
 
@@ -78,7 +79,51 @@ class Match < ApplicationRecord
     )
   end
 
+  def match_teams
+    [ home_team, away_team ].compact
+  end
+
+  def player_team_at(player_or_id, occurred_at: timer_reference_time)
+    player_id = player_or_id.respond_to?(:id) ? player_or_id.id : player_or_id.to_i
+    team_id = initial_team_id_for(player_id)
+
+    match_player_changes
+      .where(player_id:)
+      .where("occurred_at <= ?", occurred_at)
+      .order(:occurred_at, :id)
+      .each { |change| team_id = change.to_team_id }
+
+    match_teams.find { |team| team.id == team_id }
+  end
+
+  def players_for_team_at(team, occurred_at: timer_reference_time)
+    player_ids = match_player_ids.select do |player_id|
+      player_team_at(player_id, occurred_at:) == team
+    end
+
+    Player.where(id: player_ids).to_a.sort_by { |player| player_ids.index(player.id) }
+  end
+
+  def final_players_for(team)
+    players_for_team_at(team, occurred_at: timer_reference_time)
+  end
+
   private
+
+  def match_player_ids
+    team_player_ids = match_teams.flat_map { |team| team.team_players.pluck(:player_id) }
+    change_player_ids = match_player_changes.distinct.pluck(:player_id)
+    (team_player_ids + change_player_ids).uniq
+  end
+
+  def initial_team_id_for(player_id)
+    first_change = match_player_changes.where(player_id:).order(:occurred_at, :id).first
+    return first_change.from_team_id if first_change
+
+    match_teams.find do |team|
+      team.team_players.any? { |team_player| team_player.player_id == player_id }
+    end&.id
+  end
 
   def sync_status_from_timing
     self.status = if finished_at.present?

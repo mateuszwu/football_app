@@ -44,6 +44,7 @@ Rails.application.routes.draw do
     end
 
     resources :goals, only: %i[create destroy], controller: "match_goals"
+    resources :player_changes, only: :create, controller: "match_player_changes"
   end
   resources :match_days, only: :show
   resources :relationships, only: :index

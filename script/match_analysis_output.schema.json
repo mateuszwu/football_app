@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["session_date", "matches", "manual_review"],
+  "additionalProperties": true,
+  "properties": {
+    "session_date": { "type": "string" },
+    "manual_review": { "type": "array", "items": { "type": "string" } },
+    "matches": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["match_number", "teams", "events"],
+        "additionalProperties": true,
+        "properties": {
+          "match_number": { "type": ["integer", "string"] },
+          "start_datetime": { "type": ["string", "null"] },
+          "end_datetime": { "type": ["string", "null"] },
+          "teams": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["name", "players"],
+              "additionalProperties": true,
+              "properties": {
+                "name": { "type": ["string", "null"] },
+                "captain": { "type": ["string", "null"] },
+                "goalkeeper": { "type": ["string", "null"] },
+                "players": { "type": "array", "items": { "type": "string" } }
+              }
+            }
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["event_type", "confidence", "needs_audio_review"],
+              "additionalProperties": true,
+              "properties": {
+                "event_type": { "type": "string" },
+                "real_time": { "type": ["string", "null"] },
+                "match_minute": { "type": ["number", "string", "null"] },
+                "recording_id": { "type": ["string", "null"] },
+                "recording_seconds": { "type": ["number", "string", "null"] },
+                "scorer": { "type": ["string", "null"] },
+                "assistant": { "type": ["string", "null"] },
+                "confidence": { "enum": ["pewne", "niepewne"] },
+                "needs_audio_review": { "type": "boolean" },
+                "notes": { "type": ["string", "null"] }
+              },
+              "allOf": [
+                {
+                  "if": {
+                    "required": ["event_type"],
+                    "properties": {
+                      "event_type": { "enum": ["gol", "samobój", "samoboj"] }
+                    }
+                  },
+                  "then": {
+                    "required": ["goal_source", "recording_id", "recording_seconds"],
+                    "properties": {
+                      "goal_source": {
+                        "enum": [
+                          "gps_i_transkrypcja",
+                          "gps_bez_transkrypcji",
+                          "transkrypcja_bez_gps"
+                        ]
+                      },
+                      "recording_id": { "type": "string" },
+                      "recording_seconds": { "type": ["number", "string"] }
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}

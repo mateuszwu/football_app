@@ -107,6 +107,67 @@ RSpec.describe Ratings::ApplyMatchPerformance do
       expect(PlayerRatingChange.where(match:, source_type: PlayerRatingChange::SOURCE_TYPE_ASSIST)).to be_empty
     end
 
+    it "keeps goals and assists for a player who leaves but excludes that player from Elo" do
+      season = create(:season, goal_points: 1.0, assist_points: 0.8, elo_k_value: 16.0)
+      match_day = create(:match_day, season:, status: "finished")
+      team_setup = create(:team_setup, match_day:)
+      home_team = create(:team, team_setup:, team_type: Team::TEAM_TYPE_MATCH)
+      away_team = create(:team, team_setup:, team_type: Team::TEAM_TYPE_MATCH)
+      departing_player = create(:player, elo: 1000, global_performance_score: 0.0, nickname: "departing-player")
+      assistant = create(:player, elo: 1000, global_performance_score: 0.0, nickname: "departing-assistant")
+      opponent = create(:player, elo: 1000, global_performance_score: 0.0, nickname: "departing-opponent")
+      [ departing_player, assistant, opponent ].each do |player|
+        create(:match_day_player, match_day:, player:)
+      end
+      departing_team_player = create(:team_player, team: home_team, player: departing_player)
+      assistant_team_player = create(:team_player, team: home_team, player: assistant)
+      create(:team_player, team: away_team, player: opponent)
+      match = create(
+        :match,
+        match_day:,
+        home_team:,
+        away_team:,
+        home_score: 1,
+        away_score: 0,
+        started_at: Time.zone.parse("2026-06-19 19:00:00"),
+        finished_at: Time.zone.parse("2026-06-19 19:45:00")
+      )
+      Matches::RecordPlayerChange.call(
+        match:,
+        player: departing_player,
+        from_team: home_team,
+        to_team: nil,
+        occurred_at: Time.zone.parse("2026-06-19 19:20:00")
+      )
+      create(
+        :match_goal,
+        match:,
+        scoring_team: home_team,
+        scorer_team_player: departing_team_player,
+        assistant_team_player: assistant_team_player,
+        scored_at: Time.zone.parse("2026-06-19 19:10:00")
+      )
+
+      performance_result = described_class.call(match:, season:)
+      elo_result = Ratings::ProcessMatchElo.call(match:, season:)
+
+      expect(performance_result).to be(true)
+      expect(elo_result).to be(true)
+      expect(PlayerSeasonStat.find_by!(player: departing_player, season:).attributes.slice("goals", "assists")).to eq(
+        "goals" => 1,
+        "assists" => 0
+      )
+      expect(PlayerSeasonStat.find_by!(player: assistant, season:).attributes.slice("goals", "assists")).to eq(
+        "goals" => 0,
+        "assists" => 1
+      )
+      expect(departing_player.reload.elo).to eq(1000)
+      expect(departing_player.global_performance_score).to eq(BigDecimal("1.0"))
+      expect(departing_team_player.reload.elo_delta).to be_nil
+      expect(PlayerRatingChange.where(match:, player: departing_player, source_type: PlayerRatingChange::SOURCE_TYPE_MATCH)).to be_empty
+      expect(PlayerRatingChange.where(match:, player: departing_player, source_type: PlayerRatingChange::SOURCE_TYPE_GOAL)).to exist
+    end
+
     it "does not process the same match twice" do
       season = create(:season, goal_points: 1.0, assist_points: 0.8)
       match_day = create(:match_day, season:, status: "finished")

@@ -127,6 +127,48 @@ RSpec.describe Ratings::ProcessMatchElo do
       expect(smaller_players.map { |player| player.reload.elo }).to all(eq(1001))
     end
 
+    it "applies Elo to the team where a player finishes the match" do
+      season = create(:season, initial_elo: 1000, elo_k_value: 16.0)
+      match_day = create(:match_day, season:, status: "finished")
+      team_setup = create(:team_setup, match_day:)
+      home_team = create(:team, team_setup:, team_type: Team::TEAM_TYPE_MATCH)
+      away_team = create(:team, team_setup:, team_type: Team::TEAM_TYPE_MATCH)
+      switching_player = create(:player, elo: 1000, nickname: "elo-switcher")
+      home_player = create(:player, elo: 1000, nickname: "elo-home")
+      away_player = create(:player, elo: 1000, nickname: "elo-away")
+      [ switching_player, home_player, away_player ].each do |player|
+        create(:match_day_player, match_day:, player:)
+      end
+      home_switching_team_player = create(:team_player, team: home_team, player: switching_player)
+      home_team_player = create(:team_player, team: home_team, player: home_player)
+      create(:team_player, team: away_team, player: away_player)
+      match = create(
+        :match,
+        match_day:,
+        home_team:,
+        away_team:,
+        home_score: 1,
+        away_score: 0,
+        started_at: Time.zone.parse("2026-06-19 19:00:00"),
+        finished_at: Time.zone.parse("2026-06-19 19:45:00")
+      )
+      player_change = Matches::RecordPlayerChange.call(
+        match:,
+        player: switching_player,
+        from_team: home_team,
+        to_team: away_team,
+        occurred_at: Time.zone.parse("2026-06-19 19:20:00")
+      )
+
+      result = described_class.call(match:, season:)
+
+      expect(player_change).to be_persisted
+      expect(result).to be(true)
+      expect(home_switching_team_player.reload.elo_delta).to be_nil
+      expect(home_team_player.reload.elo_delta).to be_present
+      expect(away_team.team_players.find_by!(player: switching_player).elo_delta).to be_present
+    end
+
     it "does not process the same match twice" do
       season = create(:season, elo_k_value: 16.0)
       match_day = create(:match_day, season:, status: "finished")

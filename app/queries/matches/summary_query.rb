@@ -10,6 +10,7 @@ module Matches
       :time,
       :status,
       :timeline,
+      :match_events,
       :score_progression,
       :summary_cards,
       :team_rosters,
@@ -38,6 +39,7 @@ module Matches
         time: time,
         status: status,
         timeline: timeline,
+        match_events: match_events,
         score_progression: score_progression,
         summary_cards: summary_cards,
         team_rosters: team_rosters,
@@ -105,6 +107,7 @@ module Matches
         {
           id: goal.id,
           event_type: goal.own_goal? ? :own_goal : :goal,
+          occurred_at: goal.scored_at,
           occurred_at_seconds: event.fetch(:occurred_at_seconds),
           team: event.fetch(:scoring_team),
           scorer: event.fetch(:scorer),
@@ -121,6 +124,36 @@ module Matches
 
     def score_progression
       [ { team_a: 0, team_b: 0 } ].concat(timeline.map { |event| event.fetch(:score_after) })
+    end
+
+    def player_changes
+      match.match_player_changes
+        .includes(:player, :from_team, :to_team)
+        .order(:occurred_at, :id)
+        .map do |change|
+          {
+            id: change.id,
+            player: change.player,
+            from_team: change.from_team,
+            to_team: change.to_team,
+            event_type: change.event_type,
+            occurred_at: change.occurred_at,
+            occurred_at_seconds: occurred_at_seconds_for(change.occurred_at)
+          }
+        end
+    end
+
+    def match_events
+      goal_events = timeline.map { |event| event.merge(timeline_type: :goal) }
+      player_change_events = player_changes.map { |event| event.merge(timeline_type: :player_change) }
+
+      (goal_events + player_change_events).sort_by do |event|
+        [
+          event.fetch(:occurred_at)&.to_f || Float::INFINITY,
+          event.fetch(:timeline_type) == :player_change ? 0 : 1,
+          event.fetch(:id)
+        ]
+      end
     end
 
     def summary_cards
@@ -283,6 +316,12 @@ module Matches
 
     def score_label(score_hash)
       "#{score_hash.fetch(:team_a)}:#{score_hash.fetch(:team_b)}"
+    end
+
+    def occurred_at_seconds_for(timestamp)
+      return nil if match.started_at.blank? || timestamp.blank?
+
+      [ timestamp.to_i - match.started_at.to_i, 0 ].max
     end
   end
 end

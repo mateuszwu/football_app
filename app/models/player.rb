@@ -4,6 +4,7 @@ class Player < ApplicationRecord
 
   has_many :match_day_players, dependent: :destroy
   has_many :match_days, through: :match_day_players
+  has_many :match_player_changes, dependent: :destroy
   has_many :player_rating_changes, dependent: :destroy
   has_many :player_season_stats, dependent: :destroy
   has_many :season_pair_stats_as_player_one,

@@ -56,11 +56,11 @@ module Ratings
     end
 
     def home_players
-      @home_players ||= match.home_team.players.to_a
+      @home_players ||= match.final_players_for(match.home_team)
     end
 
     def away_players
-      @away_players ||= match.away_team.players.to_a
+      @away_players ||= match.final_players_for(match.away_team)
     end
 
     def elo_map

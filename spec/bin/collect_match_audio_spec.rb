@@ -90,5 +90,53 @@ RSpec.describe "script/collect_match_audio.py" do
         end
       end
     end
+
+    context "when a today's DeviceLog JSON is present" do
+      it "copies 6aa JSON files and records them separately from audio" do
+        Dir.mktmpdir("collect-match-audio-spec-") do |directory|
+          source = File.join(directory, "Downloads")
+          output = File.join(directory, "tmp")
+          FileUtils.mkdir_p(source)
+          today = Time.parse("2026-09-13 12:00:00 UTC")
+          yesterday = Time.parse("2026-09-12 12:00:00 UTC")
+
+          current = File.join(source, "6aa-current.json")
+          File.write(current, '{"DeviceLog": {}}')
+          File.utime(today, today, current)
+
+          old = File.join(source, "6aa-old.json")
+          File.write(old, '{"DeviceLog": {}}')
+          File.utime(yesterday, yesterday, old)
+
+          unrelated = File.join(source, "other.json")
+          File.write(unrelated, '{"DeviceLog": {}}')
+          File.utime(today, today, unrelated)
+
+          _stdout, stderr, status = Open3.capture3(
+            "python3",
+            script_path,
+            "--source",
+            source,
+            "--output-root",
+            output,
+            "--date",
+            "2026-09-13",
+            "--timezone",
+            "UTC"
+          )
+
+          expect(status).to be_success, stderr
+          run_root = File.join(output, "2026-09-13")
+          expect(Dir.children(File.join(run_root, "inbox/device_logs"))).to eq(
+            [ "6aa-current.json" ]
+          )
+          manifest = JSON.parse(File.read(File.join(run_root, "manifest.json")))
+          expect(manifest.fetch("device_log_count")).to eq(1)
+          expect(manifest.fetch("files").map { |file| file.fetch("kind") }).to contain_exactly(
+            "device_log"
+          )
+        end
+      end
+    end
   end
 end

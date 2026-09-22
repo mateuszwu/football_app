@@ -17,6 +17,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_SOURCE = Path.home() / "Downloads"
 DEFAULT_OUTPUT_ROOT = PROJECT_ROOT / "tmp/match_audio"
 AUDIO_EXTENSIONS = {".aac", ".flac", ".m4a", ".mp3", ".ogg", ".wav"}
+DEVICE_LOG_PREFIX = "6aa"
 
 
 def parse_arguments() -> argparse.Namespace:
@@ -88,6 +89,17 @@ def discover_audio(source: Path, target_date: date, timezone: ZoneInfo) -> list[
     )
 
 
+def discover_device_logs(source: Path, target_date: date, timezone: ZoneInfo) -> list[Path]:
+    return sorted(
+        path
+        for path in source.iterdir()
+        if path.is_file()
+        and path.suffix.casefold() == ".json"
+        and path.name.casefold().startswith(DEVICE_LOG_PREFIX)
+        and file_date(path, timezone) == target_date
+    )
+
+
 def collect(
     source: Path,
     output_root: Path,
@@ -99,6 +111,7 @@ def collect(
 ) -> tuple[Path, dict[str, object]]:
     run_root = output_root / target_date.isoformat()
     audio_files = discover_audio(source, target_date, timezone)
+    device_log_files = discover_device_logs(source, target_date, timezone)
     records: list[dict[str, object]] = []
 
     for audio in audio_files:
@@ -120,12 +133,36 @@ def collect(
             }
         )
 
+    for device_log in device_log_files:
+        destination = run_root / "inbox/device_logs" / device_log.name
+        status = "planned" if dry_run else copy_file(
+            device_log,
+            destination,
+            force=force,
+        )
+        records.append(
+            {
+                "kind": "device_log",
+                "source_type": "device_log",
+                "source": str(device_log),
+                "destination": str(destination),
+                "mtime": datetime.fromtimestamp(
+                    device_log.stat().st_mtime,
+                    timezone,
+                ).isoformat(),
+                "size": device_log.stat().st_size,
+                "sha256": sha256(device_log),
+                "status": status,
+            }
+        )
+
     manifest = {
         "date": target_date.isoformat(),
         "timezone": str(timezone),
         "source": str(source),
         "run_root": str(run_root),
         "audio_count": len(audio_files),
+        "device_log_count": len(device_log_files),
         "files": records,
     }
     manifest_path = run_root / "manifest.json"

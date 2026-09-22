@@ -138,8 +138,36 @@ the same Bearer token as the import endpoint.
 
 After resolving player identities and receiving an explicit confirmation, send the
 match-day payload to `POST /api/match_imports`. The importer creates the match day,
-per-match rosters, goals, assists, scores, and finished-match performance data in one
-transaction.
+per-match rosters, player changes, goals, assists, scores, and finished-match performance
+data in one transaction.
+
+For a player who changes teams or leaves the pitch during a match, add `player_changes`
+to the relevant match. `from_team` may be omitted for a player entering from the bench;
+`to_team` may be omitted when the player leaves the pitch:
+
+```json
+{
+  "player_changes": [
+    {
+      "player": "adam",
+      "from_team": "Team A",
+      "to_team": "Team B",
+      "occurred_at": "2026-06-19 19:10"
+    },
+    {
+      "player": "jan",
+      "from_team": "Team A",
+      "to_team": null,
+      "occurred_at": "2026-06-19 19:20"
+    }
+  ]
+}
+```
+
+Changes are applied chronologically before goals are imported. This allows the same
+player to score or assist for either team at the relevant moment. Match Elo uses the
+player's final team; a player who finishes off the pitch is excluded from both teams'
+Elo rosters.
 
 ## Common Commands
 
@@ -193,6 +221,15 @@ profile; `R` uses the milder
 `recorder` profile because it is already compressed and its stereo channels
 contain the same signal.
 
+The collector also copies today's `6aa*.json` files from the same `Downloads`
+directory to `tmp/match_audio/YYYY-MM-DD/inbox/device_logs/`. The pipeline reads
+`DeviceLog.Zapps[]` for `footba01` / `Football Match`, resolves the
+`event_code` channel dynamically, removes consecutive duplicate values, and
+replays `MATCH_START`, goals, `UNDO_GOAL`, and `MATCH_END`. The replay is saved
+in `analysis/report.json` and is used to create focused audio search windows
+for DeviceLog goals that have no corresponding audio candidate. Those windows
+also appear as numbered clips and manual-review items in `analysis/report.md`.
+
 Useful development stages:
 
 ```sh
@@ -245,6 +282,42 @@ when the operator is known.
 An eight-goal 5:3 result is inferred only when the full large-v3 context check
 confirms the session rule to five goals. Missing captains and ambiguous names
 remain unresolved rather than being inferred.
+
+### Isolated Meczyk transcription workflow
+
+The new workflow is deliberately separate from `script/match_audio_pipeline.py`
+and writes only to `tmp/match_transcription_workflow/YYYY-MM-DD`. It selects
+only `Meczyk-*` audio files by the date in the filename, selects matching
+`6aa*.json` Suunto GPS files by their `DeviceLog` date, reads active approved
+players through Rails, decodes M4A to neutral PCM without cleaning, and runs a
+full `ggml-large-v3.bin` transcription. It then writes an AI prompt and, by
+default, starts a new Codex analysis task with `gpt-5.6-sol` and `xhigh`
+reasoning. The generated report and uncertain-event audio clips stay in that
+isolated directory and do not touch `tmp/match_audio`.
+
+If Metal cannot allocate the full model, the script automatically retries the
+same full model on CPU; pass `--cpu` to select CPU from the start.
+
+Run it for the requested date with:
+
+```sh
+python3 script/match_transcription_workflow.py --date 2026-09-20
+```
+
+Use `--skip-analysis-thread` to collect, transcribe, and write the prompt
+without starting Codex. The AI contract is documented in
+`script/match_analysis_instructions.md` and enforced by
+`script/match_analysis_output.schema.json`. If an app-native Codex task returns
+the JSON outside the terminal process, pass it back with
+`--analysis-result PATH` to generate the same report and review clips.
+Review clips are exported as 16 kHz mono MP3 files and embedded in
+`report.md` with Codex-compatible audio players.
+For every `gol` and `samobój`, the report adds a first table column with one
+of `GPS + transkrypcja`, `GPS bez transkrypcji`, or `Transkrypcja bez GPS`.
+Each goal also gets a 45-second MP3 clip embedded inline in the table,
+starting 5 seconds before the matching transcription mention when audio confirms
+the goal. GPS is used only for a goal without an audio confirmation. Existing
+review clips are removed and recreated on every completed run.
 
 Run tests:
 

@@ -27,13 +27,15 @@ module Api
         original_teams: [ :name, :captain, { players: [] } ],
         teams: [ :name, :captain, { players: [] } ],
         goals: %i[team scorer assistant scored_at own_goal],
+        player_changes: %i[player from_team to_team occurred_at],
         matches: [
           :started_at,
           :finished_at,
           :all_roster_players_on_pitch,
           {
             teams: [ :name, :captain, { players: [] } ],
-            goals: %i[team scorer assistant scored_at own_goal]
+            goals: %i[team scorer assistant scored_at own_goal],
+            player_changes: %i[player from_team to_team occurred_at]
           }
         ]
       ).to_h
@@ -48,7 +50,7 @@ module Api
     end
 
     def match_payload(match)
-      {
+      payload = {
         match_id: match.id,
         match_url: match_url(match),
         status: match.status,
@@ -58,6 +60,19 @@ module Api
         },
         all_roster_players_on_pitch: match.all_roster_players_on_pitch?
       }
+
+      changes = match.match_player_changes.includes(:player, :from_team, :to_team).order(:occurred_at, :id)
+      payload[:player_changes] = changes.map do |change|
+        {
+          "player" => change.player.nickname,
+          "from_team" => change.from_team&.name,
+          "to_team" => change.to_team&.name,
+          "event_type" => change.event_type,
+          "occurred_at" => change.occurred_at.iso8601
+        }
+      end if changes.any?
+
+      payload
     end
   end
 end

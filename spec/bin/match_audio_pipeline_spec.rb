@@ -958,7 +958,7 @@ RSpec.describe "script/match_audio_pipeline.py" do
 
       expect(status).to be_success, stderr
       result = JSON.parse(stdout)
-      expect(result.fetch("captains").map { |captain| captain["name"] }).to eq([ "Wicu", "Piotrek (Cash)" ])
+      expect(result.fetch("captains").map { |captain| captain["name"] }).to eq([ "Wicu", "Dima" ])
       expect(result.fetch("captains").map { |captain| captain["team_label"] }).to eq(
         [ "Drużyna Wica", "Drużyna Piotrka (Cash)" ]
       )
@@ -1094,6 +1094,199 @@ RSpec.describe "script/match_audio_pipeline.py" do
       markdown = result.fetch("markdown")
       expect(markdown).to include("## Zestawienie meczów", "## Składy sesji i kapitanowie", "Meczyk/R", "kapitan nieustalony", "Kamil gol")
       expect(result.fetch("json_keys")).to include("date", "matches", "session", "manual_review")
+    end
+
+    it "parses a dynamic event_code channel and replays DeviceLog events" do
+      python = <<~PYTHON
+        import json
+        import sys
+        from datetime import date
+        from zoneinfo import ZoneInfo
+
+        sys.path.insert(0, sys.argv[1])
+        import match_audio_pipeline as pipeline
+
+        document = {
+            "DeviceLog": {
+                "Zapps": [{
+                    "Id": "footba01",
+                    "Name": "Football Match",
+                    "Channels": [{"VariableId": "event_code", "ChannelId": 77}],
+                }],
+                "Samples": [
+                    {"ZappSample": {"ChannelId": 77, "Value": 50}, "TimeISO8601": "2026-09-13T10:01:00+02:00"},
+                    {"ZappSample": {"ChannelId": 77, "Value": 10}, "TimeISO8601": "2026-09-13T10:00:00+02:00"},
+                    {"ZappSample": {"ChannelId": 77, "Value": 20}, "TimeISO8601": "2026-09-13T10:00:20+02:00"},
+                    {"ZappSample": {"ChannelId": 77, "Value": 20}, "TimeISO8601": "2026-09-13T10:00:21+02:00"},
+                    {"ZappSample": {"ChannelId": 77, "Value": 21}, "TimeISO8601": "2026-09-13T10:00:30+02:00"},
+                    {"ZappSample": {"ChannelId": 77, "Value": 30}, "TimeISO8601": "2026-09-13T10:00:40+02:00"},
+                    {"ZappSample": {"ChannelId": 77, "Value": 40}, "TimeISO8601": "2026-09-13T10:00:50+02:00"},
+                    {"ZappSample": {"ChannelId": 77, "Value": 51}, "TimeISO8601": "2026-09-13T10:01:01+02:00"},
+                    {"ZappSample": {"ChannelId": 99, "Value": 20}, "TimeISO8601": "2026-09-13T10:00:25+02:00"},
+                ],
+            }
+        }
+        result = pipeline.parse_device_log_document(
+            document,
+            date(2026, 9, 13),
+            ZoneInfo("Europe/Warsaw"),
+        )
+        match = result["matches"][0]
+        print(json.dumps({
+            "channel_id": result["channel_id"],
+            "sample_count": result["sample_count"],
+            "event_types": [event["event_type"] for event in result["events"]],
+            "score": match["final_score"],
+            "goal_count": match["goal_count"],
+            "active_goals": [goal["value"] for goal in match["goals"] if goal["active"]],
+        }))
+      PYTHON
+
+      stdout, stderr, status = Open3.capture3(
+        "python3",
+        "-c",
+        python,
+        File.dirname(script_path)
+      )
+
+      expect(status).to be_success, stderr
+      expect(JSON.parse(stdout)).to eq(
+        "channel_id" => 77,
+        "sample_count" => 7,
+        "event_types" => [ "MATCH_START", "GOAL_MY", "GOAL_MY", "GOAL_THEM", "UNDO_GOAL", "MATCH_END", "MATCH_END" ],
+        "score" => { "my" => 2, "them" => 0 },
+        "goal_count" => 2,
+        "active_goals" => [ 20, 21 ]
+      )
+    end
+
+    it "uses DeviceLog goal timestamps to create a focused missing-goal window" do
+      python = <<~PYTHON
+        import json
+        import sys
+        from datetime import date
+        from zoneinfo import ZoneInfo
+
+        sys.path.insert(0, sys.argv[1])
+        import match_audio_pipeline as pipeline
+
+        device_log = {
+            "status": "parsed",
+            "matches": [{
+                "match_number": 1,
+                "start": {"timestamp": "2026-09-13T10:00:00+02:00"},
+                "end": {"timestamp": "2026-09-13T10:01:00+02:00"},
+                "goals": [
+                    {"goal_number": 1, "side": "my", "active": True, "timestamp": "2026-09-13T10:00:20+02:00", "score_after": {"my": 1, "them": 0}},
+                    {"goal_number": 2, "side": "them", "active": True, "timestamp": "2026-09-13T10:00:40+02:00", "score_after": {"my": 1, "them": 1}},
+                ],
+                "final_score": {"my": 1, "them": 1},
+                "goal_count": 2,
+            }],
+        }
+        goal = {
+            "scorer": "Kamil",
+            "recording_seconds": 20.0,
+            "goal_confirmation": "repeated_within_5_seconds",
+        }
+        summary = {
+            "id": "meczyk-13-wrz-2026-o-10-00",
+            "meczyk_variant": "neutral",
+            "goals": [goal],
+            "pending_goals": [],
+            "device_log": {},
+        }
+        recording = {
+            "id": summary["id"],
+            "name": "Meczyk-13 wrz 2026 o 10:00.m4a",
+            "source_type": "meczyk",
+            "audio": {"duration": 100.0},
+        }
+        pipeline.attach_device_log_guidance(
+            device_log,
+            [summary],
+            [recording],
+            date(2026, 9, 13),
+            ZoneInfo("Europe/Warsaw"),
+        )
+        print(json.dumps({
+            "status": summary["device_log"]["status"],
+            "expected_score": summary["device_log"]["expected_score"],
+            "missing": [
+                {
+                    "seconds": item["recording_seconds"],
+                    "window": item["search_window"],
+                }
+                for item in summary["device_log"]["missing_goals"]
+            ],
+        }))
+      PYTHON
+
+      stdout, stderr, status = Open3.capture3(
+        "python3",
+        "-c",
+        python,
+        File.dirname(script_path)
+      )
+
+      expect(status).to be_success, stderr
+      expect(JSON.parse(stdout)).to eq(
+        "status" => "matched",
+        "expected_score" => { "my" => 1, "them" => 1 },
+        "missing" => [ { "seconds" => 40.0, "window" => { "from_seconds" => 25.0, "to_seconds" => 85.0 } } ]
+      )
+    end
+
+    it "allows a DeviceLog-only goal window to be confirmed manually" do
+      python = <<~PYTHON
+        import json
+        import sys
+
+        sys.path.insert(0, sys.argv[1])
+        import match_audio_pipeline as pipeline
+
+        summary = {
+            "match_number": 1,
+            "meczyk_goal_count": 0,
+            "goals": [],
+            "pending_goals": [],
+            "pending_recorder_goals": [],
+            "device_log": {
+                "missing_goals": [{
+                    "recording_seconds": 40.0,
+                    "review_source_id": "match-1",
+                    "review_source_role": "device_log",
+                    "review_clip": {"clip_link": "manual_review/device-goal.m4a"},
+                    "evidence": [],
+                    "type": "goal",
+                }],
+            },
+        }
+        pipeline.apply_manual_confirmations([summary], [{
+            "match_number": 1,
+            "clip_link": "manual_review/device-goal.m4a",
+            "resolution": "new_goal",
+            "scorer": "Kamil",
+            "assist": None,
+        }])
+        print(json.dumps({
+            "scorers": [goal["scorer"] for goal in summary["goals"]],
+            "remaining": summary["device_log"]["missing_goals"],
+        }))
+      PYTHON
+
+      stdout, stderr, status = Open3.capture3(
+        "python3",
+        "-c",
+        python,
+        File.dirname(script_path)
+      )
+
+      expect(status).to be_success, stderr
+      expect(JSON.parse(stdout)).to include(
+        "scorers" => [ "Kamil" ],
+        "remaining" => []
+      )
     end
   end
 end

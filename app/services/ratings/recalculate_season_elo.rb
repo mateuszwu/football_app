@@ -82,11 +82,11 @@ module Ratings
     def process_match(match, elo_map)
       Ratings::ProcessMatchElo.call(match:, season:, force: true)
 
-      match.home_team.players.each do |player|
+      match.final_players_for(match.home_team).each do |player|
         elo_map[player.id] = player.reload.elo
       end
 
-      match.away_team.players.each do |player|
+      match.final_players_for(match.away_team).each do |player|
         elo_map[player.id] = player.reload.elo
       end
     end

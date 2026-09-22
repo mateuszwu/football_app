@@ -130,6 +130,83 @@ RSpec.describe "API match imports" do
           end
         end
       end
+
+      it "imports player changes and keeps goals valid before and after a team switch" do
+        begin
+          original_api_token = ENV["FOOTBALL_APP_API_TOKEN"]
+          ENV["FOOTBALL_APP_API_TOKEN"] = "secret-token"
+          season = create(:season)
+          create(:player, name: "Switching Player", nickname: "switching", approval_status: "approved", active: true)
+          create(:player, name: "Home Player", nickname: "home-player", approval_status: "approved", active: true)
+          create(:player, name: "Away Player", nickname: "away-player", approval_status: "approved", active: true)
+          create(:player, name: "Leaving Player", nickname: "leaving", approval_status: "approved", active: true)
+          headers = { "Authorization" => "Bearer secret-token" }
+          payload = {
+            season_id: season.id,
+            played_on: "2026-06-19",
+            original_teams: [
+              { name: "Original A", players: [ "switching", "home-player", "leaving" ] },
+              { name: "Original B", players: [ "away-player" ] }
+            ],
+            matches: [
+              {
+                started_at: "2026-06-19 19:00",
+                finished_at: "2026-06-19 19:30",
+                teams: [
+                  { name: "Team A", players: [ "switching", "home-player", "leaving" ] },
+                  { name: "Team B", players: [ "away-player" ] }
+                ],
+                player_changes: [
+                  { player: "switching", from_team: "Team A", to_team: "Team B", occurred_at: "2026-06-19 19:10" },
+                  { player: "leaving", from_team: "Team A", to_team: nil, occurred_at: "2026-06-19 19:20" }
+                ],
+                goals: [
+                  { team: "Team A", scorer: "switching", scored_at: "2026-06-19 19:05" },
+                  { team: "Team B", scorer: "switching", assistant: "away-player", scored_at: "2026-06-19 19:15" }
+                ]
+              }
+            ]
+          }
+
+          post "/api/match_imports", params: payload, headers:, as: :json
+
+          match = Match.order(:id).last
+          changes = match.match_player_changes.order(:occurred_at)
+          goals = match.match_goals.order(:scored_at)
+
+          expect(response).to have_http_status(:created)
+          expect(response.parsed_body["matches"].first["player_changes"]).to eq([
+            {
+              "player" => "switching",
+              "from_team" => "Team A",
+              "to_team" => "Team B",
+              "event_type" => "team_change",
+              "occurred_at" => "2026-06-19T19:10:00Z"
+            },
+            {
+              "player" => "leaving",
+              "from_team" => "Team A",
+              "to_team" => nil,
+              "event_type" => "substitution_out",
+              "occurred_at" => "2026-06-19T19:20:00Z"
+            }
+          ])
+          expect(changes.map(&:event_type)).to eq([ "team_change", "substitution_out" ])
+          expect(goals.map { |goal| [ goal.scorer.nickname, goal.scoring_team.name ] }).to eq(
+            [ [ "switching", "Team A" ], [ "switching", "Team B" ] ]
+          )
+          expect(match.final_players_for(match.home_team).map(&:nickname)).to contain_exactly("home-player")
+          expect(match.final_players_for(match.away_team).map(&:nickname)).to contain_exactly("switching", "away-player")
+          expect(match.home_team.team_players.find_by!(player: Player.find_by!(nickname: "switching")).elo_delta).to be_nil
+          expect(match.away_team.team_players.find_by!(player: Player.find_by!(nickname: "switching")).elo_delta).to be_present
+        ensure
+          if original_api_token.nil?
+            ENV.delete("FOOTBALL_APP_API_TOKEN")
+          else
+            ENV["FOOTBALL_APP_API_TOKEN"] = original_api_token
+          end
+        end
+      end
     end
 
     context "when the bearer token is missing" do

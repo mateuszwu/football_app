@@ -33,6 +33,17 @@ DEFAULT_TRANSCRIPTION_MODEL = (
 DEFAULT_BATCH_MODEL = DEFAULT_TRANSCRIPTION_MODEL
 DEFAULT_VERIFICATION_MODEL = DEFAULT_TRANSCRIPTION_MODEL
 DEFAULT_PREPARE_WORKERS = 2
+DEVICE_EVENT_TYPES = {
+    1: "MATCH_START",
+    2: "GOAL_MY",
+    3: "GOAL_THEM",
+    4: "UNDO_GOAL",
+    5: "MATCH_END",
+}
+DEVICE_LOG_START_TOLERANCE_SECONDS = 300.0
+DEVICE_LOG_GOAL_MATCH_TOLERANCE_SECONDS = 45.0
+DEVICE_LOG_GOAL_SEARCH_BEFORE_SECONDS = 15.0
+DEVICE_LOG_GOAL_SEARCH_AFTER_SECONDS = 45.0
 
 POLISH_MONTHS = {
     "sty": 1,
@@ -313,6 +324,282 @@ def time_finding(
             "estimated_recording_boundary": "medium",
         }.get(status, "not_established"),
         "evidence": evidence,
+    }
+
+
+def parse_device_timestamp(value: Any, timezone: ZoneInfo) -> datetime:
+    text = str(value).strip()
+    if text.endswith("Z"):
+        text = f"{text[:-1]}+00:00"
+    parsed = datetime.fromisoformat(text)
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone)
+    return parsed.astimezone(timezone)
+
+
+def same_channel(left: Any, right: Any) -> bool:
+    return str(left) == str(right)
+
+
+def deduplicate_device_samples(samples: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    deduplicated: list[dict[str, Any]] = []
+    previous_value: Any = object()
+    for sample in sorted(samples, key=lambda item: item["timestamp"]):
+        if sample["value"] == previous_value:
+            continue
+        deduplicated.append(sample)
+        previous_value = sample["value"]
+    return deduplicated
+
+
+def parse_device_log_document(
+    document: dict[str, Any],
+    target_date: date,
+    timezone: ZoneInfo,
+) -> dict[str, Any]:
+    device_log = document.get("DeviceLog")
+    if not isinstance(device_log, dict):
+        raise ValueError("brak obiektu DeviceLog")
+
+    zapps = device_log.get("Zapps", [])
+    app = next(
+        (
+            item
+            for item in zapps
+            if isinstance(item, dict)
+            and item.get("Id") == "footba01"
+            and item.get("Name") == "Football Match"
+        ),
+        None,
+    )
+    if app is None:
+        raise ValueError("brak aplikacji Football Match (footba01)")
+
+    channels = app.get("Channels", [])
+    channel = next(
+        (
+            item
+            for item in channels
+            if isinstance(item, dict) and item.get("VariableId") == "event_code"
+        ),
+        None,
+    )
+    if channel is None or "ChannelId" not in channel:
+        raise ValueError("brak kanału event_code")
+    channel_id = channel["ChannelId"]
+
+    samples: list[dict[str, Any]] = []
+    for sample in device_log.get("Samples", []):
+        if not isinstance(sample, dict):
+            continue
+        zapp_sample = sample.get("ZappSample")
+        if not isinstance(zapp_sample, dict) or not same_channel(
+            zapp_sample.get("ChannelId"),
+            channel_id,
+        ):
+            continue
+        try:
+            value = int(float(zapp_sample["Value"]))
+            timestamp = parse_device_timestamp(sample["TimeISO8601"], timezone)
+        except (KeyError, TypeError, ValueError, OverflowError):
+            continue
+        if timestamp.date() != target_date:
+            continue
+        samples.append(
+            {
+                "value": value,
+                "timestamp": iso_datetime(timestamp),
+            }
+        )
+
+    deduplicated = deduplicate_device_samples(samples)
+    events: list[dict[str, Any]] = []
+    ignored_samples: list[dict[str, Any]] = []
+    for sample in deduplicated:
+        event_type = sample["value"] // 10
+        event_name = DEVICE_EVENT_TYPES.get(event_type)
+        if event_name is None:
+            ignored_samples.append(
+                {
+                    **sample,
+                    "reason": "unknown_event_type",
+                }
+            )
+            continue
+        events.append(
+            {
+                **sample,
+                "event_type": event_name,
+            }
+        )
+
+    replay = replay_device_events(events)
+    return {
+        "application": {
+            "id": app.get("Id"),
+            "name": app.get("Name"),
+        },
+        "channel_id": channel_id,
+        "raw_sample_count": len(samples),
+        "sample_count": len(deduplicated),
+        "event_count": len(events),
+        "ignored_sample_count": len(ignored_samples),
+        "ignored_samples": ignored_samples,
+        "events": events,
+        "matches": replay["matches"],
+        "ignored_events": replay["ignored_events"],
+    }
+
+
+def replay_device_events(events: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
+    matches: list[dict[str, Any]] = []
+    ignored_events: list[dict[str, Any]] = []
+    current: dict[str, Any] | None = None
+
+    def finish_match(match: dict[str, Any]) -> None:
+        match["final_score"] = dict(match["score"])
+        match["goal_count"] = sum(
+            1 for goal in match["goals"] if goal.get("active")
+        )
+
+    for event in events:
+        event_copy = dict(event)
+        event_type = event_copy.get("event_type")
+        if event_type == "MATCH_START":
+            if current is not None:
+                current["status"] = "interrupted_by_match_start"
+                current["end_reason"] = "next_match_start"
+                finish_match(current)
+                matches.append(current)
+            current = {
+                "match_number": len(matches) + 1,
+                "status": "active",
+                "start": event_copy,
+                "end": None,
+                "events": [event_copy],
+                "goals": [],
+                "undo_events": [],
+                "unmatched_undo_events": [],
+                "score": {"my": 0, "them": 0},
+            }
+            continue
+
+        if current is None:
+            ignored_events.append(
+                {
+                    **event_copy,
+                    "reason": "outside_match",
+                }
+            )
+            continue
+
+        current["events"].append(event_copy)
+        if event_type in {"GOAL_MY", "GOAL_THEM"}:
+            side = "my" if event_type == "GOAL_MY" else "them"
+            current["score"][side] += 1
+            current["goals"].append(
+                {
+                    "goal_number": len(current["goals"]) + 1,
+                    "side": side,
+                    "active": True,
+                    "timestamp": event_copy["timestamp"],
+                    "value": event_copy["value"],
+                    "event_type": event_type,
+                    "score_after": dict(current["score"]),
+                }
+            )
+        elif event_type == "UNDO_GOAL":
+            active_goals = [
+                goal for goal in reversed(current["goals"]) if goal["active"]
+            ]
+            if active_goals:
+                goal = active_goals[0]
+                goal["active"] = False
+                goal["undone_by"] = event_copy
+                current["score"][goal["side"]] -= 1
+                event_copy["undoes_goal_number"] = goal["goal_number"]
+                current["undo_events"].append(event_copy)
+            else:
+                current["unmatched_undo_events"].append(event_copy)
+        elif event_type == "MATCH_END":
+            current["end"] = event_copy
+            current["status"] = "completed"
+            finish_match(current)
+            matches.append(current)
+            current = None
+
+    if current is not None:
+        current["end_reason"] = "end_of_device_log"
+        finish_match(current)
+        matches.append(current)
+
+    return {
+        "matches": matches,
+        "ignored_events": ignored_events,
+    }
+
+
+def load_device_logs(
+    manifest: dict[str, Any],
+    target_date: date,
+    timezone: ZoneInfo,
+) -> dict[str, Any]:
+    records = [
+        record
+        for record in manifest.get("files", [])
+        if record.get("kind") == "device_log"
+    ]
+    if not records:
+        return {
+            "status": "not_found",
+            "files": [],
+            "events": [],
+            "matches": [],
+            "errors": [],
+        }
+
+    file_results: list[dict[str, Any]] = []
+    events: list[dict[str, Any]] = []
+    errors: list[dict[str, str]] = []
+    for record in records:
+        path = Path(str(record["destination"]))
+        try:
+            document = json.loads(path.read_text(encoding="utf-8"))
+            parsed = parse_device_log_document(document, target_date, timezone)
+        except (OSError, json.JSONDecodeError, ValueError) as error:
+            error_details = {
+                "path": str(path),
+                "error": str(error),
+            }
+            errors.append(error_details)
+            file_results.append({**record, "status": "error", "error": str(error)})
+            continue
+
+        events.extend(parsed["events"])
+        file_results.append(
+            {
+                **record,
+                "status": "parsed",
+                "channel_id": parsed["channel_id"],
+                "raw_sample_count": parsed["raw_sample_count"],
+                "sample_count": parsed["sample_count"],
+                "event_count": parsed["event_count"],
+            }
+        )
+
+    events = deduplicate_device_samples(events)
+    replay = replay_device_events(events)
+    status = "parsed" if events else "empty"
+    if errors and not events:
+        status = "error"
+    return {
+        "status": status,
+        "files": file_results,
+        "events": events,
+        "event_count": len(events),
+        "matches": replay["matches"],
+        "ignored_events": replay["ignored_events"],
+        "errors": errors,
     }
 
 
@@ -1322,7 +1609,7 @@ def build_session_context(
                 "source": "informacja użytkownika",
                 "evidence": [],
             }
-            for roster, captain in zip(rosters, ("Wicu", "Piotrek (Cash)"))
+            for roster, captain in zip(rosters, ("Wicu", "Dima"))
         ],
         "match_rule": {
             "id": "first_to_five",
@@ -1544,6 +1831,244 @@ def build_match_summaries(
     return sorted(summaries, key=lambda item: item["match_number"])
 
 
+def attach_device_log_guidance(
+    device_log: dict[str, Any],
+    match_summaries: list[dict[str, Any]],
+    recordings: list[dict[str, Any]],
+    target_date: date,
+    timezone: ZoneInfo,
+) -> None:
+    """Align DeviceLog replay goals with recordings and create search windows."""
+
+    recordings_by_id = {recording["id"]: recording for recording in recordings}
+    device_matches = device_log.get("matches", [])
+    used_device_match_indexes: set[int] = set()
+    mappings: list[dict[str, Any]] = []
+
+    for summary in match_summaries:
+        recording = recordings_by_id.get(summary["id"])
+        summary["device_log"] = {
+            "status": "not_available",
+            "missing_goals": [],
+            "goal_alignments": [],
+        }
+        if not recording or not device_matches:
+            continue
+
+        recording_start = recording_start_datetime(recording, target_date, timezone)
+        if recording_start is None:
+            summary["device_log"] = {
+                "status": "recording_start_unavailable",
+                "missing_goals": [],
+                "goal_alignments": [],
+            }
+            continue
+        recording_duration = float(recording.get("audio", {}).get("duration", 0))
+
+        candidates: list[tuple[float, int, dict[str, Any], float]] = []
+        for index, device_match in enumerate(device_matches):
+            if index in used_device_match_indexes:
+                continue
+            try:
+                device_start = parse_device_timestamp(
+                    device_match["start"]["timestamp"],
+                    timezone,
+                )
+            except (KeyError, TypeError, ValueError):
+                continue
+            start_offset = (device_start - recording_start).total_seconds()
+            if start_offset < -DEVICE_LOG_START_TOLERANCE_SECONDS:
+                continue
+            if start_offset > recording_duration + DEVICE_LOG_START_TOLERANCE_SECONDS:
+                continue
+            try:
+                device_end = device_match.get("end")
+                end_offset = (
+                    parse_device_timestamp(device_end["timestamp"], timezone)
+                    - recording_start
+                ).total_seconds()
+                if end_offset < -DEVICE_LOG_START_TOLERANCE_SECONDS:
+                    continue
+            except (KeyError, TypeError, ValueError):
+                pass
+            candidates.append((abs(start_offset), index, device_match, start_offset))
+
+        if not candidates:
+            summary["device_log"] = {
+                "status": "no_matching_device_match",
+                "missing_goals": [],
+                "goal_alignments": [],
+            }
+            continue
+
+        _, device_match_index, device_match, start_offset = min(
+            candidates,
+            key=lambda item: item[0],
+        )
+        used_device_match_indexes.add(device_match_index)
+        active_device_goals = [
+            goal for goal in device_match.get("goals", []) if goal.get("active")
+        ]
+        audio_candidates: list[tuple[dict[str, Any], str]] = []
+        for goal in summary.get("goals", []):
+            if goal.get("recording_seconds") is not None:
+                audio_candidates.append((goal, "confirmed"))
+        for goal in summary.get("pending_goals", []):
+            if goal.get("recording_seconds") is not None:
+                audio_candidates.append((goal, "pending"))
+        audio_candidates.sort(key=lambda item: item[0]["recording_seconds"])
+
+        used_audio_indexes: set[int] = set()
+        alignments: list[dict[str, Any]] = []
+        missing_goals: list[dict[str, Any]] = []
+        for device_goal in active_device_goals:
+            try:
+                device_goal_time = parse_device_timestamp(
+                    device_goal["timestamp"],
+                    timezone,
+                )
+            except (KeyError, TypeError, ValueError):
+                continue
+            recording_seconds = (
+                device_goal_time - recording_start
+            ).total_seconds()
+            possible_audio = [
+                (
+                    abs(float(goal["recording_seconds"]) - recording_seconds),
+                    index,
+                    goal,
+                    status,
+                )
+                for index, (goal, status) in enumerate(audio_candidates)
+                if index not in used_audio_indexes
+            ]
+            matched_audio = min(possible_audio, default=None, key=lambda item: item[0])
+            if (
+                matched_audio is not None
+                and matched_audio[0] <= DEVICE_LOG_GOAL_MATCH_TOLERANCE_SECONDS
+            ):
+                _, audio_index, audio_goal, audio_status = matched_audio
+                used_audio_indexes.add(audio_index)
+                alignments.append(
+                    {
+                        "status": "audio_candidate",
+                        "side": device_goal["side"],
+                        "device_event": device_goal,
+                        "recording_seconds": round(recording_seconds, 3),
+                        "audio_recording_seconds": audio_goal["recording_seconds"],
+                        "audio_status": audio_status,
+                        "audio_scorer": audio_goal.get("scorer"),
+                        "delta_seconds": round(
+                            float(audio_goal["recording_seconds"])
+                            - recording_seconds,
+                            3,
+                        ),
+                    }
+                )
+                continue
+
+            if recording_seconds < -DEVICE_LOG_GOAL_SEARCH_AFTER_SECONDS:
+                search_status = "outside_audio_recording"
+                search_window = None
+            elif recording_duration > 0 and recording_seconds > recording_duration:
+                search_status = "outside_audio_recording"
+                search_window = None
+            else:
+                search_status = "missing_audio_candidate"
+                window_start = max(
+                    recording_seconds - DEVICE_LOG_GOAL_SEARCH_BEFORE_SECONDS,
+                    0,
+                )
+                window_end = recording_seconds + DEVICE_LOG_GOAL_SEARCH_AFTER_SECONDS
+                if recording_duration > 0:
+                    window_end = min(window_end, recording_duration)
+                search_window = {
+                    "from_seconds": round(window_start, 3),
+                    "to_seconds": round(max(window_end, window_start + 1), 3),
+                }
+
+            missing = {
+                "goal_number": device_goal.get("goal_number"),
+                "side": device_goal["side"],
+                "device_event": device_goal,
+                "recording_seconds": round(recording_seconds, 3),
+                "recording_datetime": iso_datetime(device_goal_time),
+                "expected_score": device_goal.get("score_after"),
+                "status": search_status,
+                "search_window": search_window,
+                "reason": "device_log_goal_without_audio_candidate",
+                "review_source_id": summary["id"],
+                "review_source_role": "device_log",
+                "review_variant": summary.get("meczyk_variant", "neutral"),
+            }
+            missing_goals.append(missing)
+            alignments.append(
+                {
+                    "status": search_status,
+                    "side": device_goal["side"],
+                    "device_event": device_goal,
+                    "recording_seconds": round(recording_seconds, 3),
+                    "search_window": search_window,
+                }
+            )
+
+        extra_audio_goals = [
+            {
+                "recording_seconds": goal.get("recording_seconds"),
+                "scorer": goal.get("scorer"),
+                "status": status,
+            }
+            for index, (goal, status) in enumerate(audio_candidates)
+            if index not in used_audio_indexes
+        ]
+        expected_score = device_match.get("final_score") or device_match.get("score")
+        if not summary.get("final_score") and isinstance(expected_score, dict):
+            my_score = expected_score.get("my")
+            them_score = expected_score.get("them")
+            if my_score is not None and them_score is not None:
+                summary["final_score"] = f"{my_score}:{them_score}"
+                summary["final_score_source"] = "device_log"
+                summary["final_score_confidence"] = "high"
+                summary["final_score_evidence"] = [
+                    {
+                        "source": "DeviceLog",
+                        "match_number": device_match.get("match_number"),
+                        "start": device_match.get("start"),
+                        "end": device_match.get("end"),
+                        "score": expected_score,
+                    }
+                ]
+        summary["device_log"] = {
+            "status": "matched",
+            "match_number": device_match.get("match_number"),
+            "start": device_match.get("start"),
+            "end": device_match.get("end"),
+            "recording_start_offset_seconds": round(start_offset, 3),
+            "expected_score": expected_score,
+            "expected_goal_count": device_match.get("goal_count", 0),
+            "audio_candidate_goal_count": len(audio_candidates),
+            "audio_confirmed_goal_count": len(summary.get("goals", [])),
+            "missing_goal_count": len(missing_goals),
+            "missing_goals": missing_goals,
+            "goal_alignments": alignments,
+            "extra_audio_goals": extra_audio_goals,
+        }
+        mappings.append(
+            {
+                "recording_id": summary["id"],
+                "device_match_number": device_match.get("match_number"),
+                "missing_goal_count": len(missing_goals),
+            }
+        )
+
+    device_log["match_mappings"] = mappings
+    device_log["matched_match_count"] = len(mappings)
+    device_log["unmatched_match_count"] = max(
+        len(device_matches) - len(used_device_match_indexes),
+        0,
+    )
+
+
 def load_manual_confirmations(run_root: Path) -> list[dict[str, Any]]:
     path = run_root / "analysis" / "manual_confirmations.json"
     if not path.is_file():
@@ -1567,6 +2092,11 @@ def find_pending_confirmation_goal(
         for pending in [summary.get(key, [])]
         for index, goal in enumerate(pending)
     ]
+    device_pending = summary.get("device_log", {}).get("missing_goals", [])
+    candidates.extend(
+        (device_pending, index, goal)
+        for index, goal in enumerate(device_pending)
+    )
 
     if clip_link:
         exact_clip_matches = [
@@ -1645,6 +2175,12 @@ def apply_confirmation_to_existing_goal(
     target: dict[str, Any],
     confirmation: dict[str, Any],
 ) -> None:
+    if confirmation.get("scorer"):
+        target["scorer"] = confirmation["scorer"]
+        target["scorer_source"] = {
+            "source": "potwierdzenie użytkownika",
+            "confidence": "high",
+        }
     assist_status = confirmation.get("assist_status")
     if assist_status == "needs_manual_review":
         target["assist"] = None
@@ -1667,7 +2203,19 @@ def apply_confirmation_to_existing_goal(
             "source": "potwierdzenie użytkownika po odsłuchu klipów 6–9",
             "confidence": "high",
         }
+    elif "assist" in confirmation:
+        target["assist"] = confirmation.get("assist")
+        target["assist_candidates"] = (
+            [confirmation["assist"]] if confirmation.get("assist") else []
+        )
+        target["assist_status"] = "confirmed_by_user"
+        target["assist_source"] = {
+            "source": "potwierdzenie użytkownika",
+            "confidence": "high",
+        }
 
+    target["confidence"] = "high"
+    target["source_confidence"] = "manual_user_confirmed"
     target["manual_confirmation_status"] = "confirmed_by_user"
     target["manual_confirmation"] = confirmation
 
@@ -1826,10 +2374,25 @@ def apply_manual_confirmations(
         summary["manual_confirmed_goal_count"] = len(
             summary.get("manual_confirmations", [])
         )
+        if "device_log" in summary:
+            summary["device_log"]["missing_goal_count"] = len(
+                summary["device_log"].get("missing_goals", [])
+            )
+            summary["device_log"]["audio_confirmed_goal_count"] = len(
+                summary.get("goals", [])
+            )
         summary["manual_review_goals"] = [
             goal["review_clip"]
-            for goal in summary.get("pending_goals", [])
-            + summary.get("pending_recorder_goals", [])
+            for goal in (
+                [
+                    goal
+                    for goal in summary.get("goals", [])
+                    if goal.get("confidence") != "high"
+                ]
+                + summary.get("pending_goals", [])
+                + summary.get("pending_recorder_goals", [])
+                + summary.get("device_log", {}).get("missing_goals", [])
+            )
             if goal.get("review_clip")
         ]
 
@@ -2003,11 +2566,26 @@ def create_goal_review_clips(
 
     for summary in match_summaries:
         reviews: list[dict[str, Any]] = []
+        low_confidence_goals = [
+            goal
+            for goal in summary.get("goals", [])
+            if goal.get("confidence") != "high"
+            and goal.get("recording_seconds") is not None
+        ]
+        for goal in low_confidence_goals:
+            goal.setdefault("review_source_id", summary["id"])
+            goal.setdefault("review_source_role", "meczyk")
+            goal.setdefault(
+                "review_variant",
+                summary.get("meczyk_variant", "neutral"),
+            )
         pending_groups = (
             ("pending_goals", summary.get("pending_goals", [])),
             ("pending_recorder_goals", summary.get("pending_recorder_goals", [])),
+            ("device_log_missing_goals", summary.get("device_log", {}).get("missing_goals", [])),
+            ("low_confidence_goals", low_confidence_goals),
         )
-        for _, pending_goals in pending_groups:
+        for group_name, pending_goals in pending_groups:
             for index, goal in enumerate(pending_goals, start=1):
                 source_id = goal.get("review_source_id")
                 recording = recordings_by_id.get(source_id)
@@ -2018,6 +2596,20 @@ def create_goal_review_clips(
                         "source_id": source_id,
                         "source_role": goal.get("review_source_role"),
                         "scorer": goal.get("scorer"),
+                    }
+                    goal["review_clip"] = review
+                    reviews.append(review)
+                    continue
+
+                search_window = goal.get("search_window")
+                if group_name == "device_log_missing_goals" and not search_window:
+                    review = {
+                        "status": goal.get("status", "outside_audio_recording"),
+                        "source_id": source_id,
+                        "source_role": goal.get("review_source_role"),
+                        "variant": goal.get("review_variant", "neutral"),
+                        "side": goal.get("side"),
+                        "expected_score": goal.get("expected_score"),
                     }
                     goal["review_clip"] = review
                     reviews.append(review)
@@ -2037,13 +2629,23 @@ def create_goal_review_clips(
                     reviews.append(review)
                     continue
 
-                clip_start = max(float(recording_seconds) - 8.0, 0.0)
+                if search_window:
+                    clip_start = max(float(search_window["from_seconds"]), 0.0)
+                    requested_duration = max(
+                        float(search_window["to_seconds"]) - clip_start,
+                        1.0,
+                    )
+                else:
+                    clip_start = max(float(recording_seconds) - 8.0, 0.0)
+                    requested_duration = 35.0
                 duration = float(recording.get("audio", {}).get("duration", 0))
-                clip_duration = 35.0
+                clip_duration = requested_duration
                 if duration > 0:
                     clip_duration = min(clip_duration, max(duration - clip_start, 1.0))
                 scorer = slugify(str(goal.get("scorer") or "nierozpoznany"))
                 role = slugify(str(goal.get("review_source_role") or "source"))
+                if group_name == "low_confidence_goals":
+                    role = "meczyk-goal"
                 clip = review_root / (
                     f"match-{summary['match_number']:02d}-{role}-"
                     f"{index:02d}-{scorer}.m4a"
@@ -2097,6 +2699,9 @@ def create_goal_review_clips(
                     "duration_seconds": round(clip_duration, 3),
                     "clip_path": str(clip),
                     "clip_link": clip.relative_to(analysis_root).as_posix(),
+                    "search_window": search_window,
+                    "side": goal.get("side"),
+                    "expected_score": goal.get("expected_score"),
                 }
                 goal["review_clip"] = review
                 reviews.append(review)
@@ -2147,6 +2752,38 @@ def assign_review_numbers(
                 }
             )
 
+        for goal in summary.get("goals", []):
+            if goal.get("confidence") == "high":
+                continue
+            clip = goal.get("review_clip", {})
+            clip_link = clip.get("clip_link")
+            if not clip_link:
+                continue
+            number = len(index) + 1
+            clip["review_number"] = number
+            clip["audio_number"] = number
+            clip_link = numbered_clip_link(
+                clip_link,
+                number,
+                analysis_root,
+            )
+            clip["clip_link"] = clip_link
+            index.append(
+                {
+                    "number": number,
+                    "audio_number": number,
+                    "match_number": summary["match_number"],
+                    "source_id": summary["id"],
+                    "scorer": goal.get("scorer"),
+                    "assist": goal.get("assist"),
+                    "type": goal.get("type", "goal"),
+                    "status": clip.get("status", "ready"),
+                    "resolution": "low_confidence_goal",
+                    "user_note": None,
+                    "clip_link": clip_link,
+                }
+            )
+
         for goal in summary.get("pending_goals", []) + summary.get(
             "pending_recorder_goals", []
         ):
@@ -2174,6 +2811,38 @@ def assign_review_numbers(
                     "type": goal.get("type", "goal"),
                     "status": clip.get("status", "ready"),
                     "resolution": "manual_review_required",
+                    "user_note": None,
+                    "clip_link": clip_link,
+                }
+            )
+
+        for goal in summary.get("device_log", {}).get("missing_goals", []):
+            clip = goal.get("review_clip", {})
+            clip_link = clip.get("clip_link")
+            if not clip_link:
+                continue
+            number = len(index) + 1
+            clip["review_number"] = number
+            clip["audio_number"] = number
+            clip_link = numbered_clip_link(
+                clip_link,
+                number,
+                analysis_root,
+            )
+            clip["clip_link"] = clip_link
+            index.append(
+                {
+                    "number": number,
+                    "audio_number": number,
+                    "match_number": summary["match_number"],
+                    "source_id": goal.get("review_source_id"),
+                    "scorer": None,
+                    "assist": None,
+                    "type": "goal",
+                    "status": clip.get("status", "ready"),
+                    "resolution": "device_log_search",
+                    "side": goal.get("side"),
+                    "expected_score": goal.get("expected_score"),
                     "user_note": None,
                     "clip_link": clip_link,
                 }
@@ -2206,11 +2875,13 @@ def render_report(
     organizational: list[dict[str, Any]] | None = None,
     manual_review: list[str] | None = None,
     manual_review_clips: list[dict[str, Any]] | None = None,
+    device_log: dict[str, Any] | None = None,
 ) -> str:
     session_context = session_context or {}
     organizational = organizational or []
     manual_review = manual_review or []
     manual_review_clips = manual_review_clips or []
+    device_log = device_log or {}
 
     def cell(value: Any, fallback: str = "—") -> str:
         if value is None or value == "":
@@ -2230,6 +2901,7 @@ def render_report(
             "wypowiedziany": "wypowiedziany w audio",
             "zweryfikowany_large_v3": "zweryfikowany large-v3",
             "wywnioskowany_z_reguly": "wywnioskowany z reguły",
+            "device_log": "DeviceLog",
         }.get(source or "", "nierozpoznany")
 
     def goal_evidence(goal: dict[str, Any]) -> str:
@@ -2286,6 +2958,33 @@ def render_report(
         )
     if not pairs:
         lines.append("| — | — | — | — | — | — |")
+    lines.append("")
+    lines.extend(["## DeviceLog", ""])
+    if device_log.get("status") in {None, "not_found"}:
+        lines.append("Nie znaleziono dzisiejszego pliku 6aa*.json.")
+    else:
+        lines.append(
+            f"Status: {cell(device_log.get('status'))}; "
+            f"zdarzenia: {device_log.get('event_count', 0)}; "
+            f"dopasowane mecze: {device_log.get('matched_match_count', 0)}."
+        )
+        for file in device_log.get("files", []):
+            lines.append(
+                f"- `{Path(file.get('path', file.get('destination', ''))).name}` — "
+                f"{file.get('status', '—')}; kanał event_code: "
+                f"{file.get('channel_id', '—')}."
+            )
+        for summary in match_summaries:
+            guidance = summary.get("device_log", {})
+            if guidance.get("status") != "matched":
+                continue
+            expected = guidance.get("expected_score", {})
+            missing_count = guidance.get("missing_goal_count", 0)
+            lines.append(
+                f"- Mecz {summary['match_number']}: DeviceLog przewiduje "
+                f"MY {expected.get('my', '—')} : ONI {expected.get('them', '—')}; "
+                f"brakujące okna audio: {missing_count}."
+            )
     lines.append("")
     operator = session_context.get("recording_operator")
     if operator:
@@ -2417,8 +3116,8 @@ def render_report(
                 f"({source_label(summary.get('final_score_source'))}; "
                 f"pewność: {cell(summary.get('final_score_confidence'))}).",
                 "",
-                "| # | Minuta | Strzelec | Asysta | Meczyk/R | Pewność | Dowód |",
-                "| ---: | ---: | --- | --- | --- | --- | --- |",
+                "| # | Minuta | Strzelec | Asysta | Meczyk/R | Pewność | Klip | Dowód |",
+                "| ---: | ---: | --- | --- | --- | --- | --- | --- |",
             ]
         )
         for index, goal in enumerate(summary["goals"], start=1):
@@ -2435,14 +3134,20 @@ def render_report(
             scorer = goal.get("scorer")
             if goal.get("type") == "own_goal" and scorer:
                 scorer = f"{scorer} (samobój)"
+            clip_link = goal.get("review_clip", {}).get("clip_link")
+            clip = (
+                f"[odsłuchaj]({clip_link})"
+                if goal.get("confidence") != "high" and clip_link
+                else "—"
+            )
             lines.append(
                 f"| {index} | {cell(goal.get('match_minute'))} | "
                 f"{cell(scorer, 'nierozpoznany')} | {cell(assist)} | "
                 f"{confirmation} | {cell(goal.get('confidence'))} | "
-                f"{goal_evidence(goal)} |"
+                f"{clip} | {goal_evidence(goal)} |"
             )
         if not summary["goals"]:
-            lines.append("| — | — | nierozpoznany | brak/nie rozpoznano | — | — | — |")
+            lines.append("| — | — | nierozpoznany | brak/nie rozpoznano | — | — | — | — |")
         lines.append("")
 
     lines.extend(["## Reguła wyniku", ""])
@@ -2535,6 +3240,30 @@ def build_manual_review(
                 f"Mecz {number}: para Meczyk/R ma status "
                 f"{summary.get('pair_verification')}; zdarzenia nie są wspólnie "
                 "potwierdzone."
+            )
+        for missing in summary.get("device_log", {}).get("missing_goals", []):
+            side = "MY" if missing.get("side") == "my" else "ONI"
+            clip = missing.get("review_clip", {})
+            link = clip.get("clip_link")
+            review_number = clip.get("review_number")
+            listen = (
+                f" [klip {review_number}: odsłuchaj fragment]({link})"
+                if link
+                else ""
+            )
+            window = missing.get("search_window") or {}
+            if window:
+                window_label = (
+                    f"{window.get('from_seconds', 0):.1f}–"
+                    f"{window.get('to_seconds', 0):.1f} s nagrania"
+                )
+            else:
+                window_label = "poza zakresem nagrania"
+            items.append(
+                f"Mecz {number}: DeviceLog wskazuje brakujący gol {side} "
+                f"około {missing.get('recording_seconds', 0):.1f} s "
+                f"({window_label}); wynik po evencie: "
+                f"{missing.get('expected_score', {})}.{listen}"
             )
         for pending in summary.get("pending_goals", []) + summary.get(
             "pending_recorder_goals", []
@@ -2767,6 +3496,14 @@ def main() -> int:
             analyses,
             timezone,
         )
+        device_log = load_device_logs(manifest, target_date, timezone)
+        attach_device_log_guidance(
+            device_log,
+            match_summaries,
+            recordings,
+            target_date,
+            timezone,
+        )
         create_goal_review_clips(
             match_summaries,
             recordings,
@@ -2813,6 +3550,7 @@ def main() -> int:
             "session": session_context,
             "ab": analyses,
             "matches": match_summaries,
+            "device_log": device_log,
             "manual_confirmations": manual_confirmations,
             "manual_review_clips": manual_review_clips,
             "manual_review": manual_review,
@@ -2837,6 +3575,7 @@ def main() -> int:
                 organizational,
                 manual_review,
                 manual_review_clips,
+                device_log,
             ),
             encoding="utf-8",
         )

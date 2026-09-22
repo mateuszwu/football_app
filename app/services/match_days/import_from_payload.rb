@@ -6,6 +6,7 @@ module MatchDays
       end
     end
     ParsedGoal = Struct.new(:team_name, :scorer_name, :assistant_name, :scored_at, :own_goal, keyword_init: true)
+    ParsedPlayerChange = Struct.new(:player_name, :from_team_name, :to_team_name, :occurred_at, keyword_init: true)
 
     def self.call(payload:, season:, available_players:)
       new(payload:, season:, available_players:).call
@@ -88,7 +89,8 @@ module MatchDays
           finished_at: payload[:finished_at],
           all_roster_players_on_pitch: payload[:all_roster_players_on_pitch],
           teams: payload[:teams],
-          goals: payload[:goals]
+          goals: payload[:goals],
+          player_changes: payload[:player_changes]
         }
       )
     end
@@ -106,7 +108,8 @@ module MatchDays
         finished_at: match_data[:finished_at],
         all_roster_players_on_pitch: ActiveModel::Type::Boolean.new.cast(all_roster_players_on_pitch) || false,
         teams: Array(match_data[:teams]).map { |team| normalize_team(team) },
-        goals: Array(match_data[:goals]).map { |goal| normalize_goal(goal) }
+        goals: Array(match_data[:goals]).map { |goal| normalize_goal(goal) },
+        player_changes: Array(match_data[:player_changes]).map { |change| normalize_player_change(change) }
       }
     end
 
@@ -127,6 +130,16 @@ module MatchDays
         assistant_name: goal_data[:assistant].to_s.strip.presence,
         scored_at: goal_data[:scored_at],
         own_goal: ActiveModel::Type::Boolean.new.cast(goal_data[:own_goal]) || false
+      )
+    end
+
+    def normalize_player_change(change)
+      change_data = change.to_h.symbolize_keys
+      ParsedPlayerChange.new(
+        player_name: change_data[:player].to_s.strip,
+        from_team_name: change_data[:from_team].to_s.strip.presence,
+        to_team_name: change_data[:to_team].to_s.strip.presence,
+        occurred_at: change_data[:occurred_at]
       )
     end
 
@@ -154,6 +167,7 @@ module MatchDays
         end
 
         validate_match_players_are_in_original_teams(match_data, match_index:)
+        validate_match_player_changes(match_data, match_index:)
         validate_match_goals(match_data, match_index:)
       end
     end
@@ -194,7 +208,13 @@ module MatchDays
         end
 
         scorer_team = goal.own_goal ? opponent_team_for(match_data, team) : team
-        unless scorer_team[:player_names].any? { |player_name| same_player?(player_name, goal.scorer_name) }
+        scorer = player_for(goal.scorer_name)
+        scorer_team_at_goal = player_team_name_at(
+          match_data,
+          player_id: scorer&.id,
+          occurred_at: goal_scored_at(goal, match_data:, match_index:, goal_index:)
+        )
+        unless same_name?(scorer_team_at_goal, scorer_team[:name])
           errors << "#{goal.scorer_name} is not listed in #{scorer_team[:name]} for match #{match_index + 1}"
         end
 
@@ -205,7 +225,13 @@ module MatchDays
           next
         end
 
-        unless team[:player_names].any? { |player_name| same_player?(player_name, goal.assistant_name) }
+        assistant = player_for(goal.assistant_name)
+        assistant_team_at_goal = player_team_name_at(
+          match_data,
+          player_id: assistant&.id,
+          occurred_at: goal_scored_at(goal, match_data:, match_index:, goal_index:)
+        )
+        unless same_name?(assistant_team_at_goal, team[:name])
           errors << "#{goal.assistant_name} is not listed in #{team[:name]} for match #{match_index + 1}"
         end
 
@@ -230,8 +256,26 @@ module MatchDays
 
     def process_imported_match!(match, match_data:, match_index:)
       start_match!(match, match_data:, match_index:)
+      create_player_changes!(match, match_data:, match_index:)
       create_goals!(match, match_data:, match_index:)
       finish_match!(match, match_data:, match_index:) if match_finished_at(match_data).present?
+    end
+
+    def create_player_changes!(match, match_data:, match_index:)
+      ordered_player_changes(match_data).each_with_index do |change, change_index|
+        result = Matches::RecordPlayerChange.call(
+          match:,
+          player: player_for(change.player_name),
+          from_team: team_for(match, change.from_team_name),
+          to_team: team_for(match, change.to_team_name),
+          occurred_at: player_change_occurred_at(change, match_data:, match_index:, change_index:)
+        )
+
+        next if result
+
+        errors << "Could not record player change #{change_index + 1} for match #{match_index + 1}"
+        raise ActiveRecord::Rollback
+      end
     end
 
     def create_match_team!(team_setup:, team_data:)
@@ -321,7 +365,8 @@ module MatchDays
         original_player_names +
         original_teams_data.filter_map { |team| team[:captain_name] } +
         matches_data.flat_map do |match_data|
-          match_data[:teams].flat_map { |team| team[:player_names] + [ team[:captain_name] ].compact }
+          match_data[:teams].flat_map { |team| team[:player_names] + [ team[:captain_name] ].compact } +
+            match_data[:player_changes].map(&:player_name)
         end
       ).uniq
     end
@@ -357,6 +402,73 @@ module MatchDays
       team.team_players.find_by!(player:)
     end
 
+    def validate_match_player_changes(match_data, match_index:)
+      assignments = initial_player_assignments(match_data)
+
+      ordered_player_changes(match_data).each_with_index do |change, change_index|
+        label = "Match #{match_index + 1} player change #{change_index + 1}"
+        from_team = team_data_for(match_data, change.from_team_name)
+        to_team = team_data_for(match_data, change.to_team_name)
+
+        errors << "#{label} needs a player" if change.player_name.blank?
+        errors << "#{label} needs from_team or to_team" if change.from_team_name.blank? && change.to_team_name.blank?
+        errors << "#{label} references unknown from_team: #{change.from_team_name}" if change.from_team_name.present? && from_team.blank?
+        errors << "#{label} references unknown to_team: #{change.to_team_name}" if change.to_team_name.present? && to_team.blank?
+        errors << "#{label} must use different teams" if from_team.present? && to_team.present? && same_name?(from_team[:name], to_team[:name])
+        errors << "#{label} has an invalid occurred_at" if change.occurred_at.present? && parse_time(change.occurred_at).blank?
+        unless original_player_names.any? { |player_name| same_player?(player_name, change.player_name) }
+          errors << "#{change.player_name} in player change #{change_index + 1} is not listed in original_teams for match #{match_index + 1}"
+        end
+
+        player = player_for(change.player_name)
+        next if player.blank? || from_team.blank? && to_team.blank?
+
+        current_team_name = assignments[player.id]
+        unless same_name?(current_team_name, change.from_team_name)
+          errors << "#{change.player_name} is not in #{change.from_team_name.presence || 'the bench'} before player change #{change_index + 1} in match #{match_index + 1}"
+        end
+
+        assignments[player.id] = change.to_team_name
+      end
+    end
+
+    def initial_player_assignments(match_data)
+      match_data[:teams].each_with_object({}) do |team, assignments|
+        team[:player_names].each do |player_name|
+          player = player_for(player_name)
+          next if player.blank?
+
+          assignments[player.id] ||= team[:name]
+        end
+      end
+    end
+
+    def player_team_name_at(match_data, player_id:, occurred_at:)
+      return nil if player_id.blank?
+
+      assignments = initial_player_assignments(match_data)
+      ordered_player_changes(match_data).each do |change|
+        change_time = parse_time(change.occurred_at)
+        break if change_time.present? && occurred_at.present? && change_time > occurred_at
+
+        player = player_for(change.player_name)
+        assignments[player.id] = change.to_team_name if player&.id == player_id
+      end
+      assignments[player_id]
+    end
+
+    def ordered_player_changes(match_data)
+      match_data[:player_changes].each_with_index.sort_by do |change, index|
+        [ parse_time(change.occurred_at) || Time.zone.at(0), index ]
+      end.map(&:first)
+    end
+
+    def team_data_for(match_data, team_name)
+      return nil if team_name.blank?
+
+      match_data[:teams].find { |team| same_name?(team[:name], team_name) }
+    end
+
     def played_on
       @played_on ||= Date.iso8601(payload[:played_on].to_s)
     rescue Date::Error
@@ -373,6 +485,10 @@ module MatchDays
 
     def goal_scored_at(goal, match_data:, match_index:, goal_index:)
       parse_time(goal.scored_at) || match_started_at(match_data, match_index:) + (goal_index + 1).minutes
+    end
+
+    def player_change_occurred_at(change, match_data:, match_index:, change_index:)
+      parse_time(change.occurred_at) || match_started_at(match_data, match_index:) + (change_index + 1).seconds
     end
 
     def parse_time(value)

@@ -172,6 +172,59 @@ RSpec.describe "Matches" do
         expect(response.body).not_to include("Ostatnie wydarzenia")
       end
 
+      it "renders player changes in the match history" do
+        season = create(:season, name: "Summer 2026")
+        match_day = create(:match_day, season:, played_on: Date.new(2026, 6, 19), status: "in_progress")
+        team_setup = create(:team_setup, match_day:)
+        home_team = create(:team, team_setup:, name: "Team A", team_type: Team::TEAM_TYPE_MATCH)
+        away_team = create(:team, team_setup:, name: "Team B", team_type: Team::TEAM_TYPE_MATCH)
+        player = create(:player, name: "Adam Nowak", nickname: "adam-change")
+        opponent = create(:player, name: "Marek Kowalski", nickname: "marek-change")
+        [ player, opponent ].each { |candidate| create(:match_day_player, match_day:, player: candidate) }
+        create(:team_player, team: home_team, player:)
+        create(:team_player, team: away_team, player: opponent)
+        match = create(
+          :match,
+          match_day:,
+          home_team:,
+          away_team:,
+          home_score: 0,
+          away_score: 1,
+          started_at: Time.zone.parse("2026-06-19 19:00:00")
+        )
+        Matches::RecordPlayerChange.call(
+          match:,
+          player:,
+          from_team: home_team,
+          to_team: away_team,
+          occurred_at: Time.zone.parse("2026-06-19 19:15:00")
+        )
+        create(
+          :match_goal,
+          match:,
+          scoring_team: away_team,
+          scorer_team_player: away_team.team_players.find_by!(player:),
+          scored_at: Time.zone.parse("2026-06-19 19:25:00")
+        )
+
+        get "/matches/#{match.id}"
+
+        expect(response).to have_http_status(:ok)
+        page = Nokogiri::HTML(response.body)
+        timeline_card = page.css(".match-report-main > .match-report-card").find do |card|
+          card.at_css("h2")&.text&.strip == "Przebieg meczu"
+        end
+        timeline_rows = timeline_card.css(".match-timeline-row")
+
+        expect(timeline_rows.size).to eq(2)
+        expect(timeline_rows[0]["class"]).to include("match-timeline-row--player-change")
+        expect(timeline_rows[0].text).to include("Zmiana drużyny", "Adam Nowak", "Team A", "Team B")
+        expect(timeline_rows[1]["class"]).to include("match-timeline-row--goal")
+        expect(timeline_rows[1].text).to include("Adam Nowak", "0:1")
+        expect(page.css(".match-report-main > .match-report-card h2").map { |heading| heading.text.strip })
+          .not_to include("Zmiany zawodników")
+      end
+
       it "renders the lead and equalizer summary with scorer and team names" do
         season = create(:season, name: "Summer 2026")
         match_day = create(:match_day, season: season, played_on: Date.new(2026, 6, 19), status: "finished")
@@ -299,7 +352,7 @@ RSpec.describe "Matches" do
 
         expect(response).to have_http_status(:ok)
         expect(response.body).to include("Nierozpoczęty")
-        expect(response.body).to include("Brak zdarzeń bramkowych w tym meczu.")
+        expect(response.body).to include("Brak zdarzeń w tym meczu.")
         expect(response.body).to include("Czas meczu")
         expect(response.body).to include("00:00")
         expect(response.body).to include("Brak przypisanych zawodników.")

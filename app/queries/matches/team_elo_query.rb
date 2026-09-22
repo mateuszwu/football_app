@@ -27,7 +27,10 @@ module Matches
     attr_reader :match
 
     def team_players_for(team)
-      team.team_players.includes(:player).to_a
+      final_player_ids = match.final_players_for(team).map(&:id)
+      team.team_players.includes(:player).where(player_id: final_player_ids).to_a.sort_by do |team_player|
+        final_player_ids.index(team_player.player_id)
+      end
     end
 
     def historical_snapshot_available?(team_players, attribute)

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_22_200000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_20_120000) do
   create_table "match_day_players", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.integer "match_day_id", null: false
@@ -75,6 +75,23 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_22_200000) do
     t.index ["own_goal", "undone_at"], name: "index_match_goals_on_own_goal_and_undone_at"
     t.index ["scorer_team_player_id"], name: "index_match_goals_on_scorer_team_player_id"
     t.index ["scoring_team_id"], name: "index_match_goals_on_scoring_team_id"
+  end
+
+  create_table "match_player_changes", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "event_type", null: false
+    t.integer "from_team_id"
+    t.integer "match_id", null: false
+    t.datetime "occurred_at", null: false
+    t.integer "player_id", null: false
+    t.integer "to_team_id"
+    t.datetime "updated_at", null: false
+    t.index ["from_team_id"], name: "index_match_player_changes_on_from_team_id"
+    t.index ["match_id", "occurred_at", "id"], name: "idx_match_player_changes_on_match_and_time"
+    t.index ["match_id", "player_id"], name: "index_match_player_changes_on_match_id_and_player_id"
+    t.index ["match_id"], name: "index_match_player_changes_on_match_id"
+    t.index ["player_id"], name: "index_match_player_changes_on_player_id"
+    t.index ["to_team_id"], name: "index_match_player_changes_on_to_team_id"
   end
 
   create_table "matches", force: :cascade do |t|
@@ -296,6 +313,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_22_200000) do
   add_foreign_key "match_goals", "team_players", column: "assistant_team_player_id"
   add_foreign_key "match_goals", "team_players", column: "scorer_team_player_id"
   add_foreign_key "match_goals", "teams", column: "scoring_team_id"
+  add_foreign_key "match_player_changes", "matches"
+  add_foreign_key "match_player_changes", "players"
+  add_foreign_key "match_player_changes", "teams", column: "from_team_id"
+  add_foreign_key "match_player_changes", "teams", column: "to_team_id"
   add_foreign_key "matches", "match_days"
   add_foreign_key "matches", "matches", column: "lineup_source_match_id"
   add_foreign_key "matches", "team_setups"
