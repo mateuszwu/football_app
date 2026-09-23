@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 """Transcribe Meczyk recordings and delegate match analysis to a new Codex task.
 
-This workflow is intentionally isolated from ``match_audio_pipeline.py``.  It
-uses ``tmp/match_transcription_workflow`` and never reads or writes
-``tmp/match_audio``.  The source audio is decoded to a neutral WAV only because
-whisper.cpp needs a directly readable PCM stream; no denoising or other audio
-cleaning is performed.
+This is the repository's match-audio workflow. It uses Meczyk recordings,
+Suunto GPS logs, the active player roster, and fuzzy player-name candidates.
+The source audio is decoded to neutral WAV because whisper.cpp needs a directly
+readable PCM stream; no denoising or other audio cleaning is performed.
 """
 
 from __future__ import annotations
@@ -18,10 +17,13 @@ import re
 import shutil
 import subprocess
 import sys
+from string import Template
 import unicodedata
 from pathlib import Path
 from typing import Any, Iterable
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
+from fuzzy_player_matching import match_transcript_to_players
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -32,6 +34,7 @@ DEFAULT_MODEL = PROJECT_ROOT / ".local/whisper.cpp/models/ggml-large-v3.bin"
 DEFAULT_VAD_MODEL = PROJECT_ROOT / ".local/whisper.cpp/models/ggml-silero-v6.2.0.bin"
 INSTRUCTIONS_PATH = PROJECT_ROOT / "script/match_analysis_instructions.md"
 OUTPUT_SCHEMA_PATH = PROJECT_ROOT / "script/match_analysis_output.schema.json"
+EVENTS_TABLE_TEMPLATE_PATH = PROJECT_ROOT / "script/templates/match_events_table.md"
 SUPPORTED_AUDIO_EXTENSIONS = {".aac", ".flac", ".m4a", ".mp3", ".ogg", ".wav"}
 GPS_PREFIX = "6aa"
 MECZYK_FILENAME_RE = re.compile(
@@ -79,7 +82,7 @@ CLIP_DURATION_SECONDS = 45.0
 def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
-            "Nowy, odizolowany workflow: Meczyk-* -> large-v3 -> analiza Codex "
+            "Workflow meczowy: Meczyk-* -> large-v3 -> analiza Codex "
             "-> raport meczowy."
         ),
     )
@@ -558,11 +561,13 @@ def build_analysis_prompt(
     recordings: list[dict[str, Any]],
     gps_files: list[dict[str, Any]],
     players: list[dict[str, Any]],
+    player_match_candidates_path: Path,
 ) -> str:
     instructions = INSTRUCTIONS_PATH.read_text(encoding="utf-8")
     materials = {
         "run_root": str(run_root),
         "players": str(run_root / "players.json"),
+        "player_match_candidates": str(player_match_candidates_path),
         "gps": [file["path"] for file in gps_files],
         "transcripts": [recording["transcript"]["json"] for recording in recordings],
         "recordings": [
@@ -582,6 +587,12 @@ def build_analysis_prompt(
         f"```json\n{json.dumps(materials, ensure_ascii=False, indent=2)}\n```\n\n"
         "## Lista zawodników pobrana z bazy\n\n"
         f"Liczba zawodników: {len(players)}. Pełna lista jest w `{run_root / 'players.json'}`.\n\n"
+        "## Podpowiedzi fuzzy matching\n\n"
+        f"Kandydaci nazwisk z timestampami są zapisani w `{player_match_candidates_path}`. "
+        "Używaj ich jako listy pomocniczej: sprawdź surowy fragment, TOP kandydatów, "
+        "różnicę punktacji i kontekst transkrypcji. Punktacja nie jest pewnym "
+        "rozpoznaniem; przy niskim wyniku lub bliskich kandydatach zachowaj "
+        "niepewność i nie wymuszaj zawodnika.\n\n"
         "## Oczekiwany format odpowiedzi\n\n"
         f"Zwróć wyłącznie JSON zgodny ze schematem `{OUTPUT_SCHEMA_PATH}`. Nie dodawaj Markdown ani komentarza."
         "\n"
@@ -826,6 +837,9 @@ def markdown_cell(value: Any, fallback: str = "—") -> str:
 
 
 def render_report(report: dict[str, Any]) -> str:
+    events_table_template = Template(
+        EVENTS_TABLE_TEMPLATE_PATH.read_text(encoding="utf-8")
+    )
     lines = [
         f"# Raport meczowy — {markdown_cell(report.get('session_date'))}",
         "",
@@ -869,10 +883,9 @@ def render_report(report: dict[str, Any]) -> str:
             [
                 "### Eventy",
                 "",
-                "| Klasyfikacja gola | LP | Czas rzeczywisty | Minuta meczu | Event type | Strzelec | Asystent | Pewność | Dodatkowe info | Audio do potwierdzenia |",
-                "| --- | ---: | --- | ---: | --- | --- | --- | --- | --- | --- |",
             ]
         )
+        event_rows = []
         for index, event in enumerate(match.get("events", []), start=1):
             audio = event.get("audio_to_verify")
             audio_label = f"![odsłuchaj]({audio})" if audio else "—"
@@ -881,7 +894,7 @@ def render_report(report: dict[str, Any]) -> str:
                 if is_goal_event(event)
                 else "—"
             )
-            lines.append(
+            event_rows.append(
                 "| "
                 + " | ".join(
                     [
@@ -900,7 +913,9 @@ def render_report(report: dict[str, Any]) -> str:
                 + " |"
             )
         if not match.get("events"):
-            lines.append("| — | — | — | — | — | — | — | — | Brak eventów | — |")
+            event_rows.append("| — | — | — | — | — | — | — | — | Brak eventów | — |")
+        table = events_table_template.substitute(event_rows="\n".join(event_rows))
+        lines.extend(table.rstrip().splitlines())
         lines.append("")
     manual_review = report.get("manual_review", [])
     lines.extend(["## Do ręcznej weryfikacji", ""])
@@ -917,6 +932,7 @@ def write_manifest(
     recordings: list[dict[str, Any]],
     gps_files: list[dict[str, Any]],
     players: list[dict[str, Any]],
+    player_match_candidates_path: Path,
 ) -> None:
     manifest = {
         "date": target_date.isoformat(),
@@ -924,7 +940,8 @@ def write_manifest(
         "recordings": recordings,
         "gps_files": gps_files,
         "players_count": len(players),
-        "isolation": "tmp/match_transcription_workflow; independent from tmp/match_audio",
+        "player_match_candidates_file": str(player_match_candidates_path),
+        "workflow": "Meczyk audio + Suunto GPS + fuzzy player-name matching",
     }
     (run_root / "manifest.json").write_text(
         json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
@@ -980,8 +997,53 @@ def main() -> int:
                     cpu=arguments.cpu,
                     force=arguments.force,
                 )
-        write_manifest(run_root, target_date, recordings, gps_files, players)
-        prompt = build_analysis_prompt(run_root, recordings, gps_files, players)
+        player_match_candidates_path = run_root / "analysis/player_match_candidates.json"
+        player_match_candidates_path.parent.mkdir(parents=True, exist_ok=True)
+        player_match_document = {
+            "algorithm": "character similarity plus Polish phonetic similarity",
+            "scoring": {
+                "formula": "0.7 * character_score + 0.3 * phonetic_score",
+                "minimum_fuzzy_score": 65,
+                "top_candidates": 3,
+                "score_bands": {
+                    "strong": 90,
+                    "probable": 80,
+                    "review": 65,
+                },
+            },
+            "players_considered": len(players),
+            "recordings": [],
+        }
+        for recording in recordings:
+            transcript_path = Path(recording["transcript"]["json"])
+            transcript_document = json.loads(transcript_path.read_text(encoding="utf-8"))
+            player_match_document["recordings"].append(
+                match_transcript_to_players(
+                    transcript_document,
+                    players,
+                    recording_id=recording["id"],
+                    transcript_path=str(transcript_path),
+                )
+            )
+        player_match_candidates_path.write_text(
+            json.dumps(player_match_document, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        write_manifest(
+            run_root,
+            target_date,
+            recordings,
+            gps_files,
+            players,
+            player_match_candidates_path,
+        )
+        prompt = build_analysis_prompt(
+            run_root,
+            recordings,
+            gps_files,
+            players,
+            player_match_candidates_path,
+        )
         prompt_path = run_root / "analysis_prompt.md"
         prompt_path.write_text(prompt, encoding="utf-8")
         if arguments.skip_analysis_thread and arguments.analysis_result:
@@ -1002,6 +1064,7 @@ def main() -> int:
         raw_report["recordings"] = recordings
         raw_report["gps"] = gps_summary(gps_files)
         raw_report["players_file"] = str(run_root / "players.json")
+        raw_report["player_match_candidates_file"] = str(player_match_candidates_path)
         create_audio_review_clips(raw_report, run_root)
         analysis_root = run_root / "analysis"
         (analysis_root / "ai_analysis.json").write_text(

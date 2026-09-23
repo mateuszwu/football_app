@@ -49,6 +49,21 @@ nie dopisuj nazwiska na podstawie samego faktu, że GPS zarejestrował gol.
 ## Tożsamość zawodników
 
 - Dopasowuj transkrypcję wyłącznie do listy zawodników z `players.json`.
+- Jeśli materiały zawierają `player_match_candidates.json`, użyj go jako
+  podpowiedzi do nazwisk rozpoznanych przez ASR. Każdy wpis zachowuje surowy
+  fragment, pozycję w segmencie i zakres timestampu oraz TOP 3 zawodników z
+  punktacją podobieństwa znakowego i fonetycznego.
+- Wynik fuzzy matchera nie jest potwierdzeniem tożsamości. Sprawdź oryginalny
+  fragment transkrypcji i kontekst meczu. Przy bliskich wynikach kandydatów,
+  sprzecznym kontekście albo słabej punktacji pozostaw `scorer`/`assistant` jako
+  null i oznacz event jako `niepewne`; nie wybieraj automatycznie pierwszego
+  kandydata.
+- Brak fragmentu w raporcie fuzzy nie oznacza, że nazwisko nie padło. W takiej
+  sytuacji wróć do pełnej transkrypcji i pozostaw osobę jako null, jeśli nie da
+  się jej rozpoznać z materiałów.
+- Liczba wystąpień w rankingu fuzzy jest tylko sygnałem pomocniczym. Nie
+  zakładaj, że zawodnik grał w meczu wyłącznie dlatego, że jego nazwisko często
+  pojawia się wśród kandydatów.
 - Zachowaj pełną nazwę z bazy, np. `Piotrek (Bramkarz)`.
 - Przy błędach Whispera użyj podobieństwa fonetycznego oraz kontekstu zawodników
   będących w danym momencie na boisku. Przykład: `Waca` może pasować do `Wicu`

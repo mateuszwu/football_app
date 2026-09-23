@@ -201,108 +201,28 @@ separate correction pass; an initial prompt conflicts with this script's
 anti-hallucination mode because whisper.cpp uses the same context budget for
 both features.
 
-Run the development pipeline for recordings added to `~/Downloads` today:
+### Match audio workflow
 
-```sh
-python3 script/match_audio_pipeline.py
-```
-
-The pipeline selects audio whose local modification date is today and whose
-name starts with `Meczyk-` or `R`. TXT files in
-`Downloads` are deliberately ignored because they are not reliable references.
-Audio files are copied to
-`tmp/match_audio/YYYY-MM-DD`, which is ignored by Git. It pairs `Meczyk` and
-`R` recordings by duration, reports missing counterparts, prepares neutral
-and cleaned WAVs, transcribes both, and writes Markdown plus JSON comparison
-reports. It verifies proposed pairs by transcript similarity and compares the
-goal/assist sequences from both audio sources. Existing TXT files are never
-used to score or select a cleaner variant. `Meczyk` uses the `bluetooth` cleaner
-profile; `R` uses the milder
-`recorder` profile because it is already compressed and its stereo channels
-contain the same signal.
-
-The collector also copies today's `6aa*.json` files from the same `Downloads`
-directory to `tmp/match_audio/YYYY-MM-DD/inbox/device_logs/`. The pipeline reads
-`DeviceLog.Zapps[]` for `footba01` / `Football Match`, resolves the
-`event_code` channel dynamically, removes consecutive duplicate values, and
-replays `MATCH_START`, goals, `UNDO_GOAL`, and `MATCH_END`. The replay is saved
-in `analysis/report.json` and is used to create focused audio search windows
-for DeviceLog goals that have no corresponding audio candidate. Those windows
-also appear as numbered clips and manual-review items in `analysis/report.md`.
-
-Useful development stages:
-
-```sh
-python3 script/match_audio_pipeline.py --stage collect
-python3 script/match_audio_pipeline.py --stage prepare
-python3 script/match_audio_pipeline.py --stage transcribe --cpu
-python3 script/match_audio_pipeline.py --stage analyze
-```
-
-Etap `prepare` domyślnie przetwarza dwa niezależne nagrania równolegle przez
-FFmpeg (`--prepare-workers 2`). Wyniki neutral/clean pozostają deterministyczne;
-liczbę workerów można zmienić parametrem, np. `--prepare-workers 1`.
-
-All full-file transcriptions default to the local full `ggml-large-v3.bin`
-model, for both neutral/original and cleaned variants of every audio file.
-Short context verification uses the same full large-v3 model. Pass
-`--model PATH` or `--verification-model PATH` only when an intentional model
-override is needed. Each pipeline transcript stores a model marker; an
-existing transcript without a matching marker is transcribed again instead of
-being silently reused. Each transcribe run also writes per-file wall-clock
-times and the actual device used to `transcription_timings.json`. The analysis
-also uses it on short context clips for the
-session roster/rule and, when needed, around a missing final score; use
-`--no-score-verification` only to skip the score-tail pass. It parses the
-recording hour from each `Meczyk-... o HH:MM` filename and adds the audio offset
-to produce local match datetimes. Start/end findings carry an explicit status:
-an audio message is `confirmed_audio`, while the end of a file is
-`estimated_recording_boundary`. Recordings with neither a start message nor a
-goal are reported as organizational recordings and are not counted as matches.
-An extracted goal is counted automatically only when the goal announcement is
-repeated within five seconds or the same event is independently matched in the
-paired Meczyk/R recordings. Single announcements, announcements spread beyond
-five seconds, and unmatched recorder-only calls remain manual-review candidates;
-the pipeline exports short audio clips under `analysis/manual_review/` and links
-to them from a numbered clip index in the Markdown and JSON reports. Candidate transcript evidence and the
-confirmation window are retained in JSON, so a background `gol` call does not
-silently change the score. Assist evidence is kept separate and is never
-invented when it is not clear.
-Human decisions can be persisted in
-`tmp/match_audio/YYYY-MM-DD/analysis/manual_confirmations.json`; the next
-`--stage analyze` run merges confirmed duplicates and adds confirmed goals
-before calculating scores.
-The JSON report keeps evidence and confidence for goals, assists, scores,
-lineups, captains, and time findings. It marks whether each goal is confirmed
-by both Meczyk/R recordings; low-quality pairs remain single-source findings.
-If a later audio statement corrects an initial goal call to an own goal, the
-report preserves both the initial scorer and the correction as `own_goal`
-evidence. Recorder files can also carry a user-confirmed `recorded_by` identity
-when the operator is known.
-An eight-goal 5:3 result is inferred only when the full large-v3 context check
-confirms the session rule to five goals. Missing captains and ambiguous names
-remain unresolved rather than being inferred.
-
-### Isolated Meczyk transcription workflow
-
-The new workflow is deliberately separate from `script/match_audio_pipeline.py`
-and writes only to `tmp/match_transcription_workflow/YYYY-MM-DD`. It selects
-only `Meczyk-*` audio files by the date in the filename, selects matching
-`6aa*.json` Suunto GPS files by their `DeviceLog` date, reads active approved
-players through Rails, decodes M4A to neutral PCM without cleaning, and runs a
-full `ggml-large-v3.bin` transcription. It then writes an AI prompt and, by
-default, starts a new Codex analysis task with `gpt-5.6-sol` and `xhigh`
-reasoning. The generated report and uncertain-event audio clips stay in that
-isolated directory and do not touch `tmp/match_audio`.
-
-If Metal cannot allocate the full model, the script automatically retries the
-same full model on CPU; pass `--cpu` to select CPU from the start.
-
-Run it for the requested date with:
+Run the workflow for a date using recordings in `~/Downloads`:
 
 ```sh
 python3 script/match_transcription_workflow.py --date 2026-09-20
 ```
+
+It selects `Meczyk-*` audio by the date in the filename and matching `6aa*.json`
+Suunto GPS logs by their `DeviceLog` date. It reads the active approved player
+roster through Rails, decodes audio to neutral PCM without denoising, and runs
+the full local `ggml-large-v3.bin` model. Results go to
+`tmp/match_transcription_workflow/YYYY-MM-DD`.
+
+The workflow scans timestamped transcript segments against the roster and
+writes TOP 3 fuzzy/phonetic player candidates, including the raw phrase,
+segment position, timestamp, component scores, and ambiguity margin, to
+`analysis/player_match_candidates.json`. These candidates are evidence for the
+analysis model, not automatic name replacements. The workflow then writes an
+AI prompt and, by default, starts a Codex analysis task with `gpt-5.6-sol` and
+`xhigh` reasoning. If Metal cannot allocate the full model, it retries the
+same model on CPU; pass `--cpu` to select CPU from the start.
 
 Use `--skip-analysis-thread` to collect, transcribe, and write the prompt
 without starting Codex. The AI contract is documented in
@@ -312,11 +232,14 @@ the JSON outside the terminal process, pass it back with
 `--analysis-result PATH` to generate the same report and review clips.
 Review clips are exported as 16 kHz mono MP3 files and embedded in
 `report.md` with Codex-compatible audio players.
-For every `gol` and `samobój`, the report adds a first table column with one
-of `GPS + transkrypcja`, `GPS bez transkrypcji`, or `Transkrypcja bez GPS`.
-Each goal also gets a 45-second MP3 clip embedded inline in the table,
-starting 5 seconds before the matching transcription mention when audio confirms
-the goal. GPS is used only for a goal without an audio confirmation. Existing
+
+The Markdown event-table layout is stored in
+`script/templates/match_events_table.md` and used by the report renderer. For
+every `gol` and `samobój`, the report adds a first table column with one of
+`GPS + transkrypcja`, `GPS bez transkrypcji`, or `Transkrypcja bez GPS`. Each
+goal also gets a 45-second MP3 clip embedded inline in the table, starting
+5 seconds before the matching transcription mention when audio confirms the
+goal. GPS is used only for a goal without an audio confirmation. Existing
 review clips are removed and recreated on every completed run.
 
 Run tests:
