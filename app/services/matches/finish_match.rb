@@ -16,6 +16,7 @@ module Matches
         update_team_results!
         match.update!(finished_at: finished_at)
         Ratings::ApplyMatchPerformance.call(match:)
+        update_season_end_date!
         Relationships::RebuildSeasonPairStats.call(season: match.match_day.season)
         match.match_day.update!(status: "finished") if all_match_day_matches_finished?
       end
@@ -28,6 +29,13 @@ module Matches
     private
 
     attr_reader :match, :finished_at
+
+    def update_season_end_date!
+      season = match.match_day.season
+      latest_played_on = season.match_days.joins(:matches)
+                               .where.not(matches: { finished_at: nil }).maximum(:played_on)
+      season.update!(ends_on: latest_played_on)
+    end
 
     def update_team_results!
       home_team = match.home_team

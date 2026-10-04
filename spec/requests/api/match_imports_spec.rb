@@ -71,6 +71,7 @@ RSpec.describe "API match imports" do
             }
           )
           expect(matches.first.match_day.season).to eq(season)
+          expect(season.reload.ends_on).to eq(Date.new(2026, 6, 19))
           expect(matches.first).to be_all_roster_players_on_pitch
           expect(matches.second).not_to be_all_roster_players_on_pitch
           expect(matches.first.home_team.players.map(&:nickname)).to eq([ "adam" ])
