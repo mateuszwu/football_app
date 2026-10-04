@@ -46,9 +46,9 @@ Use this order:
 10. If it is not implemented, mark it `in_progress` and implement it.
 11. For new features, inspect SimpleCov line and branch coverage for the new or changed code. If a line or branch is not covered, decide whether the code is actually needed; remove unnecessary code, otherwise add the missing spec.
 12. Run local validation manually.
-13. Stage, commit, push, and create a draft PR.
-14. Put the ticket description from `.ai/gh_issues/<ticket-file>.json` into the PR description.
-15. Share the PR link with the user for review and stop.
+13. Stage and commit only the files belonging to the task. Do not create a pull request unless the user explicitly asks for one.
+14. When the user approves merging, merge the task branch into `main` and push `main` directly.
+15. Mark the local task `done` after it is merged and report the result to the user.
 
 Do not merge without explicit user permission.
 
@@ -56,7 +56,7 @@ Do not merge without explicit user permission.
 
 If the user says `continue`, `move forward`, or accepts the completed work:
 
-1. Merge the current approved PR.
+1. Merge the current approved task branch into `main` and push `main` directly. If the user explicitly requested a PR, use that approved PR instead.
 2. Change the ticket status in `.ai/gh_issues/README.md` to `done`.
 3. Pick the next lowest-numbered ticket that is not `done`.
 4. Repeat the workflow.
@@ -65,7 +65,7 @@ Do not merge unless the user has clearly approved it.
 
 ## Branches
 
-Create a dedicated branch for each ticket before opening the PR.
+Create a dedicated branch for each ticket. Merge approved work directly into `main`; do not create a PR unless explicitly requested.
 
 Preferred format:
 
@@ -121,7 +121,9 @@ Use:
 
 ## Pull Requests
 
-Open a draft PR first when implementation is ready for review.
+Do not create pull requests by default. The user's standing preference is to merge approved changes directly into `main` and push them without a PR.
+
+The following PR conventions apply only when the user explicitly requests a PR.
 
 Use the same format as commits for the PR title:
 
@@ -148,7 +150,7 @@ Notify the user only when:
 
 - you have a question
 - you encounter an error or blocker
-- a PR is ready for review
+- approved work was merged, or an explicitly requested PR is ready for review
 - a ticket was already fully done and was marked `done`
 
 Do not send routine progress updates.
