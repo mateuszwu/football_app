@@ -1,6 +1,25 @@
 require "rails_helper"
 
 RSpec.describe MatchesHelper do
+  describe "#match_report_clock" do
+    it "uses Polish summer time for stored UTC match and goal times" do
+      match = create(:match, started_at: Time.utc(2026, 10, 18, 8, 18, 52))
+
+      expect(Time.zone.name).to eq("Europe/Warsaw")
+      expect(helper.match_report_clock(match.reload.started_at)).to eq("10:18")
+    end
+
+    it "uses Polish winter time without a fixed two-hour adjustment" do
+      match = create(:match, started_at: Time.utc(2026, 12, 6, 9, 15))
+
+      expect(helper.match_report_clock(match.reload.started_at)).to eq("10:15")
+    end
+
+    it "returns a dash for a missing start" do
+      expect(helper.match_report_clock(nil)).to eq("—")
+    end
+  end
+
   describe "#match_report_duration" do
     it "formats minute durations" do
       result = helper.match_report_duration(2_110)

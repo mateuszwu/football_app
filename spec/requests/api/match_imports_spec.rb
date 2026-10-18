@@ -182,17 +182,19 @@ RSpec.describe "API match imports" do
               "from_team" => "Team A",
               "to_team" => "Team B",
               "event_type" => "team_change",
-              "occurred_at" => "2026-06-19T19:10:00Z"
+              "occurred_at" => "2026-06-19T19:10:00+02:00"
             },
             {
               "player" => "leaving",
               "from_team" => "Team A",
               "to_team" => nil,
               "event_type" => "substitution_out",
-              "occurred_at" => "2026-06-19T19:20:00Z"
+              "occurred_at" => "2026-06-19T19:20:00+02:00"
             }
           ])
           expect(changes.map(&:event_type)).to eq([ "team_change", "substitution_out" ])
+          expect(match.started_at.utc).to eq(Time.utc(2026, 6, 19, 17, 0))
+          expect(goals.first.scored_at.utc).to eq(Time.utc(2026, 6, 19, 17, 5))
           expect(goals.map { |goal| [ goal.scorer.nickname, goal.scoring_team.name ] }).to eq(
             [ [ "switching", "Team A" ], [ "switching", "Team B" ] ]
           )
