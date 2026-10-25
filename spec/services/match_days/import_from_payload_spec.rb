@@ -250,7 +250,6 @@ RSpec.describe MatchDays::ImportFromPayload do
         expect(result.errors).to include("Original team 1 name is required")
         expect(result.errors).to include("Original team 1 needs at least one player")
         expect(result.errors).to include("Match 1 must contain exactly two teams")
-        expect(result.errors).to include("Match 1 goals must contain at least one goal")
         expect(result.errors).to include("Match 1 team 1 name is required")
         expect(result.errors).to include("Match 1 team 1 needs at least one player")
         expect(MatchDay.count).to eq(0)

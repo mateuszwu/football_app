@@ -160,7 +160,6 @@ module MatchDays
     def validate_matches
       matches_data.each_with_index do |match_data, match_index|
         errors << "Match #{match_index + 1} must contain exactly two teams" unless match_data[:teams].size == 2
-        errors << "Match #{match_index + 1} goals must contain at least one goal" if match_data[:goals].empty?
 
         match_data[:teams].each_with_index do |team, team_index|
           validate_team(team, label: "Match #{match_index + 1} team #{team_index + 1}")

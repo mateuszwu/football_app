@@ -3,6 +3,52 @@ require "rails_helper"
 RSpec.describe "API match imports" do
   describe "POST /api/match_imports" do
     context "when the bearer token is valid" do
+      it "imports a finished scoreless draw and calculates ratings without goals" do
+        begin
+          original_api_token = ENV["FOOTBALL_APP_API_TOKEN"]
+          ENV["FOOTBALL_APP_API_TOKEN"] = "secret-token"
+          season = create(:season)
+          adam = create(:player, nickname: "adam", approval_status: "approved", active: true)
+          jan = create(:player, nickname: "jan", approval_status: "approved", active: true)
+          teams = [
+            { name: "Team A", players: [ adam.nickname ], captain: adam.nickname },
+            { name: "Team B", players: [ jan.nickname ], captain: jan.nickname }
+          ]
+          payload = {
+            season_id: season.id,
+            played_on: "2026-10-25",
+            original_teams: teams,
+            matches: [
+              {
+                started_at: "2026-10-25T10:35:00+01:00",
+                finished_at: "2026-10-25T10:45:10+01:00",
+                all_roster_players_on_pitch: true,
+                teams:,
+                goals: []
+              }
+            ]
+          }
+
+          post "/api/match_imports", params: payload,
+            headers: { "Authorization" => "Bearer secret-token" }, as: :json
+
+          expect(response).to have_http_status(:created)
+          match = Match.find(response.parsed_body.fetch("matches").first.fetch("match_id"))
+          expect(match).to be_finished
+          expect([ match.home_score, match.away_score ]).to eq([ 0, 0 ])
+          expect(match.match_goals).to be_empty
+          expect(match.started_at).to eq(Time.zone.parse("2026-10-25T10:35:00+01:00"))
+          expect(match.finished_at).to eq(Time.zone.parse("2026-10-25T10:45:10+01:00"))
+          expect(match.player_rating_changes.pluck(:player_id)).to contain_exactly(adam.id, jan.id)
+        ensure
+          if original_api_token.nil?
+            ENV.delete("FOOTBALL_APP_API_TOKEN")
+          else
+            ENV["FOOTBALL_APP_API_TOKEN"] = original_api_token
+          end
+        end
+      end
+
       it "creates multiple matches from JSON and returns the created records" do
         begin
           original_api_token = ENV["FOOTBALL_APP_API_TOKEN"]
