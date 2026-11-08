@@ -6,6 +6,8 @@ class MatchGoal < ApplicationRecord
   belongs_to :scorer_team_player, class_name: "TeamPlayer"
   belongs_to :assistant_team_player, class_name: "TeamPlayer", optional: true
 
+  enum :set_piece, { free_kick: "free_kick", penalty: "penalty" }, validate: { allow_nil: true }
+
   validates :scored_at, presence: true
   validate :scoring_team_belongs_to_match
   validate :scoring_team_is_playing
