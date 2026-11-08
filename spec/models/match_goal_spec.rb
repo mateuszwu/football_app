@@ -1,6 +1,32 @@
 require "rails_helper"
 
 RSpec.describe MatchGoal do
+  describe "#set_piece" do
+    it "allows an unclassified goal and persists free-kick and penalty classifications" do
+      match = create(:match)
+      scorer_team_player = create(:team_player, team: match.home_team)
+      goal = create(:match_goal, match:, scoring_team: match.home_team, scorer_team_player:)
+
+      expect(goal.reload.set_piece).to be_nil
+
+      goal.update!(set_piece: :free_kick)
+      expect(goal.reload).to be_free_kick
+
+      goal.update!(set_piece: :penalty)
+      expect(goal.reload).to be_penalty
+    end
+
+    it "rejects unsupported classifications" do
+      match = create(:match)
+      scorer_team_player = create(:team_player, team: match.home_team)
+
+      goal = build(:match_goal, match:, scoring_team: match.home_team, scorer_team_player:, set_piece: "corner")
+
+      expect(goal).not_to be_valid
+      expect(goal.errors[:set_piece]).to be_present
+    end
+  end
+
   describe "validations" do
     context "when required attributes are present" do
       it "is valid" do

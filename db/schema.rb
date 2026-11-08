@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_18_150000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_08_130000) do
   create_table "match_day_players", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.integer "match_day_id", null: false
@@ -64,6 +64,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_18_150000) do
     t.datetime "scored_at", null: false
     t.integer "scorer_team_player_id", null: false
     t.integer "scoring_team_id", null: false
+    t.string "set_piece"
     t.datetime "undone_at"
     t.datetime "updated_at", null: false
     t.index ["assistant_team_player_id"], name: "index_match_goals_on_assistant_team_player_id"
@@ -75,6 +76,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_18_150000) do
     t.index ["own_goal", "undone_at"], name: "index_match_goals_on_own_goal_and_undone_at"
     t.index ["scorer_team_player_id"], name: "index_match_goals_on_scorer_team_player_id"
     t.index ["scoring_team_id"], name: "index_match_goals_on_scoring_team_id"
+    t.check_constraint "set_piece IN ('free_kick', 'penalty')", name: "match_goals_valid_set_piece"
   end
 
   create_table "match_player_changes", force: :cascade do |t|
