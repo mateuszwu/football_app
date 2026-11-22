@@ -26,7 +26,7 @@ module Api
         :all_roster_players_on_pitch,
         original_teams: [ :name, :captain, { players: [] } ],
         teams: [ :name, :captain, { players: [] } ],
-        goals: %i[team scorer assistant scored_at own_goal],
+        goals: %i[team scorer assistant scored_at own_goal set_piece],
         player_changes: %i[player from_team to_team occurred_at],
         matches: [
           :started_at,
@@ -34,7 +34,7 @@ module Api
           :all_roster_players_on_pitch,
           {
             teams: [ :name, :captain, { players: [] } ],
-            goals: %i[team scorer assistant scored_at own_goal],
+            goals: %i[team scorer assistant scored_at own_goal set_piece],
             player_changes: %i[player from_team to_team occurred_at]
           }
         ]
