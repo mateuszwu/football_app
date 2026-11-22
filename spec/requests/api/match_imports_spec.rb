@@ -3,6 +3,96 @@ require "rails_helper"
 RSpec.describe "API match imports" do
   describe "POST /api/match_imports" do
     context "when the bearer token is valid" do
+      it "preserves set-piece types and goals without a classification in a multi-match import" do
+        begin
+          original_api_token = ENV["FOOTBALL_APP_API_TOKEN"]
+          ENV["FOOTBALL_APP_API_TOKEN"] = "secret-token"
+          season = create(:season)
+          adam = create(:player, nickname: "adam", approval_status: "approved", active: true)
+          jan = create(:player, nickname: "jan", approval_status: "approved", active: true)
+          teams = [
+            { name: "Team A", players: [ adam.nickname ] },
+            { name: "Team B", players: [ jan.nickname ] }
+          ]
+          payload = {
+            season_id: season.id, played_on: "2026-11-22", original_teams: teams,
+            matches: [ {
+              started_at: "2026-11-22T10:00:00+01:00", finished_at: "2026-11-22T10:30:00+01:00", teams:,
+              goals: [
+                { team: "Team A", scorer: adam.nickname, set_piece: "penalty" },
+                { team: "Team A", scorer: adam.nickname, set_piece: "free_kick" },
+                { team: "Team B", scorer: jan.nickname }
+              ]
+            } ]
+          }
+
+          post "/api/match_imports", params: payload,
+            headers: { "Authorization" => "Bearer secret-token" }, as: :json
+
+          expect(response).to have_http_status(:created)
+          match = Match.find(response.parsed_body.fetch("matches").first.fetch("match_id"))
+          expect(match.match_goals.order(:id).pluck(:set_piece)).to eq([ "penalty", "free_kick", nil ])
+          expect([ match.home_score, match.away_score ]).to eq([ 2, 1 ])
+        ensure
+          ENV["FOOTBALL_APP_API_TOKEN"] = original_api_token
+        end
+      end
+
+      it "preserves the penalty classification in a single-match import" do
+        begin
+          original_api_token = ENV["FOOTBALL_APP_API_TOKEN"]
+          ENV["FOOTBALL_APP_API_TOKEN"] = "secret-token"
+          season = create(:season)
+          adam = create(:player, nickname: "adam", approval_status: "approved", active: true)
+          jan = create(:player, nickname: "jan", approval_status: "approved", active: true)
+          teams = [
+            { name: "Team A", players: [ adam.nickname ] },
+            { name: "Team B", players: [ jan.nickname ] }
+          ]
+          payload = {
+            season_id: season.id, played_on: "2026-11-22", started_at: "2026-11-22T10:00:00+01:00",
+            finished_at: "2026-11-22T10:30:00+01:00", teams:,
+            goals: [ { team: "Team A", scorer: adam.nickname, set_piece: "penalty" } ]
+          }
+
+          post "/api/match_imports", params: payload,
+            headers: { "Authorization" => "Bearer secret-token" }, as: :json
+
+          expect(response).to have_http_status(:created)
+          match = Match.find(response.parsed_body.fetch("matches").first.fetch("match_id"))
+          expect(match.match_goals.sole.set_piece).to eq("penalty")
+        ensure
+          ENV["FOOTBALL_APP_API_TOKEN"] = original_api_token
+        end
+      end
+
+      it "rejects an unsupported set-piece type without saving the match day" do
+        begin
+          original_api_token = ENV["FOOTBALL_APP_API_TOKEN"]
+          ENV["FOOTBALL_APP_API_TOKEN"] = "secret-token"
+          season = create(:season)
+          adam = create(:player, nickname: "adam", approval_status: "approved", active: true)
+          jan = create(:player, nickname: "jan", approval_status: "approved", active: true)
+          teams = [
+            { name: "Team A", players: [ adam.nickname ] },
+            { name: "Team B", players: [ jan.nickname ] }
+          ]
+          payload = {
+            season_id: season.id, played_on: "2026-11-22", started_at: "2026-11-22T10:00:00+01:00", teams:,
+            goals: [ { team: "Team A", scorer: adam.nickname, set_piece: "corner" } ]
+          }
+
+          post "/api/match_imports", params: payload,
+            headers: { "Authorization" => "Bearer secret-token" }, as: :json
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(MatchDay.count).to eq(0)
+          expect(MatchGoal.count).to eq(0)
+        ensure
+          ENV["FOOTBALL_APP_API_TOKEN"] = original_api_token
+        end
+      end
+
       it "imports a finished scoreless draw and calculates ratings without goals" do
         begin
           original_api_token = ENV["FOOTBALL_APP_API_TOKEN"]

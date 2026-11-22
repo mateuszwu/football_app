@@ -141,6 +141,10 @@ match-day payload to `POST /api/match_imports`. The importer creates the match d
 per-match rosters, player changes, goals, assists, scores, and finished-match performance
 data in one transaction.
 
+Each imported goal may include an optional `set_piece` field set to `penalty`
+or `free_kick`. Omit it for goals without a known set-piece classification;
+unsupported values reject the import.
+
 For a player who changes teams or leaves the pitch during a match, add `player_changes`
 to the relevant match. `from_team` may be omitted for a player entering from the bench;
 `to_team` may be omitted when the player leaves the pitch:

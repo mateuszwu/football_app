@@ -5,7 +5,7 @@ module MatchDays
         matches.first
       end
     end
-    ParsedGoal = Struct.new(:team_name, :scorer_name, :assistant_name, :scored_at, :own_goal, keyword_init: true)
+    ParsedGoal = Struct.new(:team_name, :scorer_name, :assistant_name, :scored_at, :own_goal, :set_piece, keyword_init: true)
     ParsedPlayerChange = Struct.new(:player_name, :from_team_name, :to_team_name, :occurred_at, keyword_init: true)
 
     def self.call(payload:, season:, available_players:)
@@ -129,7 +129,8 @@ module MatchDays
         scorer_name: goal_data[:scorer].to_s.strip,
         assistant_name: goal_data[:assistant].to_s.strip.presence,
         scored_at: goal_data[:scored_at],
-        own_goal: ActiveModel::Type::Boolean.new.cast(goal_data[:own_goal]) || false
+        own_goal: ActiveModel::Type::Boolean.new.cast(goal_data[:own_goal]) || false,
+        set_piece: goal_data[:set_piece].presence
       )
     end
 
@@ -317,6 +318,7 @@ module MatchDays
           scorer_team_player_id: team_player_for(goal.own_goal ? opponent_team_for(match, scoring_team) : scoring_team, goal.scorer_name).id,
           assistant_team_player_id: goal.assistant_name.present? ? team_player_for(scoring_team, goal.assistant_name).id : nil,
           own_goal: goal.own_goal,
+          set_piece: goal.set_piece,
           scored_at: goal_scored_at(goal, match_data:, match_index:, goal_index:)
         )
 
